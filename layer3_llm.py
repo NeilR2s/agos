@@ -28,7 +28,7 @@ print(anomalies.index.tolist())
 # ── Step 3: Define a function that asks Gemini about one date ────────────────
 def ask_gemini(date, close_price, volume):
     # This is the Gemini API endpoint
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/3.1-flash-lite-preview:generateContent?key={API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/2.5-flash-lite-preview:generateContent?key={API_KEY}"
 
     # This is the question we ask the LLM for each anomalous date
     prompt = f"""
