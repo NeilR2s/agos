@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 import time
-from config import Config
+from config import settings
 
 class SentimentAgent:
     """
@@ -10,12 +10,11 @@ class SentimentAgent:
     """
 
     def __init__(self):
-        self.cfg = Config()
         # Validate key on startup
-        if not self.cfg.GEMINI_API_KEY:
+        if not settings.GEMINI_API_KEY:
             raise ValueError("GEMINI_API_KEY not found in .env file")
-        self.url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.cfg.AI_MODEL_VERSION}:generateContent?key={self.cfg.GEMINI_API_KEY}"
-        print(f"SentimentAgent initialized with model: {self.cfg.AI_MODEL_VERSION}")
+        self.url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.AI_MODEL_VERSION}:generateContent?key={settings.GEMINI_API_KEY}"
+        print(f"SentimentAgent initialized with model: {settings.AI_MODEL_VERSION}")
 
     def build_prompt(self, date, close_price, volume):
         # Builds the prompt string for a given anomalous date
@@ -67,10 +66,9 @@ class SentimentAgent:
 
 
 def run_layer3():
-    cfg = Config()
 
     # Load anomalies from Layer 2
-    df = pd.read_csv(cfg.LAYER2_OUTPUT, index_col=0)
+    df = pd.read_csv(settings.LAYER2_OUTPUT, index_col=0)
     anomalies = df[df['Is_Anomaly'] == True].copy()
     print(f"Found {len(anomalies)} anomalous dates to analyze")
 
@@ -94,8 +92,8 @@ def run_layer3():
 
     anomalies['sentiment'] = sentiments
     anomalies['reason'] = reasons
-    anomalies.to_csv(cfg.LAYER3_OUTPUT)
-    print(f"\nSaved to {cfg.LAYER3_OUTPUT}")
+    anomalies.to_csv(settings.LAYER3_OUTPUT)
+    print(f"\nSaved to {settings.LAYER3_OUTPUT}")
 
 
 if __name__ == "__main__":

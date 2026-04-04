@@ -34,3 +34,5 @@ class Config:
     LAYER2_OUTPUT: str = "layer2_anomalies.csv"
     LAYER3_OUTPUT: str = "layer3_llm_analysis.csv"
     LAYER4_OUTPUT: str = "layer4_trade_log.csv"
+
+settings = Config()
