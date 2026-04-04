@@ -1,108 +1,102 @@
 import requests
 import pandas as pd
-import os
-from dotenv import load_dotenv
+import time
+from config import Config
 
-# ── Step 1: Load the API key from the .env file ──────────────────────────────
-# This reads your .env file and makes GEMINI_API_KEY available to Python
-# Your key never appears anywhere in this code file
-load_dotenv()
-API_KEY = os.getenv("GEMINI_API_KEY")
-
-if not API_KEY:
-    print("ERROR: No API key found. Make sure your .env file is set up correctly.")
-    exit()
-
-print("API key loaded successfully")
-
-# ── Step 2: Load the anomalies from Layer 2 ──────────────────────────────────
-# Read the CSV that layer2_ann.py saved
-df = pd.read_csv("layer2_anomalies.csv", index_col=0)
-
-# Filter to only the rows flagged as anomalies
-anomalies = df[df['Is_Anomaly'] == True].copy()
-
-print(f"\nFound {len(anomalies)} anomalous dates to analyze:")
-print(anomalies.index.tolist())
-
-# ── Step 3: Define a function that asks Gemini about one date ────────────────
-def ask_gemini(date, close_price, volume):
-    # This is the Gemini API endpoint
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/3.1-flash-lite-preview:generateContent?key={API_KEY}"
-
-    # This is the question we ask the LLM for each anomalous date
-    prompt = f"""
-    You are a financial analyst assistant.
-    
-    On {date}, the iShares MSCI Philippines ETF (EPHE) showed unusual trading activity.
-    - Closing price: {close_price:.2f}
-    - Volume: {volume:,.0f}
-    
-    Based on your knowledge of Philippine market events around this date,
-    what was the likely market sentiment? 
-    
-    Reply with ONLY this format, nothing else:
-    SENTIMENT: [Bullish/Bearish/Uncertain]
-    REASON: [One sentence explanation]
+class SentimentAgent:
+    """
+    Handles all communication with the LLM API.
+    Class-based so it can be easily swapped for a different provider later.
     """
 
-    # Package the prompt into the format Gemini expects
-    payload = {
-        "contents": [
-            {
-                "parts": [
-                    {"text": prompt}
-                ]
-            }
-        ]
-    }
+    def __init__(self):
+        self.cfg = Config()
+        # Validate key on startup
+        if not self.cfg.GEMINI_API_KEY:
+            raise ValueError("GEMINI_API_KEY not found in .env file")
+        self.url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.cfg.AI_MODEL_VERSION}:generateContent?key={self.cfg.GEMINI_API_KEY}"
+        print(f"SentimentAgent initialized with model: {self.cfg.AI_MODEL_VERSION}")
 
-    # Send the request to Gemini
-    response = requests.post(url, json=payload)
+    def build_prompt(self, date, close_price, volume):
+        # Builds the prompt string for a given anomalous date
+        return f"""
+        You are a financial analyst assistant.
 
-    # Check if the request worked
-    if response.status_code == 200:
-        # Dig into the response to get the text
-        result = response.json()
-        text = result['candidates'][0]['content']['parts'][0]['text']
-        return text.strip()
-    else:
-        # If something went wrong, show the error
-        print(f"API error for {date}: {response.status_code} - {response.text}")
-        return "SENTIMENT: Uncertain\nREASON: API call failed."
+        On {date}, the iShares MSCI Philippines ETF (EPHE) showed unusual trading activity.
+        - Closing price: {close_price:.2f}
+        - Volume: {volume:,.0f}
 
-# ── Step 4: Loop through each anomaly and ask Gemini ─────────────────────────
-print("\nAsking Gemini about each anomalous date...")
+        Based on your knowledge of Philippine market events around this date,
+        what was the likely market sentiment?
 
-sentiments = []
-reasons = []
+        Reply with ONLY this format, nothing else:
+        SENTIMENT: [Bullish/Bearish/Uncertain]
+        REASON: [One sentence explanation]
+        """
 
-for date in anomalies.index:
-    close = anomalies.loc[date, 'Close']
-    volume = anomalies.loc[date, 'Volume']
+    def call_api(self, prompt):
+        # Sends one prompt to the LLM and returns the raw text response
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}]
+        }
+        response = requests.post(self.url, json=payload)
 
-    print(f"\nAnalyzing {date}...")
-    response_text = ask_gemini(date, close, volume)
-    print(response_text)
+        if response.status_code == 200:
+            return response.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+        else:
+            print(f"  API error {response.status_code}: {response.text}")
+            return "SENTIMENT: Uncertain\nREASON: API call failed."
 
-    # Parse the response to extract sentiment and reason
-    sentiment = "Uncertain"
-    reason = "Could not parse response"
+    def parse_response(self, text):
+        # Extracts sentiment and reason from the LLM's formatted response
+        sentiment = "Uncertain"
+        reason = "Could not parse response"
+        for line in text.split('\n'):
+            if line.startswith("SENTIMENT:"):
+                sentiment = line.replace("SENTIMENT:", "").strip()
+            if line.startswith("REASON:"):
+                reason = line.replace("REASON:", "").strip()
+        return sentiment, reason
 
-    for line in response_text.split('\n'):
-        if line.startswith("SENTIMENT:"):
-            sentiment = line.replace("SENTIMENT:", "").strip()
-        if line.startswith("REASON:"):
-            reason = line.replace("REASON:", "").strip()
+    def analyze(self, date, close_price, volume):
+        # Full pipeline: build prompt → call API → parse → return result
+        prompt = self.build_prompt(date, close_price, volume)
+        raw_response = self.call_api(prompt)
+        sentiment, reason = self.parse_response(raw_response)
+        return sentiment, reason
 
-    sentiments.append(sentiment)
-    reasons.append(reason)
 
-# ── Step 5: Save the results ─────────────────────────────────────────────────
-anomalies['sentiment'] = sentiments
-anomalies['reason'] = reasons
+def run_layer3():
+    cfg = Config()
 
-anomalies.to_csv("layer3_llm_analysis.csv")
-print("\nResults saved to layer3_llm_analysis.csv")
-print("\nFinal sentiment summary:")
-print(anomalies[['Close', 'sentiment', 'reason']])
+    # Load anomalies from Layer 2
+    df = pd.read_csv(cfg.LAYER2_OUTPUT, index_col=0)
+    anomalies = df[df['Is_Anomaly'] == True].copy()
+    print(f"Found {len(anomalies)} anomalous dates to analyze")
+
+    # Create agent and analyze each date
+    agent = SentimentAgent()
+    sentiments, reasons = [], []
+
+    for date in anomalies.index:
+        close = anomalies.loc[date, 'Close']
+        volume = anomalies.loc[date, 'Volume']
+
+        print(f"\nAnalyzing {date}...")
+        sentiment, reason = agent.analyze(date, close, volume)
+        print(f"  {sentiment} — {reason}")
+
+        sentiments.append(sentiment)
+        reasons.append(reason)
+
+        # Wait 2 seconds between calls to avoid hitting rate limits
+        time.sleep(2)
+
+    anomalies['sentiment'] = sentiments
+    anomalies['reason'] = reasons
+    anomalies.to_csv(cfg.LAYER3_OUTPUT)
+    print(f"\nSaved to {cfg.LAYER3_OUTPUT}")
+
+
+if __name__ == "__main__":
+    run_layer3()

@@ -1,161 +1,131 @@
 import pandas as pd
+from config import Config
 
-# ── Step 1: Load the results from Layer 3 ────────────────────────────────────
-# This reads the CSV that layer3_llm.py saved, which contains:
-# - The 7 anomalous dates detected by our Autoencoder
-# - The closing price on each date
-# - The sentiment (Bullish/Bearish/Uncertain) from the LLM
-df = pd.read_csv("layer3_llm_analysis.csv", index_col=0)
+class RiskEngine:
+    """
+    Validates whether a proposed trade passes all risk checks.
+    Mirrors the zero-trust trading engine concept from the AGOS proposal.
+    """
 
-print("=== MINI-AGOS PAPER TRADING ENGINE ===")
-print(f"Analyzing {len(df)} anomalous trading days...\n")
+    def __init__(self, config):
+        self.cfg = config
 
-# ── Step 2: Define our simulated portfolio ────────────────────────────────────
-# This is fake money - no real trades are being made
-STARTING_CAPITAL = 200000  # PHP equivalent in mind, but EPHE trades in USD
-CAPITAL = STARTING_CAPITAL
-SHARES_HELD = 0
-TRADE_LOG = []
+    def check_capital(self, capital, price):
+        if capital < price:
+            return False, f"Insufficient capital (${capital:.2f}) to buy at ${price:.2f}"
+        return True, "OK"
 
-# ── Step 3: Define the risk management rules ─────────────────────────────────
-# These are the hard-coded safeguards, just like the real AGOS trading engine
-MAX_RISK_PERCENT = 0.10   # Never risk more than 10% of capital on one trade
-STOP_LOSS_PERCENT = 0.05  # Assume a 5% stop loss below entry price
+    def calculate_position_size(self, capital, price):
+        stop_loss = price * (1 - self.cfg.STOP_LOSS_PERCENT)
+        risk_per_share = price - stop_loss
+        max_risk = capital * self.cfg.MAX_RISK_PERCENT
+        size = int(max_risk / risk_per_share)
+        if size < 1:
+            return 0, "Position size too small"
+        return size, "OK"
 
-# ── Step 4: Loop through each anomalous date and make a decision ──────────────
-# This is the "zero-trust validation layer" - every proposed trade must
-# pass all checks before it gets approved
 
-for date, row in df.iterrows():
-    close_price = row['Close']
-    sentiment = row['sentiment']
-    reason = row['reason']
-    anomaly_score = row['Anomaly_Score']
+class TradingEngine:
+    """
+    Makes final BUY/SELL/HOLD decisions by combining
+    the ANN anomaly signal with the LLM sentiment signal.
+    """
 
-    print(f"--- Date: {date} ---")
-    print(f"  Close Price : ${close_price:.2f}")
-    print(f"  Anomaly Score: {anomaly_score:.6f}")
-    print(f"  LLM Sentiment: {sentiment}")
-    print(f"  LLM Reason   : {reason}")
+    def __init__(self):
+        self.cfg = Config()
+        self.risk = RiskEngine(self.cfg)
+        self.capital = self.cfg.STARTING_CAPITAL
+        self.shares_held = 0
+        self.trade_log = []
 
-    # ── Risk Check 1: Capital sufficiency ─────────────────────────────────
-    # Can we even afford to buy at least 1 share?
-    if CAPITAL < close_price:
-        print(f"  RISK CHECK FAILED: Not enough capital (${CAPITAL:.2f}) to buy at ${close_price:.2f}")
-        print(f"  DECISION: REJECTED\n")
-        TRADE_LOG.append({
+    def process(self, date, close_price, sentiment, reason, anomaly_score):
+        print(f"\n--- {date} ---")
+        print(f"  Price: ${close_price:.2f} | Score: {anomaly_score:.6f} | Sentiment: {sentiment}")
+
+        # Risk check 1: capital
+        ok, msg = self.risk.check_capital(self.capital, close_price)
+        if not ok:
+            print(f"  REJECTED: {msg}")
+            self._log(date, 'REJECTED', msg)
+            return
+
+        # Risk check 2: position size
+        size, msg = self.risk.calculate_position_size(self.capital, close_price)
+        if size < 1:
+            print(f"  REJECTED: {msg}")
+            self._log(date, 'REJECTED', msg)
+            return
+
+        # Decision
+        if sentiment == "Bullish":
+            cost = min(size, int(self.capital / close_price)) * close_price
+            size = int(cost / close_price)
+            self.capital -= cost
+            self.shares_held += size
+            print(f"  BUY {size} shares — Cost: ${cost:.2f} | Cash left: ${self.capital:.2f}")
+            self._log(date, f'BUY {size}', reason, close_price, cost)
+
+        elif sentiment == "Bearish" and self.shares_held > 0:
+            value = self.shares_held * close_price
+            self.capital += value
+            print(f"  SELL {self.shares_held} shares — Value: ${value:.2f} | Cash: ${self.capital:.2f}")
+            self._log(date, f'SELL {self.shares_held}', reason, close_price, value)
+            self.shares_held = 0
+
+        else:
+            print(f"  HOLD — {reason}")
+            self._log(date, 'HOLD', reason)
+
+    def _log(self, date, action, reason, price=None, amount=None):
+        self.trade_log.append({
             'date': date,
-            'action': 'REJECTED',
-            'reason': 'Insufficient capital',
-            'capital_after': CAPITAL,
-            'shares_held': SHARES_HELD
-        })
-        continue
-
-    # ── Risk Check 2: Position sizing ─────────────────────────────────────
-    # How many shares can we buy without risking more than 10% of capital?
-    # Formula: position_size = (capital x max_risk) / (entry - stop_loss)
-    stop_loss_price = close_price * (1 - STOP_LOSS_PERCENT)
-    risk_per_share = close_price - stop_loss_price
-    max_risk_amount = CAPITAL * MAX_RISK_PERCENT
-    position_size = int(max_risk_amount / risk_per_share)  # round down to whole shares
-
-    if position_size < 1:
-        print(f"  RISK CHECK FAILED: Position size too small (would be 0 shares)")
-        print(f"  DECISION: REJECTED\n")
-        TRADE_LOG.append({
-            'date': date,
-            'action': 'REJECTED',
-            'reason': 'Position size too small',
-            'capital_after': CAPITAL,
-            'shares_held': SHARES_HELD
-        })
-        continue
-
-    # ── Decision logic: combine ANN signal + LLM sentiment ────────────────
-    # This is the core of the engine - both signals must agree to trade
-    #
-    # BUY  condition: sentiment is Bullish  AND anomaly score is high
-    # SELL condition: sentiment is Bearish  AND we actually own shares
-    # HOLD condition: sentiment is Uncertain OR signals disagree
-
-    if sentiment == "Bullish":
-        # Calculate cost of this trade
-        trade_cost = position_size * close_price
-
-        if trade_cost > CAPITAL:
-            # Adjust position size down if needed
-            position_size = int(CAPITAL / close_price)
-            trade_cost = position_size * close_price
-
-        # Execute the simulated BUY
-        CAPITAL -= trade_cost
-        SHARES_HELD += position_size
-
-        print(f"  DECISION: BUY {position_size} shares at ${close_price:.2f}")
-        print(f"  Trade Cost   : ${trade_cost:.2f}")
-        print(f"  Capital Left : ${CAPITAL:.2f}")
-        print(f"  Shares Held  : {SHARES_HELD}\n")
-
-        TRADE_LOG.append({
-            'date': date,
-            'action': f'BUY {position_size} shares',
-            'price': close_price,
-            'trade_cost': trade_cost,
-            'capital_after': CAPITAL,
-            'shares_held': SHARES_HELD
+            'action': action,
+            'price': price,
+            'amount': amount,
+            'reason': reason,
+            'capital_after': self.capital,
+            'shares_held': self.shares_held
         })
 
-    elif sentiment == "Bearish" and SHARES_HELD > 0:
-        # Sell all shares we currently hold
-        trade_value = SHARES_HELD * close_price
-        CAPITAL += trade_value
+    def summary(self):
+        cfg = self.cfg
+        last_price = pd.read_csv(cfg.LAYER3_OUTPUT, index_col=0)['Close'].iloc[-1]
+        total = self.capital + (self.shares_held * last_price)
+        print("\n" + "=" * 40)
+        print("FINAL PORTFOLIO SUMMARY")
+        print("=" * 40)
+        print(f"Starting Capital : ${cfg.STARTING_CAPITAL:.2f}")
+        print(f"Remaining Cash   : ${self.capital:.2f}")
+        print(f"Shares Held      : {self.shares_held} (${self.shares_held * last_price:.2f})")
+        print(f"Total Value      : ${total:.2f}")
+        print(f"Net Change       : ${total - cfg.STARTING_CAPITAL:.2f}")
+        print("=" * 40)
+        print("*** PAPER TRADE SIMULATION — NO REAL MONEY ***")
 
-        print(f"  DECISION: SELL {SHARES_HELD} shares at ${close_price:.2f}")
-        print(f"  Trade Value  : ${trade_value:.2f}")
-        print(f"  Capital Now  : ${CAPITAL:.2f}")
-        print(f"  Shares Held  : 0\n")
+    def save(self):
+        pd.DataFrame(self.trade_log).to_csv(self.cfg.LAYER4_OUTPUT, index=False)
+        print(f"\nTrade log saved to {self.cfg.LAYER4_OUTPUT}")
 
-        TRADE_LOG.append({
-            'date': date,
-            'action': f'SELL {SHARES_HELD} shares',
-            'price': close_price,
-            'trade_value': trade_value,
-            'capital_after': CAPITAL,
-            'shares_held': 0
-        })
-        SHARES_HELD = 0
 
-    else:
-        # Uncertain sentiment or Bearish but no shares to sell - do nothing
-        print(f"  DECISION: HOLD — signals not strong enough to act\n")
+def run_layer4():
+    cfg = Config()
+    df = pd.read_csv(cfg.LAYER3_OUTPUT, index_col=0)
 
-        TRADE_LOG.append({
-            'date': date,
-            'action': 'HOLD',
-            'capital_after': CAPITAL,
-            'shares_held': SHARES_HELD
-        })
+    engine = TradingEngine()
+    print("=== MINI-AGOS PAPER TRADING ENGINE ===")
 
-# ── Step 5: Final portfolio summary ──────────────────────────────────────────
-print("=" * 40)
-print("FINAL PORTFOLIO SUMMARY")
-print("=" * 40)
+    for date, row in df.iterrows():
+        engine.process(
+            date=date,
+            close_price=row['Close'],
+            sentiment=row['sentiment'],
+            reason=row['reason'],
+            anomaly_score=row['Anomaly_Score']
+        )
 
-# Calculate the current value of any shares still held
-# Using the last known closing price
-last_price = df['Close'].iloc[-1]
-portfolio_value = CAPITAL + (SHARES_HELD * last_price)
+    engine.summary()
+    engine.save()
 
-print(f"Starting Capital : ${STARTING_CAPITAL:.2f}")
-print(f"Remaining Cash   : ${CAPITAL:.2f}")
-print(f"Shares Still Held: {SHARES_HELD} (valued at ${SHARES_HELD * last_price:.2f})")
-print(f"Total Portfolio  : ${portfolio_value:.2f}")
-print(f"Net Change       : ${portfolio_value - STARTING_CAPITAL:.2f}")
-print("=" * 40)
-print("*** THIS IS A PAPER TRADE SIMULATION - NO REAL MONEY WAS USED ***")
 
-# ── Step 6: Save the trade log ────────────────────────────────────────────────
-trade_df = pd.DataFrame(TRADE_LOG)
-trade_df.to_csv("layer4_trade_log.csv", index=False)
-print("\nTrade log saved to layer4_trade_log.csv")
+if __name__ == "__main__":
+    run_layer4()

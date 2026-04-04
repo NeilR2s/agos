@@ -1,8 +1,8 @@
-date,action,capital_after,shares_held
-2025-11-11 00:00:00-05:00,HOLD,200000,0
-2025-11-14 00:00:00-05:00,HOLD,200000,0
-2025-11-21 00:00:00-05:00,HOLD,200000,0
-2025-12-04 00:00:00-05:00,HOLD,200000,0
-2026-02-26 00:00:00-05:00,HOLD,200000,0
-2026-02-27 00:00:00-05:00,HOLD,200000,0
-2026-03-06 00:00:00-05:00,HOLD,200000,0
+date,action,price,amount,reason,capital_after,shares_held
+2025-11-14 00:00:00-05:00,BUY 8660,23.09432029724121,199996.8137741089,"Stronger-than-expected Q3 2025 GDP growth figures were likely released around this date, signaling robust economic performance and boosting investor confidence.",3.1862258911132812,8660
+2026-02-23 00:00:00-05:00,REJECTED,,,Insufficient capital ($3.19) to buy at $27.53,3.1862258911132812,8660
+2026-02-24 00:00:00-05:00,REJECTED,,,Insufficient capital ($3.19) to buy at $27.73,3.1862258911132812,8660
+2026-02-25 00:00:00-05:00,REJECTED,,,Insufficient capital ($3.19) to buy at $28.37,3.1862258911132812,8660
+2026-02-26 00:00:00-05:00,REJECTED,,,Insufficient capital ($3.19) to buy at $28.15,3.1862258911132812,8660
+2026-02-27 00:00:00-05:00,REJECTED,,,Insufficient capital ($3.19) to buy at $27.91,3.1862258911132812,8660
+2026-03-06 00:00:00-05:00,REJECTED,,,Insufficient capital ($3.19) to buy at $25.32,3.1862258911132812,8660
