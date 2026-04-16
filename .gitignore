@@ -1,0 +1,37 @@
+# Environments
+.venv/
+cron/cron_venv/
+engine/agosenv/
+research/research_venv/
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+backend/agos_env
+engine/engine_venv
+cron/cron_venv
+
+
+# Data & Databases
+*.db
+*.csv
+!cron/.env.example
+cron/.env
+engine/.env
+research/data/
+
+# Build & Dist
+dist/
+build/
+.next/
+out/
+
+# OS
+.DS_Store
+Thumbs.db
+.env
