@@ -74,7 +74,7 @@ export const LandingPage = () => {
 
                     <div className="flex items-center gap-6">
                         <Link
-                            to="/research"
+                            to="/login"
                             className="hidden sm:block font-mono text-[12px] uppercase tracking-[1.4px] border border-white/20 px-4 py-2 hover:bg-white hover:text-background transition-colors"
                         >
                             ACCESS TERMINAL

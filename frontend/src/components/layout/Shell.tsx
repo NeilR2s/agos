@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Bars3Icon, CommandLineIcon } from "@heroicons/react/24/outline";
 
@@ -9,13 +9,31 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { publishOverlayState } from "@/lib/overlay";
 import { cn } from "@/lib/utils";
 
-export const Shell = ({ children }: { children: React.ReactNode }) => {
+export const Shell = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const isLandingRoute = location.pathname === "/";
+  const isPublicRoute = location.pathname === "/" || location.pathname === "/login";
+  const isLoginRoute = location.pathname === "/login";
 
   useEffect(() => {
+    if (!isLoginRoute) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setPaletteOpen(false);
+      setMobileNavOpen(false);
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [isLoginRoute]);
+
+  useEffect(() => {
+    if (isLoginRoute) {
+      return;
+    }
+
     const handler = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === "p") {
         event.preventDefault();
@@ -26,7 +44,7 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [isLoginRoute]);
 
   useEffect(() => {
     publishOverlayState({ commandPaletteOpen: paletteOpen });
@@ -34,7 +52,7 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
-      {!isLandingRoute ? (
+      {!isPublicRoute ? (
         <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-background px-4 py-3 lg:hidden">
           <Link to="/" className="font-mono text-[14px] uppercase tracking-[1.4px] text-white">
             AGOS
@@ -71,19 +89,19 @@ export const Shell = ({ children }: { children: React.ReactNode }) => {
         </header>
       ) : null}
 
-      {!isLandingRoute ? (
+      {!isPublicRoute ? (
         <aside className="group/sidebar fixed inset-y-0 left-0 z-40 hidden w-[72px] overflow-hidden border-r border-border bg-background transition-[width] duration-200 hover:w-[240px] focus-within:w-[240px] lg:block">
           <Sidebar onOpenPalette={() => setPaletteOpen(true)} onNavigate={() => setMobileNavOpen(false)} />
         </aside>
       ) : null}
 
-      <main className={cn("min-h-dvh", !isLandingRoute && "lg:pl-[72px]")}>
+      <main className={cn("min-h-dvh", !isPublicRoute && "lg:pl-[72px]")}>
         {children}
       </main>
 
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      {!isLoginRoute ? <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} /> : null}
 
-      {!isLandingRoute ? (
+      {!isPublicRoute ? (
         <Drawer open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
           <DrawerContent side="left" className="max-w-[320px] p-0 lg:hidden">
             <Sidebar

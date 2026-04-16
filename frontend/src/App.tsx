@@ -5,6 +5,7 @@ import { ResearchView } from "./features/research/ResearchView";
 import { TradingTerminal } from "./features/trading/TradingTerminal";
 import { LandingPage } from "./features/landing/LandingPage";
 import { AgentPage } from "./features/agent/AgentPage";
+import { LoginPage } from "./features/auth/LoginPage";
 import { Toaster } from "sonner";
 import { AuthGuard } from "./components/auth/AuthGuard";
 
@@ -14,6 +15,7 @@ function App() {
             <Shell>
                 <Routes>
                     <Route path="/" element={<LandingPage />} />
+                    <Route path="/login" element={<LoginPage />} />
                     <Route path="/research" element={<AuthGuard><ResearchView /></AuthGuard>} />
                     <Route path="/portfolio" element={<AuthGuard><Dashboard /></AuthGuard>} />
                     <Route path="/trading" element={<AuthGuard><TradingTerminal /></AuthGuard>} />
