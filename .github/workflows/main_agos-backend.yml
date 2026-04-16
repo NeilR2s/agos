@@ -71,6 +71,6 @@ jobs:
         id: deploy-to-webapp
         with:
           app-name: 'agos-backend'
-          package: ./api
+          package: ./backend
           slot-name: 'Production'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_33D4FF1510D64392B34578CD3D307715 }}
