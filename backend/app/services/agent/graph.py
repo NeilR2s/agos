@@ -23,8 +23,10 @@ async def agent_node(state: GraphState, config: RunnableConfig):
     llm = ChatGoogleGenerativeAI(
         model=settings.AGENT_MODEL,
         google_api_key=settings.GEMINI_API_KEY,
-        temperature=0.3,
-        max_retries=1,
+        temperature=1,
+        max_retries=2,
+        thinking_level = "high"
+        
     )
     
     llm_with_tools = llm.bind_tools(tools)

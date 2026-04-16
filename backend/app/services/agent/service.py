@@ -75,7 +75,9 @@ class AgentService:
                 llm = ChatGoogleGenerativeAI(
                     model="gemini-3.1-flash-lite-preview",
                     google_api_key=settings.GEMINI_API_KEY,
-                    temperature=0.3
+                    temperature=1,
+                    thinking_level = "high"
+
                 )
                 prompt = f"Generate a very short 3-5 word title for a chat thread that starts with this user message: {first_msg}\nReturn ONLY the title, no quotes or prefix."
                 resp = await llm.ainvoke(prompt)
