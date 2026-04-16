@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+pydantic-settings
+azure-cosmos
+langchain>=1.0
+langgraph>=1.0
+langgraph-checkpoint-cosmosdb
+langchain-google-genai
+langsmith
+beautifulsoup4
+lxml
+curl_cffi
+python-dateutil
+pydantic
+firebase-admin
+slowapi

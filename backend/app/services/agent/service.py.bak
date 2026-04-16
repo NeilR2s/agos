@@ -1,0 +1,576 @@
+from __future__ import annotations
+
+import time
+from typing import AsyncIterator, Awaitable, Optional
+from uuid import uuid4
+
+from app.core.config import settings
+from app.db.agent_cosmos import get_agent_repository, utc_now_iso
+from app.models.agent import (
+    AgentEvent,
+    AgentMessage,
+    AgentRun,
+    AgentRunRequest,
+    AgentRunResult,
+    AgentSSEEvent,
+    AgentThread,
+    AgentThreadCreate,
+    Citation,
+)
+from app.services.agent.factory import build_agent_responder
+from app.services.agent.middleware import (
+    build_system_prompt,
+    derive_thread_title,
+    sanitize_preview,
+    should_call_engine,
+    should_call_financials,
+    trim_conversation,
+)
+from app.services.agent.state import AgentRuntimeContext, ToolOutcome
+from app.services.agent.streaming import build_sse_event, persistable_event, should_persist_event
+from app.services.agent.tools.engine import EngineAgentTools
+from app.services.agent.tools.market import MarketAgentTools
+from app.services.agent.tools.portfolio import PortfolioAgentTools
+from app.services.agent.tools.research import ResearchAgentTools
+
+
+class AgentService:
+    def __init__(self):
+        self.repository = get_agent_repository()
+        self.portfolio_tools = PortfolioAgentTools()
+        self.market_tools = MarketAgentTools()
+        self.research_tools = ResearchAgentTools(self.repository)
+        self.engine_tools = EngineAgentTools()
+
+    async def create_thread(self, user_id: str, payload: AgentThreadCreate) -> AgentThread:
+        selected_ticker = payload.selectedTicker.upper() if payload.selectedTicker else None
+        title = payload.title.strip() if payload.title else "New AGOS Session"
+        return self.repository.create_thread(
+            user_id=user_id,
+            title=title,
+            mode=payload.mode,
+            selected_ticker=selected_ticker,
+        )
+
+    def list_threads(self, user_id: str) -> list[AgentThread]:
+        return self.repository.list_threads(user_id=user_id)
+
+    def delete_thread(self, user_id: str, thread_id: str) -> bool:
+        return self.repository.delete_thread(user_id=user_id, thread_id=thread_id)
+
+    async def generate_thread_title(self, user_id: str, thread_id: str) -> AgentThread:
+        thread = self.get_thread(user_id=user_id, thread_id=thread_id)
+        if not thread:
+            raise LookupError("Thread not found")
+        
+        messages = self.list_messages(thread_id=thread_id)
+        user_messages = [m for m in messages if m.role == "user"]
+        if not user_messages:
+            return thread
+            
+        first_msg = user_messages[0].content
+        
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        from app.core.config import settings
+        
+        if not settings.GEMINI_API_KEY:
+            # Fallback
+            from app.services.agent.middleware import derive_thread_title
+            new_title = derive_thread_title(first_msg, thread.selectedTicker)
+        else:
+            try:
+                llm = ChatGoogleGenerativeAI(
+                    model="gemini-3.1-flash-lite-preview",
+                    google_api_key=settings.GEMINI_API_KEY,
+                    temperature=0.3
+                )
+                prompt = f"Generate a very short 3-5 word title for a chat thread that starts with this user message: {first_msg}
+Return ONLY the title, no quotes or prefix."
+                resp = await llm.ainvoke(prompt)
+                new_title = resp.content.strip().strip('"').strip("'")
+                if thread.selectedTicker:
+                    new_title = f"{thread.selectedTicker.upper()} / {new_title}"
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Title generation failed: {e}")
+                from app.services.agent.middleware import derive_thread_title
+                new_title = derive_thread_title(first_msg, thread.selectedTicker)
+                
+        return self.repository.update_thread(
+            user_id=user_id,
+            thread_id=thread_id,
+            title=new_title
+        )
+
+    def get_thread(self, user_id: str, thread_id: str) -> Optional[AgentThread]:
+        return self.repository.get_thread(user_id=user_id, thread_id=thread_id)
+
+    def list_messages(self, thread_id: str) -> list[AgentMessage]:
+        return self.repository.list_messages(thread_id=thread_id)
+
+    def list_runs(self, thread_id: str) -> list[AgentRun]:
+        return self.repository.list_runs(thread_id=thread_id)
+
+    def get_run(self, thread_id: str, run_id: str) -> Optional[AgentRun]:
+        return self.repository.get_run(thread_id=thread_id, run_id=run_id)
+
+    def list_events(self, thread_id: str, run_id: Optional[str] = None) -> list[AgentEvent]:
+        return self.repository.list_events(thread_id=thread_id, run_id=run_id)
+
+    async def run_once(
+        self,
+        *,
+        user_id: str,
+        auth_subject: str | None,
+        auth_token: str | None,
+        thread_id: str,
+        payload: AgentRunRequest,
+    ) -> AgentRunResult:
+        run_id: str | None = None
+        async for event in self.stream_run_events(
+            user_id=user_id,
+            auth_subject=auth_subject,
+            auth_token=auth_token,
+            thread_id=thread_id,
+            payload=payload,
+        ):
+            if event.type == "run.started":
+                run_id = event.runId
+
+        if run_id is None:
+            raise RuntimeError("Run failed to start")
+
+        thread = self.get_thread(user_id=user_id, thread_id=thread_id)
+        run = self.get_run(thread_id=thread_id, run_id=run_id)
+        if thread is None or run is None:
+            raise RuntimeError("Run persistence incomplete")
+
+        messages = self.list_messages(thread_id)
+        assistant_message = next(
+            (
+                message
+                for message in reversed(messages)
+                if message.runId == run_id and message.role == "assistant"
+            ),
+            None,
+        )
+        events = self.list_events(thread_id=thread_id, run_id=run_id)
+        return AgentRunResult(thread=thread, run=run, assistantMessage=assistant_message, events=events)
+
+    async def stream_run_events(
+        self,
+        *,
+        user_id: str,
+        auth_subject: str | None,
+        auth_token: str | None,
+        thread_id: str,
+        payload: AgentRunRequest,
+    ) -> AsyncIterator[AgentSSEEvent]:
+        thread = self.get_thread(user_id=user_id, thread_id=thread_id)
+        if thread is None:
+            raise LookupError("Thread not found")
+
+        resolved_mode = payload.mode or thread.mode
+        selected_ticker = payload.selectedTicker.upper() if payload.selectedTicker else thread.selectedTicker
+        if thread.mode != resolved_mode or thread.selectedTicker != selected_ticker:
+            thread = self.repository.update_thread(
+                user_id=user_id,
+                thread_id=thread_id,
+                mode=resolved_mode,
+                selectedTicker=selected_ticker,
+            )
+
+        run_id = str(uuid4())
+        started_at = utc_now_iso()
+        run_started_perf = time.perf_counter()
+        run = AgentRun(
+            id=run_id,
+            threadId=thread_id,
+            userId=user_id,
+            model="pending",
+            mode=resolved_mode,
+            selectedTicker=selected_ticker,
+            status="running",
+            startedAt=started_at,
+        )
+        self.repository.create_run(run)
+
+        user_message = AgentMessage(
+            id=str(uuid4()),
+            threadId=thread_id,
+            runId=run_id,
+            role="user",
+            content=payload.message.strip(),
+            citations=[],
+            createdAt=started_at,
+            tokenCount=len(payload.message.split()),
+        )
+        self.repository.create_message(user_message)
+
+        if thread.title == "New AGOS Session":
+            thread = self.repository.update_thread(
+                user_id=user_id,
+                thread_id=thread_id,
+                title=derive_thread_title(payload.message, selected_ticker),
+            )
+            import asyncio
+            asyncio.create_task(self.generate_thread_title(user_id, thread_id))
+
+        history = trim_conversation(
+            [
+                message
+                for message in self.repository.list_messages(
+                    thread_id=thread_id,
+                    limit=settings.AGENT_HISTORY_WINDOW + 1,
+                )
+                if message.id != user_message.id
+            ],
+            settings.AGENT_HISTORY_WINDOW,
+        )
+        context = AgentRuntimeContext(
+            user_id=user_id,
+            mode=resolved_mode,
+            selected_ticker=selected_ticker,
+            correlation_id=str(uuid4()),
+            lookback_days=payload.lookbackDays,
+            auth_subject=auth_subject,
+            ui_context=payload.uiContext,
+            feature_flags={"action_tools": settings.AGENT_ENABLE_ACTION_TOOLS},
+        )
+        responder = build_agent_responder()
+
+        sequence = 0
+        persisted_events: list[AgentEvent] = []
+        assistant_chunks: list[str] = []
+        citations: list[Citation] = []
+        tool_outcomes: list[ToolOutcome] = []
+        first_token_at: float | None = None
+
+        def next_event(event_type: str, data: dict, source: str = "agent") -> AgentSSEEvent:
+            nonlocal sequence
+            sequence += 1
+            event = build_sse_event(
+                thread_id=thread_id,
+                run_id=run_id,
+                sequence=sequence,
+                event_type=event_type,
+                data=data,
+            )
+            if should_persist_event(event_type):
+                persisted_events.append(persistable_event(event, source=source))
+            return event
+
+        async def emit_tool(name: str, outcome: ToolOutcome) -> AsyncIterator[AgentSSEEvent]:
+            tool_outcomes.append(outcome)
+            citations.extend(outcome.citations)
+            yield next_event(
+                "tool.completed",
+                {
+                    "name": name,
+                    "summary": outcome.summary,
+                    "riskFlags": outcome.risk_flags,
+                },
+                source="tool",
+            )
+            for citation in outcome.citations:
+                yield next_event(
+                    "citation.added",
+                    {"citation": citation.model_dump(mode="json")},
+                    source="tool",
+                )
+
+        async def execute_tool(
+            name: str,
+            detail: str,
+            operation: Awaitable[ToolOutcome],
+        ) -> AsyncIterator[AgentSSEEvent]:
+            yield next_event("tool.started", {"name": name, "detail": detail}, source="tool")
+            try:
+                outcome = await operation
+            except Exception as exc:
+                error_message = sanitize_preview(str(exc) or f"{name} failed", limit=240)
+                tool_outcomes.append(
+                    ToolOutcome(
+                        name=name,
+                        summary=f"{name} was unavailable for this run.",
+                        payload={"error": error_message},
+                        risk_flags=["tool_error"],
+                    )
+                )
+                yield next_event(
+                    "tool.error",
+                    {"name": name, "error": error_message},
+                    source="tool",
+                )
+                return
+
+            async for event in emit_tool(name, outcome):
+                yield event
+
+        try:
+            yield next_event(
+                "run.started",
+                {
+                    "thread": thread.model_dump(mode="json"),
+                    "run": run.model_dump(mode="json"),
+                },
+            )
+            yield next_event("heartbeat", {"status": "alive"})
+            yield next_event(
+                "reasoning.step",
+                {
+                    "title": "Context assembly",
+                    "detail": "Loading operator context, conversation history, and required market data.",
+                },
+            )
+
+            if responder.reason:
+                yield next_event(
+                    "reasoning.step",
+                    {
+                        "title": "Responder mode",
+                        "detail": responder.reason,
+                    },
+                    source="runtime",
+                )
+
+            async for event in execute_tool(
+                "get_portfolio_snapshot",
+                "Loading portfolio-level context.",
+                self.portfolio_tools.get_portfolio_snapshot(user_id=user_id),
+            ):
+                yield event
+
+            if selected_ticker:
+                yield next_event(
+                    "reasoning.step",
+                    {
+                        "title": "Ticker context",
+                        "detail": f"Expanding market, research, and portfolio context for {selected_ticker}.",
+                    },
+                )
+
+                async for event in execute_tool(
+                    "get_portfolio_holding",
+                    f"Resolving existing exposure to {selected_ticker}.",
+                    self.portfolio_tools.get_portfolio_holding(user_id=user_id, ticker=selected_ticker),
+                ):
+                    yield event
+
+                async for event in execute_tool(
+                    "get_market_overview",
+                    f"Loading live market overview for {selected_ticker}.",
+                    self.market_tools.get_market_overview(selected_ticker),
+                ):
+                    yield event
+
+                async for event in execute_tool(
+                    "get_latest_news",
+                    f"Loading recent news sentiment for {selected_ticker}.",
+                    self.research_tools.get_latest_news(selected_ticker, limit=5),
+                ):
+                    yield event
+
+                async for event in execute_tool(
+                    "get_latest_pse_records",
+                    f"Loading persisted PSE records for {selected_ticker}.",
+                    self.research_tools.get_latest_pse_records(selected_ticker, limit=5),
+                ):
+                    yield event
+
+                if should_call_financials(payload.message):
+                    async for event in execute_tool(
+                        "get_financial_data",
+                        f"Loading financial disclosures for {selected_ticker}.",
+                        self.market_tools.get_financial_data(selected_ticker),
+                    ):
+                        yield event
+
+                    async for event in execute_tool(
+                        "get_financial_reports",
+                        f"Loading parsed financial reports for {selected_ticker}.",
+                        self.market_tools.get_financial_reports(selected_ticker),
+                    ):
+                        yield event
+
+            async for event in execute_tool(
+                "get_latest_macro",
+                "Loading macro backdrop for the current answer.",
+                self.research_tools.get_latest_macro(limit=5),
+            ):
+                yield event
+
+            if selected_ticker and should_call_engine(payload.message, resolved_mode):
+                async for event in execute_tool(
+                    "evaluate_trade",
+                    f"Requesting guarded trade evaluation for {selected_ticker}.",
+                    self.engine_tools.evaluate_trade(
+                        user_id=user_id,
+                        ticker=selected_ticker,
+                        lookback_days=payload.lookbackDays,
+                        auth_token=auth_token,
+                    ),
+                ):
+                    yield event
+
+            system_prompt = build_system_prompt(context)
+            yield next_event(
+                "reasoning.step",
+                {
+                    "title": "Synthesis",
+                    "detail": "Generating the final operator-facing answer from collected evidence.",
+                },
+            )
+
+            token_started_perf = time.perf_counter()
+            graph_state = {
+                "history": history,
+                "latest_user_message": payload.message,
+                "context": context,
+                "tool_outcomes": tool_outcomes,
+                "system_prompt": system_prompt,
+                "response": ""
+            }
+
+            import os
+            from app.services.agent.graph import build_agent_graph
+            from langgraph_checkpoint_cosmosdb import CosmosDBSaver
+            
+            # The langgraph_checkpoint_cosmosdb package reads from these specific environment variables
+            os.environ["COSMOSDB_ENDPOINT"] = settings.COSMOS_URI
+            os.environ["COSMOSDB_KEY"] = settings.COSMOS_PRIMARY_KEY
+            
+            saver = CosmosDBSaver(
+                database_name=settings.COSMOS_DATABASE_ID,
+                container_name=settings.COSMOS_AGENT_CHECKPOINTS_CONTAINER
+            )
+            
+            graph = build_agent_graph(checkpointer=saver)
+            config = {"configurable": {"thread_id": thread_id}}
+            
+            async for event_chunk in graph.astream(graph_state, config=config, stream_mode="custom"):
+                if first_token_at is None:
+                    first_token_at = (time.perf_counter() - token_started_perf) * 1000
+                if isinstance(event_chunk, dict) and event_chunk.get("type") == "message.delta":
+                    chunk = event_chunk["delta"]
+                    assistant_chunks.append(chunk)
+                    yield next_event(
+                        "message.delta",
+                        {"delta": chunk},
+                        source="assistant",
+                    )
+
+            assistant_content = "".join(assistant_chunks).strip()
+            if not assistant_content:
+                assistant_content = (
+                    "No model output was returned for this run. Review the evidence panel and retry once the model connection is stable."
+                )
+            assistant_message = AgentMessage(
+                id=str(uuid4()),
+                threadId=thread_id,
+                runId=run_id,
+                role="assistant",
+                content=assistant_content,
+                citations=citations,
+                createdAt=utc_now_iso(),
+                tokenCount=len(assistant_content.split()),
+            )
+            self.repository.create_message(assistant_message)
+
+            completed_at = utc_now_iso()
+            latency_ms = (time.perf_counter() - run_started_perf) * 1000
+            run = self.repository.update_run(
+                thread_id=thread_id,
+                run_id=run_id,
+                model=responder.model_name,
+                status="completed",
+                completedAt=completed_at,
+                latencyMs=latency_ms,
+                ttftMs=first_token_at,
+                summary=sanitize_preview(assistant_content),
+                usage={
+                    "toolCount": len(tool_outcomes),
+                    "citationCount": len(citations),
+                    "tokenCount": assistant_message.tokenCount,
+                },
+                error=None,
+            )
+            thread = self.repository.update_thread(
+                user_id=user_id,
+                thread_id=thread_id,
+                mode=resolved_mode,
+                selectedTicker=selected_ticker,
+                lastRunStatus="completed",
+                lastAssistantPreview=sanitize_preview(assistant_content),
+            )
+
+            final_events = [
+                next_event(
+                    "message.completed",
+                    {
+                        "message": assistant_message.model_dump(mode="json"),
+                        "citations": [citation.model_dump(mode="json") for citation in citations],
+                    },
+                    source="assistant",
+                ),
+                next_event(
+                    "checkpoint.saved",
+                    {
+                        "messagesPersisted": 2,
+                        "eventCount": len(persisted_events),
+                        "threadUpdatedAt": thread.updatedAt,
+                    },
+                    source="persistence",
+                ),
+                next_event(
+                    "run.completed",
+                    {
+                        "thread": thread.model_dump(mode="json"),
+                        "run": run.model_dump(mode="json"),
+                    },
+                    source="runtime",
+                ),
+            ]
+            self.repository.create_events(persisted_events)
+            for event in final_events:
+                yield event
+        except Exception as exc:
+            error_message = str(exc)
+            latency_ms = (time.perf_counter() - run_started_perf) * 1000
+            run = self.repository.update_run(
+                thread_id=thread_id,
+                run_id=run_id,
+                model=getattr(responder, "model_name", "error"),
+                status="error",
+                completedAt=utc_now_iso(),
+                latencyMs=latency_ms,
+                ttftMs=first_token_at,
+                error=error_message,
+                summary=None,
+            )
+            thread = self.repository.update_thread(
+                user_id=user_id,
+                thread_id=thread_id,
+                lastRunStatus="error",
+            )
+            error_event = next_event(
+                "run.error",
+                {
+                    "error": error_message,
+                    "run": run.model_dump(mode="json"),
+                    "thread": thread.model_dump(mode="json"),
+                },
+                source="runtime",
+            )
+            self.repository.create_events(persisted_events)
+            yield error_event
+
+
+service: AgentService | None = None
+
+
+def get_agent_service() -> AgentService:
+    global service
+    if service is None:
+        service = AgentService()
+    return service
