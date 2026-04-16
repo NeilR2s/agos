@@ -1,28 +1,20 @@
+from unittest.mock import AsyncMock, patch
+
 import pytest
-import pytest_asyncio
-from sqlalchemy.ext.asyncio import create_async_engine
 
-from db import Base
+from db import init_db
 
-
-@pytest_asyncio.fixture
-async def test_engine():
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield engine
-    await engine.dispose()
 
 @pytest.mark.asyncio
-async def test_database_initialization(test_engine):
-    """Test that all tables are created correctly in the SQLite db."""
-    async with test_engine.connect() as conn:
-        def get_tables(connection):
-            from sqlalchemy import inspect
-            inspector = inspect(connection)
-            return inspector.get_table_names()
+async def test_init_db():
+    with patch("db.CosmosClient") as mock_client_class:
+        mock_client = AsyncMock()
+        mock_client_class.return_value.__aenter__.return_value = mock_client
 
-        tables = await conn.run_sync(get_tables)
+        mock_db = AsyncMock()
+        mock_client.create_database_if_not_exists.return_value = mock_db
 
-    expected_tables = {'pse_stock_data', 'macro_data'}
-    assert expected_tables.issubset(set(tables))
+        await init_db()
+
+        mock_client.create_database_if_not_exists.assert_called_once()
+        assert mock_db.create_container_if_not_exists.call_count == 3

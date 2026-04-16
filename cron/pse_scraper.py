@@ -2,12 +2,13 @@ import asyncio
 import re
 from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import urlsplit
 
 from bs4 import BeautifulSoup
 from curl_cffi.requests import AsyncSession
 
 from base_scraper import BaseScraper
-from db import PSEStockData
+from config import settings
 
 
 class PSEScraper(BaseScraper):
@@ -15,18 +16,22 @@ class PSEScraper(BaseScraper):
     Scraper for Philippine Stock Exchange (PSE) EDGE data.
     """
 
-    SCRAPE_URL = "https://edge.pse.com.ph/companyDirectory/search.ax"
-    FORM_URL = "https://edge.pse.com.ph/companyDirectory/form.do"
-    STOCK_DATA_ENDPOINT = (
-        "https://edge.pse.com.ph/companyPage/stockData.do?cmpy_id={cmpy_id}&security_id={sec_id}"
-    )
+    SCRAPE_SOURCE = settings.PSE_DIRECTORY_SEARCH_SOURCE
+    FORM_SOURCE = settings.PSE_DIRECTORY_FORM_SOURCE
+    STOCK_DATA_SOURCE = settings.PSE_STOCK_DATA_SOURCE
+    HOME_SOURCE = settings.PSE_HOME_SOURCE
 
-    def __init__(self, db_session, max_concurrency: int = 20):
-        super().__init__(db_session, max_concurrency=max_concurrency)
+    def __init__(self, db_client, max_concurrency: int = 20):
+        super().__init__(db_client, max_concurrency=max_concurrency)
+        home_parts = urlsplit(self.HOME_SOURCE)
+        origin = ""
+        if home_parts.scheme and home_parts.netloc:
+            origin = f"{home_parts.scheme}://{home_parts.netloc}"
+
         self._form_headers = {
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-            "Origin": "https://edge.pse.com.ph",
-            "Referer": self.FORM_URL,
+            "Origin": origin,
+            "Referer": self.FORM_SOURCE,
             "X-Requested-With": "XMLHttpRequest",
             "User-Agent": "Mozilla/5.0",
         }
@@ -122,9 +127,9 @@ class PSEScraper(BaseScraper):
             "sector": "ALL",
             "subsector": "ALL",
         }
-        await self.fetch(session, "GET", self.FORM_URL)
+        await self.fetch(session, "GET", self.FORM_SOURCE)
         resp = await self.fetch(
-            session, "POST", self.SCRAPE_URL, headers=self._form_headers, data=payload
+            session, "POST", self.SCRAPE_SOURCE, headers=self._form_headers, data=payload
         )
         soup = BeautifulSoup(resp.content, "html.parser")
 
@@ -135,7 +140,7 @@ class PSEScraper(BaseScraper):
             p = payload.copy()
             p["pageNo"] = str(page_num)
             r = await self.fetch(
-                session, "POST", self.SCRAPE_URL, headers=self._form_headers, data=p
+                session, "POST", self.SCRAPE_SOURCE, headers=self._form_headers, data=p
             )
             return list(self._parse_company_list(BeautifulSoup(r.content, "html.parser")))
 
@@ -151,7 +156,7 @@ class PSEScraper(BaseScraper):
             resp = await self.fetch(
                 session,
                 "GET",
-                self.STOCK_DATA_ENDPOINT.format(
+                self.STOCK_DATA_SOURCE.format(
                     cmpy_id=company["companyId"], sec_id=company["securityId"]
                 ),
             )
@@ -159,7 +164,7 @@ class PSEScraper(BaseScraper):
             ticker = company["stockTicker"]
 
             await self.upsert(
-                PSEStockData,
+                settings.COSMOS_PSE_CONTAINER,
                 {
                     "hash": self.generate_hash(today_str, ticker),
                     "date": today_str,
@@ -193,11 +198,68 @@ class PSEScraper(BaseScraper):
         except Exception as e:
             self.logger.error(f"Failed to process {company.get('stockTicker')}: {e}")
 
+    async def scrape_indices(self, session: AsyncSession, today_str: str):
+        self.logger.info("Scraping PSE Indices...")
+        try:
+            resp = await self.fetch(session, "GET", self.HOME_SOURCE)
+            soup = BeautifulSoup(resp.content, "html.parser")
+
+            # Find the "Index Summary" heading and its following table
+            h3 = None
+            for h in soup.find_all("h3"):
+                if "Index Summary" in h.get_text():
+                    h3 = h
+                    break
+
+            if not h3:
+                self.logger.warning("Could not find Index Summary heading.")
+                return
+
+            table = h3.find_next("table")
+            if not table:
+                self.logger.warning("Could not find Index Summary table.")
+                return
+
+            for row in table.find_all("tr"):
+                cols = row.find_all("td")
+                if len(cols) < 2:
+                    continue
+
+                index_name = cols[0].get_text(strip=True)
+                index_val_str = cols[1].get_text(strip=True).replace(",", "")
+
+                try:
+                    index_val = float(index_val_str)
+                    await self.upsert(
+                        settings.COSMOS_MACRO_CONTAINER,
+                        {
+                            "hash": self.generate_hash(
+                                today_str, "PSE", "Market Index", index_name
+                            ),
+                            "date": today_str,
+                            "source": "PSE",
+                            "category": "Market Index",
+                            "indicator": index_name,
+                            "value": index_val,
+                            "frequency": "Daily",
+                            "description": f"PSE Index Summary: {index_name}",
+                        },
+                    )
+                except ValueError:
+                    continue
+
+        except Exception as e:
+            self.logger.error(f"Failed to scrape PSE indices: {e}")
+
     async def scrape_and_process(self):
         self.logger.info("Starting PSE scrape...")
         today_str = datetime.now(UTC).date().isoformat()
 
         async with self.get_http_session() as session:
+            # 1. Scrape Indices
+            await self.scrape_indices(session, today_str)
+
+            # 2. Scrape Companies
             companies = await self.get_companies(session)
             self.logger.info(f"Found {len(companies)} companies.")
 
@@ -206,6 +268,5 @@ class PSEScraper(BaseScraper):
                 chunk = companies[i : i + chunk_size]
                 tasks = [self.process_company(session, c, today_str) for c in chunk]
                 await asyncio.gather(*tasks)
-                await self.db_session.commit()
 
         return True
