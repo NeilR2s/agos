@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { normalizeEngineHealth } from "@/data/normalizeEngine";
 import { normalizePortfolio } from "@/data/normalizePortfolio";
 import { formatCurrency } from "@/lib/format";
+import { getSignedInUserIdentity } from "@/lib/authIdentity";
 import { useAuthStore } from "@/store/authStore";
 
 type SidebarProps = {
@@ -38,12 +39,14 @@ const navItems = [
 ];
 
 const compactRevealClass =
-    "max-w-0 overflow-hidden whitespace-nowrap opacity-100 transition-[max-width,opacity] duration-200 group-hover/sidebar:delay-200 group-hover/sidebar:max-w-full group-hover/sidebar:opacity-100";
+    "max-w-0 overflow-hidden whitespace-nowrap opacity-100 transition-[max-width,opacity] duration-200 group-hover/sidebar:delay-200 group-hover/sidebar:max-w-full group-hover/sidebar:opacity-100 group-focus-within/sidebar:delay-200 group-focus-within/sidebar:max-w-full group-focus-within/sidebar:opacity-100";
 
 export function Sidebar({ onOpenPalette, onNavigate, showLabels = false, className }: SidebarProps) {
     const location = useLocation();
     const userId = getUserId();
+    const authUser = useAuthStore((state) => state.user);
     const logout = useAuthStore((state) => state.logout);
+    const signedInUser = getSignedInUserIdentity(authUser);
 
     const portfolioQuery = useQuery({
         queryKey: ["sidebar-portfolio", userId],
@@ -98,7 +101,7 @@ export function Sidebar({ onOpenPalette, onNavigate, showLabels = false, classNa
                         aria-label="AGOS home"
                         className={cn(
                             "block font-mono text-[14px] uppercase tracking-[1.4px] text-white transition-colors hover:text-white/50",
-                            showLabels ? "flex-none" : "flex-1 text-center group-hover/sidebar:flex-none group-hover/sidebar:text-left"
+                            showLabels ? "flex-none" : "flex-1 text-center group-hover/sidebar:flex-none group-hover/sidebar:text-left group-focus-within/sidebar:flex-none group-focus-within/sidebar:text-left"
                         )}
                     >
                         <span className="inline-block whitespace-nowrap">AGOS</span>
@@ -112,7 +115,7 @@ export function Sidebar({ onOpenPalette, onNavigate, showLabels = false, classNa
                             "text-white/40 hover:text-white",
                             showLabels
                                 ? "flex-none"
-                                : "pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 opacity-0 transition-opacity duration-200 group-hover/sidebar:static group-hover/sidebar:pointer-events-auto group-hover/sidebar:delay-200 group-hover/sidebar:opacity-100 group-hover/sidebar:translate-y-0"
+                                : "pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 opacity-0 transition-opacity duration-200 group-hover/sidebar:static group-hover/sidebar:pointer-events-auto group-hover/sidebar:delay-200 group-hover/sidebar:opacity-100 group-hover/sidebar:translate-y-0 group-focus-within/sidebar:static group-focus-within/sidebar:pointer-events-auto group-focus-within/sidebar:delay-200 group-focus-within/sidebar:opacity-100 group-focus-within/sidebar:translate-y-0"
                         )}
                         aria-label="Open command palette"
                     >
@@ -120,7 +123,9 @@ export function Sidebar({ onOpenPalette, onNavigate, showLabels = false, classNa
                     </Button>
                 </div>
 
-                <div className={cn("flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/30", showLabels ? "px-2 opacity-100" : "max-w-0 overflow-hidden px-0 opacity-0 transition-[max-width,opacity,padding] duration-200 group-hover/sidebar:delay-200 group-hover/sidebar:max-w-full group-hover/sidebar:px-2 group-hover/sidebar:opacity-100")}>
+                <div
+                    className={cn("flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/30", showLabels ? "px-2 opacity-100" : "max-w-0 overflow-hidden px-0 opacity-0 transition-[max-width,opacity,padding] duration-200 group-hover/sidebar:delay-200 group-hover/sidebar:max-w-full group-hover/sidebar:px-2 group-hover/sidebar:opacity-100 group-focus-within/sidebar:delay-200 group-focus-within/sidebar:max-w-full group-focus-within/sidebar:px-2 group-focus-within/sidebar:opacity-100")}
+                >
                     <Kbd>Ctrl</Kbd>
                     <Kbd>Shift</Kbd>
                     <Kbd>P</Kbd>
@@ -143,7 +148,7 @@ export function Sidebar({ onOpenPalette, onNavigate, showLabels = false, classNa
                                 title={item.label}
                                 className={cn(
                                     "flex w-full items-center py-2 font-mono text-[12px] uppercase tracking-[1.4px] transition-colors",
-                                    showLabels ? "justify-start gap-3 px-2" : "justify-center gap-0 px-0 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-2",
+                                    showLabels ? "justify-start gap-3 px-2" : "justify-center gap-0 px-0 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-2 group-focus-within/sidebar:justify-start group-focus-within/sidebar:gap-3 group-focus-within/sidebar:px-2",
                                     isActive ? "text-white" : "text-white/50 hover:text-white"
                                 )}
                             >
@@ -198,15 +203,23 @@ export function Sidebar({ onOpenPalette, onNavigate, showLabels = false, classNa
             </div>
 
             <div className="space-y-3 border-t border-border pt-4">
+                <div className={cn("space-y-1 transition-[max-width,opacity,padding] duration-200", showLabels ? "opacity-100" : compactRevealClass)}>
+                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Signed In</p>
+                    <p className="truncate font-sans text-[12px] text-white">{signedInUser.primary}</p>
+                    {signedInUser.secondary ? (
+                        <p className="truncate font-mono text-[10px] uppercase tracking-[1.2px] text-white/30">{signedInUser.secondary}</p>
+                    ) : null}
+                </div>
+
                 <div className="flex items-center justify-between gap-3">
                     <span className={cn("font-mono text-[10px] uppercase tracking-[1.4px] text-white/30 transition-[max-width,opacity] duration-200", showLabels ? "opacity-100" : compactRevealClass)}>Engine</span>
-                    <Badge variant="outline" className={cn("border-border text-white/70 transition-[max-width,opacity,padding] duration-200", showLabels ? "opacity-100" : "max-w-0 overflow-hidden border-transparent px-0 opacity-0 group-hover/sidebar:delay-200 group-hover/sidebar:max-w-full group-hover/sidebar:border-border group-hover/sidebar:px-[8px] group-hover/sidebar:opacity-100")}>
+                    <Badge variant="outline" className={cn("border-border text-white/70 transition-[max-width,opacity,padding] duration-200", showLabels ? "opacity-100" : "max-w-0 overflow-hidden border-transparent px-0 opacity-0 group-hover/sidebar:delay-200 group-hover/sidebar:max-w-full group-hover/sidebar:border-border group-hover/sidebar:px-[8px] group-hover/sidebar:opacity-100 group-focus-within/sidebar:delay-200 group-focus-within/sidebar:max-w-full group-focus-within/sidebar:border-border group-focus-within/sidebar:px-[8px] group-focus-within/sidebar:opacity-100")}>
                         {status}
                     </Badge>
                 </div>
                 <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
                     <span>v{version}</span>
-                    <button onClick={logout} className={cn("text-white/50 hover:text-white transition-colors flex items-center gap-1", showLabels ? "opacity-100" : compactRevealClass)}>
+                    <button onClick={logout} className={cn("flex items-center gap-1 text-white/50 transition-colors hover:text-white", showLabels ? "opacity-100" : compactRevealClass)}>
                         LOGOUT <ArrowLeftOnRectangleIcon className="size-3" />
                     </button>
                 </div>

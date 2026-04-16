@@ -18,6 +18,14 @@ const dedupeCitations = (citations: Citation[]) => {
   });
 };
 
+const findEventBoundary = (buffer: string) => {
+  const match = /\r?\n\r?\n/.exec(buffer);
+  if (!match || match.index === undefined) {
+    return null;
+  }
+  return { index: match.index, length: match[0].length };
+};
+
 const parseEventBlock = (block: string): AgentSSEEvent | null => {
   const lines = block.split(/\r?\n/);
   let data = "";
@@ -62,6 +70,12 @@ export function useAgentStream() {
     abortRef.current?.abort();
     abortRef.current = null;
     sawTerminalEventRef.current = false;
+    setEvents([]);
+    setLiveMessage("");
+    setCompletedMessage(null);
+    setLiveCitations([]);
+    setRun(null);
+    setError(null);
     setStatus("idle");
   }, []);
 
@@ -158,15 +172,15 @@ export function useAgentStream() {
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
-        let boundary = buffer.indexOf("\n\n");
-        while (boundary >= 0) {
-          const block = buffer.slice(0, boundary).trim();
-          buffer = buffer.slice(boundary + 2);
+        let boundary = findEventBoundary(buffer);
+        while (boundary) {
+          const block = buffer.slice(0, boundary.index).trim();
+          buffer = buffer.slice(boundary.index + boundary.length);
           const parsed = parseEventBlock(block);
           if (parsed) {
             handleEvent(parsed);
           }
-          boundary = buffer.indexOf("\n\n");
+          boundary = findEventBoundary(buffer);
         }
       }
 

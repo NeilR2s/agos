@@ -607,7 +607,7 @@ export const ResearchView = () => {
 
     return (
         <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-8 px-6 py-8 md:px-8 md:py-12">
-            <header className="grid gap-4 border-b border-border pb-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,420px)] lg:items-start lg:gap-8">
+            <header className="grid gap-4 border-b border-border pb-6 lg:grid-cols-[minmax(0,1fr)_minmax(560px,640px)] lg:items-start lg:gap-8">
                 <div className="space-y-3">
                     <Badge variant="outline" className="border-border text-white/70">
                         Market Research
@@ -618,7 +618,7 @@ export const ResearchView = () => {
                     </p>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-start lg:pt-1">
+                <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-start lg:pt-1">
                     <TickerAutocompleteInput
                         value={tickerDraft}
                         onChange={setTickerDraft}
@@ -1136,24 +1136,52 @@ export const ResearchView = () => {
                         <CardTitle>News Sentiment</CardTitle>
                         <CardDescription>Filtered by ticker and limited to the most recent items.</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-3">
-                        {newsQuery.data?.length ? newsQuery.data.map((item, index) => (
-                            <div key={index} className="space-y-2 border-b border-border pb-3 last:border-b-0 last:pb-0">
-                                <div className="flex items-start justify-between gap-3">
-                                    <p className="font-sans text-sm leading-[1.5] text-white">{String(item.headline ?? item.title ?? "Untitled")}</p>
-                                    <Badge variant="outline" className="border-border text-white/70">
-                                        {String(item.sentiment_label ?? "Neutral")}
-                                    </Badge>
-                                </div>
-                                <p className="font-sans text-[14px] leading-[1.5] text-white/70">
-                                    {String(item.summary ?? "")}
-                                </p>
-                                <div className="flex flex-wrap gap-4 font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">
-                                    <span>{String(item.date ?? "---")}</span>
-                                    <span>{formatNumber(Number(item.sentiment_score ?? 0))}</span>
-                                </div>
-                            </div>
-                        )) : <EmptyState label="No news items available." />}
+                    <CardContent className="max-h-[55vh] space-y-3 overflow-y-auto pr-2 [scrollbar-gutter:stable] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                        {newsQuery.data?.length ? newsQuery.data.map((item, index) => {
+                            const headline = String(item.headline ?? item.title ?? "Untitled");
+                            const sourceUrl = getNewsSourceUrl(item);
+
+                            return (
+                                <article key={index} className="space-y-2 border-b border-border pb-3 last:border-b-0 last:pb-0">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0 space-y-1">
+                                            {sourceUrl ? (
+                                                <a
+                                                    href={sourceUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="block text-left font-sans text-sm leading-[1.5] text-white underline-offset-4 transition-colors hover:text-white/70 hover:underline"
+                                                >
+                                                    {headline}
+                                                </a>
+                                            ) : (
+                                                <p className="font-sans text-sm leading-[1.5] text-white">{headline}</p>
+                                            )}
+                                            {sourceUrl ? (
+                                                <a
+                                                    href={sourceUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[1.4px] text-white/30 transition-colors hover:text-white/70"
+                                                >
+                                                    Open article <ArrowTopRightOnSquareIcon className="size-3" />
+                                                </a>
+                                            ) : null}
+                                        </div>
+                                        <Badge variant="outline" className="border-border text-white/70">
+                                            {String(item.sentiment_label ?? "Neutral")}
+                                        </Badge>
+                                    </div>
+                                    <p className="font-sans text-[14px] leading-[1.5] text-white/70">
+                                        {String(item.summary ?? "")}
+                                    </p>
+                                    <div className="flex flex-wrap gap-4 font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">
+                                        <span>{String(item.date ?? "---")}</span>
+                                        <span>{formatNumber(Number(item.sentiment_score ?? 0))}</span>
+                                    </div>
+                                </article>
+                            );
+                        }) : <EmptyState label="No news items available." />}
                     </CardContent>
                 </Card>
             </section>
@@ -1377,6 +1405,14 @@ function getDisclosureViewerState(item: Record<string, unknown>, fallbackCompany
         url,
         externalUrl,
     };
+}
+
+function getNewsSourceUrl(item: Record<string, unknown>) {
+    const candidateUrls = [item.url, item.link, item.article_url, item.externalUrl, item.external_url, item.Link, item.URL].filter(
+        (value): value is string => typeof value === "string" && value.trim().length > 0
+    );
+
+    return candidateUrls[0] ?? null;
 }
 
 function FinancialReportBlock({

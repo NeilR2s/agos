@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -7,9 +7,7 @@ import { agentApi } from "@/api/backend/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AgentComposer } from "@/features/agent/components/AgentComposer";
-import { AgentRunStatus } from "@/features/agent/components/AgentRunStatus";
 import { AgentThreadList } from "@/features/agent/components/AgentThreadList";
-import { AgentTracePanel } from "@/features/agent/components/AgentTracePanel";
 import { AgentTranscript } from "@/features/agent/components/AgentTranscript";
 import { useAgentStream } from "@/features/agent/hooks/useAgentStream";
 import type { AgentMessage, AgentMode, AgentRunRequest, AgentSSEEvent, AgentThread, Citation } from "@/features/agent/types";
@@ -50,6 +48,8 @@ export function AgentPage() {
   const [composerValue, setComposerValue] = useState("");
   const [threadQuery, setThreadQuery] = useState("");
   const [pendingUserMessage, setPendingUserMessage] = useState<AgentMessage | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   const threadId = searchParams.get("thread");
   const selectedTicker = (searchParams.get("ticker") ?? "").trim().toUpperCase() || null;
@@ -166,9 +166,27 @@ export function AgentPage() {
     const thread = (threadsQuery.data ?? []).find((item) => item.id === nextThreadId);
     if (thread?.selectedTicker) {
       next.set("ticker", thread.selectedTicker);
+    } else {
+      next.delete("ticker");
     }
     next.set("mode", thread?.mode ?? mode);
     setSearchParams(next, { replace: true });
+  };
+
+
+  const handleDeleteThread = async (id: string) => {
+    try {
+      await agentApi.deleteThread(id);
+      queryClient.setQueryData<AgentThread[]>(["agent-threads"], (current) => 
+        (current ?? []).filter(t => t.id !== id)
+      );
+      if (threadId === id) {
+        handleNewThread();
+      }
+      toast.success("Thread deleted");
+    } catch {
+      toast.error("Failed to delete thread");
+    }
   };
 
   const handleNewThread = () => {
@@ -185,48 +203,56 @@ export function AgentPage() {
 
   const handleSubmit = async () => {
     const trimmed = composerValue.trim();
-    if (!trimmed || stream.isStreaming) return;
+    if (!trimmed || stream.isStreaming || isSubmittingRef.current) return;
 
-    let nextThreadId = threadId;
-    let createdThread: AgentThread | null = null;
-    if (!nextThreadId) {
-      createdThread = await agentApi.createThread({ mode, selectedTicker: selectedTicker ?? undefined });
-      nextThreadId = createdThread.id;
-      queryClient.setQueryData<AgentThread[]>(["agent-threads"], (current) => [createdThread as AgentThread, ...(current ?? [])]);
-      const next = new URLSearchParams(searchParams);
-      next.set("thread", createdThread.id);
-      next.set("mode", createdThread.mode);
-      if (selectedTicker) {
-        next.set("ticker", selectedTicker);
-      }
-      setSearchParams(next, { replace: true });
-    }
-
-    const message = trimmed;
-    setComposerValue("");
-    setPendingUserMessage({
-      id: `pending-${Date.now()}`,
-      threadId: nextThreadId,
-      runId: null,
-      role: "user",
-      content: message,
-      citations: [],
-      createdAt: new Date().toISOString(),
-      tokenCount: message.split(/\s+/).length,
-      kind: "message",
-    });
-
-    const body: AgentRunRequest = {
-      message,
-      mode,
-      selectedTicker: selectedTicker ?? undefined,
-      uiContext: {
-        pathname: window.location.pathname,
-        search: window.location.search,
-      },
-    };
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
 
     try {
+      let nextThreadId = threadId;
+      let nextSelectedTicker = selectedTicker ?? undefined;
+
+      if (!nextThreadId) {
+        const createdThread = await agentApi.createThread({ mode, selectedTicker: selectedTicker ?? undefined });
+        nextThreadId = createdThread.id;
+        nextSelectedTicker = createdThread.selectedTicker ?? undefined;
+        queryClient.setQueryData<AgentThread[]>(["agent-threads"], (current) => [createdThread, ...(current ?? [])]);
+
+        const next = new URLSearchParams(searchParams);
+        next.set("thread", createdThread.id);
+        next.set("mode", createdThread.mode);
+        if (createdThread.selectedTicker) {
+          next.set("ticker", createdThread.selectedTicker);
+        } else {
+          next.delete("ticker");
+        }
+        setSearchParams(next, { replace: true });
+      }
+
+      const message = trimmed;
+      setComposerValue("");
+      setPendingUserMessage({
+        id: `pending-${Date.now()}`,
+        threadId: nextThreadId,
+        runId: null,
+        role: "user",
+        content: message,
+        citations: [],
+        createdAt: new Date().toISOString(),
+        tokenCount: message.split(/\s+/).length,
+        kind: "message",
+      });
+
+      const body: AgentRunRequest = {
+        message,
+        mode,
+        selectedTicker: nextSelectedTicker,
+        uiContext: {
+          pathname: window.location.pathname,
+          search: window.location.search,
+        },
+      };
+
       await stream.startRun({ threadId: nextThreadId, body });
       await syncQueries(nextThreadId);
     } catch (error) {
@@ -234,6 +260,8 @@ export function AgentPage() {
       toast.error(detail);
     } finally {
       setPendingUserMessage(null);
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -263,7 +291,7 @@ export function AgentPage() {
         </div>
       </header>
 
-      <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)_340px] xl:items-start">
+      <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)] xl:items-start">
         <div className="order-2 xl:order-1">
           <AgentThreadList
             threads={threads}
@@ -272,32 +300,24 @@ export function AgentPage() {
             onQueryChange={setThreadQuery}
             onSelect={handleSelectThread}
             onNewThread={handleNewThread}
+            onDelete={handleDeleteThread}
             isLoading={threadsQuery.isLoading}
           />
         </div>
 
         <div className="order-1 space-y-4 xl:order-2">
-          <AgentTranscript messages={combinedMessages} isStreaming={stream.isStreaming} />
+          <AgentTranscript messages={combinedMessages} isStreaming={stream.isStreaming} events={mergedEvents} citations={citations} />
           <AgentComposer
             value={composerValue}
             onChange={setComposerValue}
             onSubmit={handleSubmit}
-            isStreaming={stream.isStreaming}
+            isStreaming={stream.isStreaming || isSubmitting}
             selectedTicker={selectedTicker}
             mode={mode}
           />
         </div>
 
-        <div className="order-3 space-y-4 xl:order-3">
-          <AgentRunStatus
-            run={stream.run ?? runsQuery.data?.[0] ?? null}
-            isStreaming={stream.isStreaming}
-            error={stream.error}
-            citationCount={citations.length}
-            selectedTicker={selectedTicker}
-          />
-          <AgentTracePanel events={mergedEvents} citations={citations} />
-        </div>
+        
       </div>
     </div>
   );

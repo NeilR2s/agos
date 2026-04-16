@@ -73,8 +73,8 @@ export const LandingPage = () => {
                     </div>
 
                     <div className="flex items-center gap-6">
-                        <Link 
-                            to="/trading" 
+                        <Link
+                            to="/research"
                             className="hidden sm:block font-mono text-[12px] uppercase tracking-[1.4px] border border-white/20 px-4 py-2 hover:bg-white hover:text-background transition-colors"
                         >
                             ACCESS TERMINAL
@@ -96,7 +96,7 @@ export const LandingPage = () => {
                                 AGENTIC GRAPH OBSERVATION SYSTEM — V1.0.0
                             </Badge>
                         </div>
-                        
+
                         <h1 className="display-hero mb-12 select-none">
                             AGOS
                         </h1>
@@ -106,14 +106,14 @@ export const LandingPage = () => {
                         </p>
 
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                            <Link 
-                                to="/research" 
+                            <Link
+                                to="/research"
                                 className="w-full sm:w-auto bg-white text-background font-mono text-[14px] uppercase tracking-[1.4px] px-12 py-4 transition-opacity hover:opacity-90"
                             >
                                 TRY AGOS
                             </Link>
-                            <Link 
-                                to="/portfolio" 
+                            <Link
+                                to="/portfolio"
                                 className="w-full sm:w-auto border border-white/20 text-white font-mono text-[14px] uppercase tracking-[1.4px] px-12 py-4 transition-all hover:bg-white/5"
                             >
                                 VIEW PORTFOLIO
@@ -146,8 +146,8 @@ export const LandingPage = () => {
                             {architectureBlocks.map((block) => {
                                 const Icon = block.icon;
                                 return (
-                                    <article 
-                                        key={block.title} 
+                                    <article
+                                        key={block.title}
                                         className="bg-background p-10 group hover:bg-white/[0.02] transition-colors"
                                     >
                                         <div className="size-12 border border-white/20 flex items-center justify-center mb-8">
@@ -173,15 +173,15 @@ export const LandingPage = () => {
                             MOVE FROM OVERVIEW INTO LIVE DECISION SURFACES.
                         </h2>
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-                            <Link 
-                                to="/research" 
+                            <Link
+                                to="/research"
                                 className="font-mono text-[14px] uppercase tracking-[1.4px] text-white border-b border-white/40 pb-1 hover:border-white transition-colors"
                             >
                                 INSPECT MODEL TRACES
                             </Link>
                             <span className="hidden sm:inline text-white/20 font-mono">—</span>
-                            <Link 
-                                to="/trading" 
+                            <Link
+                                to="/trading"
                                 className="font-mono text-[14px] uppercase tracking-[1.4px] text-white border-b border-white/40 pb-1 hover:border-white transition-colors"
                             >
                                 OPEN TERMINAL

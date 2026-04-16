@@ -85,6 +85,17 @@ export const agentApi = {
     return backendJson<AgentThread[]>("/api/v1/agent/threads");
   },
 
+  async deleteThread(threadId: string) {
+    const token = useAuthStore.getState().token;
+    const response = await fetch(`${backendUrl}/api/v1/agent/threads/${threadId}`, {
+      method: "DELETE",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    });
+    if (!response.ok) throw new Error("Failed to delete thread");
+  },
+
   getThread(threadId: string) {
     return backendJson<AgentThread>(`/api/v1/agent/threads/${threadId}`);
   },

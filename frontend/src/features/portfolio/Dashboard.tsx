@@ -238,17 +238,19 @@ export const Dashboard = () => {
             <header className="flex flex-col gap-4 border-b border-border pb-6 md:flex-row md:items-end md:justify-between">
                 <div className="space-y-3">
                     <Badge variant="outline" className="border-border text-white/70">
-                        Portfolio / {userId}
+                        Portfolio
                     </Badge>
                     <h1 className="font-sans text-[30px] leading-[1.2]">Portfolio Control Surface</h1>
                     <p className="max-w-[700px] font-sans text-[16px] leading-[1.5] text-white/70">
                         Manage holdings and cash directly from the dashboard. The live portfolio value, cash balance, and position-level metrics refresh automatically from the backend.
                     </p>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                    <Button variant="outline" onClick={() => setHoldingDialog({ mode: "add" })}>
-                        Add Holding
-                    </Button>
+                <div className="flex flex-col items-start gap-3 md:items-end">
+                    <div className="flex flex-wrap gap-3">
+                        <Button variant="outline" onClick={() => setHoldingDialog({ mode: "add" })}>
+                            Add Holding
+                        </Button>
+                    </div>
                 </div>
             </header>
 

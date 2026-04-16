@@ -23,6 +23,8 @@ import { extractErrorMessage, formatCurrency, formatNumber } from "@/lib/format"
 import { normalizeEngineHealth, normalizeTradeDecision, type TradeDecision } from "@/data/normalizeEngine";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getSignedInUserIdentity } from "@/lib/authIdentity";
+import { useAuthStore } from "@/store/authStore";
 
 const evaluationStages = [
   "Ingesting price history",
@@ -84,6 +86,8 @@ export function TradeWorkbench({
   className,
 }: TradeWorkbenchProps) {
   const [tickerInput, setTickerInput] = useState(ticker);
+  const authUser = useAuthStore((state) => state.user);
+  const signedInUser = getSignedInUserIdentity(authUser);
   const [decision, setDecision] = useState<TradeDecision | null>(null);
   const [displayedReasoning, setDisplayedReasoning] = useState("");
   const [isOverrideOpen, setIsOverrideOpen] = useState(false);
@@ -332,7 +336,7 @@ export function TradeWorkbench({
                       <DialogHeader>
                         <DialogTitle>Manual Override</DialogTitle>
                         <DialogDescription>
-                          All overrides are logged with User ID {getUserId()} and the current ticker context.
+                          All overrides are logged for {signedInUser.primary}{signedInUser.secondary ? ` / ${signedInUser.secondary}` : ""} and the current ticker context.
                         </DialogDescription>
                       </DialogHeader>
 
