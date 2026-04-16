@@ -1,3 +1,13 @@
-beautifulsoup4
-curl-cffi
-lxml
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-dotenv
+pandas
+httpx
+azure-cosmos
+torch
+aiohttp
+git+https://github.com/amazon-science/chronos-forecasting.git
+firebase-admin
+slowapi
