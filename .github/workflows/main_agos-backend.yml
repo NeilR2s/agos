@@ -8,6 +8,10 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/main_agos-backend.yml'
+
   workflow_dispatch:
 
 jobs:
@@ -27,6 +31,7 @@ jobs:
       # 🛠️ Local Build Section (Optional)
       # The following section in your workflow is designed to catch build issues early on the client side, before deployment. This can be helpful for debugging and validation. However, if this step significantly increases deployment time and early detection is not critical for your workflow, you may remove this section to streamline the deployment process.
       - name: Create and Start virtual environment and Install dependencies
+        working-directory: ./backend
         run: |
           python -m venv antenv
           source antenv/bin/activate
@@ -38,7 +43,7 @@ jobs:
         with:
           name: python-app
           path: |
-            .
+            backend/**
             !antenv/
 
       # 🚫 Opting Out of Oryx Build
@@ -50,17 +55,22 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
+    permissions: 
+      id-token: write
+      contents: read
     
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: python-app
+          path: ./backend
       
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
           app-name: 'agos-backend'
+          package: ./api
           slot-name: 'Production'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_33D4FF1510D64392B34578CD3D307715 }}
