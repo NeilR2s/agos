@@ -1,0 +1,114 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
+@theme inline {
+    /* Fonts */
+    --font-heading: 'Geist Mono Variable', monospace;
+    --font-sans: 'Geist Variable', sans-serif;
+    --font-mono: 'Geist Mono Variable', monospace;
+    
+    /* Colors - xAI inspired */
+    --color-background: #1f2228;
+    --color-foreground: #ffffff;
+
+    --color-primary: #ffffff;
+    --color-primary-foreground: #1f2228;
+
+    --color-secondary: rgba(255, 255, 255, 0.05);
+    --color-secondary-foreground: #ffffff;
+
+    --color-destructive: #ff4444;
+    --color-destructive-foreground: #ffffff;
+
+    --color-muted: rgba(255, 255, 255, 0.03);
+    --color-muted-foreground: rgba(255, 255, 255, 0.5);
+
+    --color-accent: rgba(255, 255, 255, 0.08);
+    --color-accent-foreground: #ffffff;
+
+    --color-popover: #1f2228;
+    --color-popover-foreground: #ffffff;
+
+    --color-card: rgba(255, 255, 255, 0.03);
+    --color-card-foreground: #ffffff;
+
+    --color-border: rgba(255, 255, 255, 0.1);
+    --color-border-strong: rgba(255, 255, 255, 0.2);
+    --color-input: rgba(255, 255, 255, 0.2);
+    --color-ring: rgb(59 130 246 / 0.5);
+
+    /* Radius - 0px for brutalism */
+    --radius-sm: 0px;
+    --radius-md: 0px;
+    --radius-lg: 0px;
+    --radius-xl: 0px;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  /* Remove native input chrome that shows up as scrollbar/spinner controls. */
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  textarea {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  textarea::-webkit-scrollbar {
+    display: none;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  
+  /* Monospace Display Scale */
+  .display-hero {
+    @apply font-mono font-light uppercase tracking-normal;
+    font-size: clamp(48px, 20vw, 320px);
+    line-height: 1.1;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-sans font-normal;
+  }
+}
+
+@keyframes terminal-blink {
+  0%, 49% {
+    opacity: 1;
+  }
+
+  50%, 100% {
+    opacity: 0;
+  }
+}
+
+.cursor-block {
+  animation: terminal-blink 1s steps(1) infinite;
+}
+
+@layer components {
+  .btn-monospace {
+    @apply font-mono uppercase tracking-[1.4px] text-[14px] px-6 py-3 transition-opacity;
+  }
+  
+  .btn-monospace:hover {
+    @apply opacity-50; /* xAI dims on hover */
+  }
+}
