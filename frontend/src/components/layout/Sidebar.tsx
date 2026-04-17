@@ -37,7 +37,6 @@ type SidebarProps = {
 };
 
 const navItems = [
-    { to: "/", label: "Landing", icon: HomeIcon, aliases: ["/index"] },
     { to: "/research", label: "Research", icon: MagnifyingGlassIcon, aliases: ["/market"] },
     { to: "/portfolio", label: "Portfolio", icon: BriefcaseIcon, aliases: ["/dashboard"] },
     { to: "/trading", label: "Trading", icon: CommandLineIcon, aliases: [] },
