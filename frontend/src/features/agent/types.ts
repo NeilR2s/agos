@@ -1,5 +1,39 @@
 export type AgentMode = "general" | "research" | "trading";
 export type AgentRole = "user" | "assistant" | "system";
+export type AgentModelPreset = "agos-swift" | "agos-core" | "agos-deep";
+export type AgentThinkingLevel = "minimal" | "low" | "medium" | "high";
+
+export interface AgentExternalCapability {
+  id: string;
+  label: string;
+  kind: "remote_mcp" | "custom_tool" | "skill";
+  enabled: boolean;
+  status: "planned" | "configured";
+  endpoint?: string | null;
+  description?: string | null;
+}
+
+export interface AgentToolSettings {
+  portfolio: boolean;
+  market: boolean;
+  research: boolean;
+  engine: boolean;
+  webSearch: boolean;
+  codeExecution: boolean;
+  urlContext: boolean;
+}
+
+export interface AgentRunConfig {
+  modelPreset: AgentModelPreset;
+  temperature: number;
+  topP: number;
+  maxOutputTokens: number;
+  thinkingLevel: AgentThinkingLevel;
+  maxAgents: number;
+  tools: AgentToolSettings;
+  skills: string[];
+  externalCapabilities: AgentExternalCapability[];
+}
 
 export interface Citation {
   label: string;
@@ -27,6 +61,7 @@ export interface AgentMessage {
   id: string;
   threadId: string;
   runId?: string | null;
+  agentId?: string | null;
   role: AgentRole;
   content: string;
   citations: Citation[];
@@ -48,6 +83,7 @@ export interface AgentRun {
   latencyMs?: number | null;
   ttftMs?: number | null;
   usage: Record<string, unknown>;
+  config: Record<string, unknown>;
   error?: string | null;
   summary?: string | null;
   kind: string;
@@ -60,6 +96,10 @@ export interface AgentEvent {
   sequence: number;
   type: string;
   source: string;
+  agentId?: string | null;
+  agentLabel?: string | null;
+  agentRole?: string | null;
+  parentAgentId?: string | null;
   data: Record<string, unknown>;
   createdAt: string;
   kind: string;
@@ -71,6 +111,10 @@ export interface AgentSSEEvent {
   timestamp: string;
   sequence: number;
   type: string;
+  agentId?: string | null;
+  agentLabel?: string | null;
+  agentRole?: string | null;
+  parentAgentId?: string | null;
   data: Record<string, unknown>;
 }
 
@@ -85,6 +129,7 @@ export interface AgentRunRequest {
   mode?: AgentMode;
   selectedTicker?: string;
   lookbackDays?: number;
+  config: AgentRunConfig;
   uiContext?: Record<string, unknown>;
 }
 

@@ -11,10 +11,22 @@ import { cn } from "@/lib/utils";
 
 export const Shell = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
+  const isAgentRoute = location.pathname === "/agent" || location.pathname.startsWith("/agent/");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    const stored = window.localStorage.getItem("agos.shell.sidebar-expanded.v1");
+    if (stored === "1") return true;
+    if (stored === "0") return false;
+    return location.pathname === "/agent" || location.pathname.startsWith("/agent/");
+  });
   const isPublicRoute = location.pathname === "/" || location.pathname === "/login";
   const isLoginRoute = location.pathname === "/login";
+  const desktopSidebarWidth = isPublicRoute ? 0 : sidebarExpanded ? (isAgentRoute ? 320 : 240) : 72;
 
   useEffect(() => {
     if (!isLoginRoute) {
@@ -49,6 +61,14 @@ export const Shell = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     publishOverlayState({ commandPaletteOpen: paletteOpen });
   }, [paletteOpen]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem("agos.shell.sidebar-expanded.v1", sidebarExpanded ? "1" : "0");
+  }, [sidebarExpanded]);
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
@@ -90,12 +110,21 @@ export const Shell = ({ children }: { children: ReactNode }) => {
       ) : null}
 
       {!isPublicRoute ? (
-        <aside className="group/sidebar fixed inset-y-0 left-0 z-40 hidden w-[72px] overflow-hidden border-r border-border bg-background transition-[width] duration-200 hover:w-[240px] focus-within:w-[240px] lg:block">
-          <Sidebar onOpenPalette={() => setPaletteOpen(true)} onNavigate={() => setMobileNavOpen(false)} />
+        <aside
+          className="fixed inset-y-0 left-0 z-40 hidden overflow-hidden border-r border-border bg-background transition-[width] duration-200 lg:block"
+          style={{ width: desktopSidebarWidth }}
+        >
+          <Sidebar
+            onOpenPalette={() => setPaletteOpen(true)}
+            onNavigate={() => setMobileNavOpen(false)}
+            onToggleExpanded={() => setSidebarExpanded((current) => !current)}
+            showLabels={sidebarExpanded}
+            isAgentMode={isAgentRoute}
+          />
         </aside>
       ) : null}
 
-      <main className={cn("min-h-dvh", !isPublicRoute && "lg:pl-[72px]")}>
+      <main className={cn("min-h-dvh")} style={!isPublicRoute ? { paddingLeft: desktopSidebarWidth } : undefined}>
         {children}
       </main>
 
@@ -110,7 +139,9 @@ export const Shell = ({ children }: { children: ReactNode }) => {
                 setPaletteOpen(true);
               }}
               onNavigate={() => setMobileNavOpen(false)}
+              onToggleExpanded={() => setMobileNavOpen(false)}
               showLabels
+              isAgentMode={isAgentRoute}
               className="w-full px-4 py-4"
             />
           </DrawerContent>

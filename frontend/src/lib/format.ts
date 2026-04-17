@@ -96,3 +96,19 @@ export function extractErrorMessage(error: unknown, fallback = "Request failed")
 export function safeArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
+
+export function formatDurationMs(value: number | null | undefined) {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return "---";
+  }
+
+  const totalSeconds = Math.max(0, Math.round(value / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  }
+
+  return `${seconds}s`;
+}

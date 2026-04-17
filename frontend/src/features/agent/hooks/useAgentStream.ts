@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { agentApi } from "@/api/backend/client";
+import { humanizeAgentError } from "@/features/agent/lib/errors";
 import type { AgentMessage, AgentRun, AgentRunRequest, AgentSSEEvent, Citation } from "@/features/agent/types";
 
 type StartRunInput = {
@@ -136,7 +137,7 @@ export function useAgentStream() {
     if (event.type === "run.error") {
       sawTerminalEventRef.current = true;
       const detail = event.data.error;
-      setError(typeof detail === "string" ? detail : "Run failed");
+      setError(typeof detail === "string" ? (humanizeAgentError(detail) ?? "Run failed") : "Run failed");
       const candidate = event.data.run;
       if (candidate && typeof candidate === "object") {
         setRun(candidate as AgentRun);
@@ -202,7 +203,7 @@ export function useAgentStream() {
         return;
       }
 
-      const detail = streamError instanceof Error ? streamError.message : "Run failed";
+      const detail = humanizeAgentError(streamError instanceof Error ? streamError.message : "Run failed") ?? "Run failed";
       setError(detail);
       setStatus("error");
       throw streamError;

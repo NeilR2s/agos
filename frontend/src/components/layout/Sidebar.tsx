@@ -1,17 +1,21 @@
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Link, useLocation } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import {
+    ChevronDoubleLeftIcon,
+    ChevronDoubleRightIcon,
     BriefcaseIcon,
     CommandLineIcon,
     ChatBubbleLeftRightIcon,
     HomeIcon,
     MagnifyingGlassIcon,
     ArrowLeftOnRectangleIcon,
+    PlusIcon,
 } from "@heroicons/react/24/outline";
 
-import { backendClient, getUserId } from "@/api/backend/client";
+import { agentApi, backendClient, getUserId } from "@/api/backend/client";
 import { engineClient } from "@/api/engine/client";
+import { AgentThreadList } from "@/features/agent/components/AgentThreadList";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
@@ -26,7 +30,9 @@ import { useAuthStore } from "@/store/authStore";
 type SidebarProps = {
     onOpenPalette: () => void;
     onNavigate?: () => void;
+    onToggleExpanded?: () => void;
     showLabels?: boolean;
+    isAgentMode?: boolean;
     className?: string;
 };
 
@@ -38,15 +44,27 @@ const navItems = [
     { to: "/agent", label: "Agent", icon: ChatBubbleLeftRightIcon, aliases: [] },
 ];
 
-const compactRevealClass =
-    "max-w-0 overflow-hidden whitespace-nowrap opacity-100 transition-[max-width,opacity] duration-200 group-hover/sidebar:delay-200 group-hover/sidebar:max-w-full group-hover/sidebar:opacity-100 group-focus-within/sidebar:delay-200 group-focus-within/sidebar:max-w-full group-focus-within/sidebar:opacity-100";
+const hiddenRevealClass = "max-w-0 overflow-hidden whitespace-nowrap px-0 opacity-0";
 
-export function Sidebar({ onOpenPalette, onNavigate, showLabels = false, className }: SidebarProps) {
+export function Sidebar({
+    onOpenPalette,
+    onNavigate,
+    onToggleExpanded,
+    showLabels = false,
+    isAgentMode = false,
+    className,
+}: SidebarProps) {
     const location = useLocation();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const queryClient = useQueryClient();
     const userId = getUserId();
     const authUser = useAuthStore((state) => state.user);
     const logout = useAuthStore((state) => state.logout);
     const signedInUser = getSignedInUserIdentity(authUser);
+    const [threadQuery, setThreadQuery] = useState("");
+    const activeThreadId = searchParams.get("thread");
+    const currentMode = searchParams.get("mode") ?? "general";
+    const currentTicker = searchParams.get("ticker");
 
     const portfolioQuery = useQuery({
         queryKey: ["sidebar-portfolio", userId],
@@ -81,7 +99,25 @@ export function Sidebar({ onOpenPalette, onNavigate, showLabels = false, classNa
         refetchInterval: 30000,
     });
 
+    const threadsQuery = useQuery({
+        queryKey: ["agent-threads"],
+        queryFn: () => agentApi.listThreads(),
+        enabled: isAgentMode,
+    });
+
     const holdings = useMemo(() => portfolioQuery.data?.holdings.slice(0, 6) ?? [], [portfolioQuery.data]);
+    const filteredThreads = useMemo(() => {
+        const items = threadsQuery.data ?? [];
+        const normalized = threadQuery.trim().toUpperCase();
+        if (!normalized) {
+            return items;
+        }
+
+        return items.filter((thread) => {
+            const haystack = `${thread.title} ${thread.selectedTicker ?? ""} ${thread.lastAssistantPreview ?? ""}`.toUpperCase();
+            return haystack.includes(normalized);
+        });
+    }, [threadQuery, threadsQuery.data]);
 
     const health = healthQuery.data ?? { status: "CHECKING", version: "---", model: "---" };
     const status = healthQuery.isError ? "OFFLINE" : health.status.toUpperCase();
@@ -91,9 +127,51 @@ export function Sidebar({ onOpenPalette, onNavigate, showLabels = false, classNa
             ? versionQuery.data.version
             : "---";
 
+    const updateAgentSearchParams = (patch: Record<string, string | null>) => {
+        const next = new URLSearchParams(searchParams);
+        Object.entries(patch).forEach(([key, value]) => {
+            if (value) {
+                next.set(key, value);
+            } else {
+                next.delete(key);
+            }
+        });
+        setSearchParams(next, { replace: true });
+    };
+
+    const handleSelectThread = (threadId: string) => {
+        const thread = (threadsQuery.data ?? []).find((item) => item.id === threadId);
+        updateAgentSearchParams({
+            thread: threadId,
+            mode: thread?.mode ?? currentMode,
+            ticker: thread?.selectedTicker ?? null,
+        });
+        onNavigate?.();
+    };
+
+    const handleNewThread = () => {
+        updateAgentSearchParams({ thread: null, ticker: currentTicker, mode: currentMode });
+        onNavigate?.();
+    };
+
+    const handleDeleteThread = async (threadId: string) => {
+        await agentApi.deleteThread(threadId);
+        await queryClient.invalidateQueries({ queryKey: ["agent-threads"] });
+
+        if (threadId === activeThreadId) {
+            const remaining = (threadsQuery.data ?? []).filter((thread) => thread.id !== threadId);
+            const nextThread = remaining[0] ?? null;
+            updateAgentSearchParams({
+                thread: nextThread?.id ?? null,
+                mode: nextThread?.mode ?? currentMode,
+                ticker: nextThread?.selectedTicker ?? currentTicker ?? null,
+            });
+        }
+    };
+
     return (
         <div className={cn("flex h-full w-full flex-col justify-between gap-6 overflow-hidden bg-background px-2 py-4 text-foreground", showLabels && "px-4", className)}>
-            <div className={cn("space-y-6", !showLabels && "space-y-5")}>
+            <div className={cn("flex min-h-0 flex-1 flex-col", !showLabels ? "gap-5" : "gap-6")}>
                 <div className={cn("relative flex items-center", showLabels ? "justify-between gap-3" : "justify-center")}>
                     <Link
                         to="/"
@@ -101,30 +179,41 @@ export function Sidebar({ onOpenPalette, onNavigate, showLabels = false, classNa
                         aria-label="AGOS home"
                         className={cn(
                             "block font-mono text-[14px] uppercase tracking-[1.4px] text-white transition-colors hover:text-white/50",
-                            showLabels ? "flex-none" : "flex-1 text-center group-hover/sidebar:flex-none group-hover/sidebar:text-left group-focus-within/sidebar:flex-none group-focus-within/sidebar:text-left"
+                            showLabels ? "flex-none" : "flex-1 text-center"
                         )}
                     >
                         <span className="inline-block whitespace-nowrap">AGOS</span>
                     </Link>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={onOpenPalette}
-                        className={cn(
-                            "text-white/40 hover:text-white",
-                            showLabels
-                                ? "flex-none"
-                                : "pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 opacity-0 transition-opacity duration-200 group-hover/sidebar:static group-hover/sidebar:pointer-events-auto group-hover/sidebar:delay-200 group-hover/sidebar:opacity-100 group-hover/sidebar:translate-y-0 group-focus-within/sidebar:static group-focus-within/sidebar:pointer-events-auto group-focus-within/sidebar:delay-200 group-focus-within/sidebar:opacity-100 group-focus-within/sidebar:translate-y-0"
-                        )}
-                        aria-label="Open command palette"
-                    >
-                        <CommandLineIcon className="size-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                        {onToggleExpanded ? (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={onToggleExpanded}
+                                className="text-white/40 hover:text-white"
+                                aria-label={showLabels ? "Collapse sidebar" : "Expand sidebar"}
+                            >
+                                {showLabels ? <ChevronDoubleLeftIcon className="size-4" /> : <ChevronDoubleRightIcon className="size-4" />}
+                            </Button>
+                        ) : null}
+                        {showLabels ? (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={onOpenPalette}
+                                className="text-white/40 hover:text-white"
+                                aria-label="Open command palette"
+                            >
+                                <CommandLineIcon className="size-4" />
+                            </Button>
+                        ) : null}
+                    </div>
                 </div>
 
                 <div
-                    className={cn("flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/30", showLabels ? "px-2 opacity-100" : "max-w-0 overflow-hidden px-0 opacity-0 transition-[max-width,opacity,padding] duration-200 group-hover/sidebar:delay-200 group-hover/sidebar:max-w-full group-hover/sidebar:px-2 group-hover/sidebar:opacity-100 group-focus-within/sidebar:delay-200 group-focus-within/sidebar:max-w-full group-focus-within/sidebar:px-2 group-focus-within/sidebar:opacity-100")}
+                    className={cn("flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/30 transition-[max-width,opacity,padding] duration-200", showLabels ? "px-2 opacity-100" : hiddenRevealClass)}
                 >
                     <Kbd>Ctrl</Kbd>
                     <Kbd>Shift</Kbd>
@@ -148,7 +237,7 @@ export function Sidebar({ onOpenPalette, onNavigate, showLabels = false, classNa
                                 title={item.label}
                                 className={cn(
                                     "flex w-full items-center py-2 font-mono text-[12px] uppercase tracking-[1.4px] transition-colors",
-                                    showLabels ? "justify-start gap-3 px-2" : "justify-center gap-0 px-0 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-2 group-focus-within/sidebar:justify-start group-focus-within/sidebar:gap-3 group-focus-within/sidebar:px-2",
+                                    showLabels ? "justify-start gap-3 px-2" : "justify-center gap-0 px-0",
                                     isActive ? "text-white" : "text-white/50 hover:text-white"
                                 )}
                             >
@@ -156,7 +245,7 @@ export function Sidebar({ onOpenPalette, onNavigate, showLabels = false, classNa
                                 <span
                                     className={cn(
                                         "min-w-0 whitespace-nowrap transition-[max-width,opacity] duration-200",
-                                        showLabels ? "max-w-full opacity-100" : compactRevealClass
+                                        showLabels ? "max-w-full opacity-100" : hiddenRevealClass
                                     )}
                                 >
                                     {item.label}
@@ -166,44 +255,89 @@ export function Sidebar({ onOpenPalette, onNavigate, showLabels = false, classNa
                     })}
                 </nav>
 
-                <div className="space-y-3 border-t border-border pt-4">
-                    <div className="flex items-center justify-between gap-2">
-                        <span className={cn("font-mono text-[10px] uppercase tracking-[1.4px] text-white/30 transition-[max-width,opacity] duration-200", showLabels ? "opacity-100" : compactRevealClass)}>Holdings</span>
-                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">{holdings.length}</span>
-                    </div>
+                {isAgentMode ? (
+                    showLabels ? (
+                        <div className="flex min-h-0 flex-1 flex-col border-t border-border pt-4">
+                            <div className="mb-3 flex items-center justify-between gap-3 px-2">
+                                <div>
+                                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">History</p>
+                                    <p className="mt-1 font-sans text-[12px] leading-[1.5] text-white/45">Agent threads and saved runs</p>
+                                </div>
+                                <Button type="button" variant="outline" size="icon-sm" onClick={handleNewThread} className="border-white/15 text-white/75 hover:bg-white/[0.05]">
+                                    <PlusIcon className="size-4" />
+                                </Button>
+                            </div>
 
-                    <div className="space-y-1">
-                        {portfolioQuery.isLoading ? (
-                            <TerminalSkeleton lines={3} label="SYNCING" compact={!showLabels} />
-                        ) : holdings.length ? (
-                            holdings.map((holding) => (
-                                <Link
-                                    key={holding.id}
-                                    to={`/research?ticker=${holding.ticker}`}
-                                    onClick={() => onNavigate?.()}
-                                    className="group flex items-center justify-between gap-3 px-2 py-2 text-white/50 transition-colors hover:text-white"
-                                    title={holding.ticker}
-                                >
-                                    <span className="font-mono text-[12px] uppercase tracking-[1.4px] text-white">{holding.ticker}</span>
-                                    <span
-                                        className={cn(
-                                            "min-w-0 truncate font-sans text-[12px] text-white/30 transition-[max-width,opacity] duration-200",
-                                            showLabels ? "max-w-full opacity-100" : compactRevealClass
-                                        )}
+                            <div className="min-h-0 flex-1 overflow-hidden">
+                                <AgentThreadList
+                                    threads={filteredThreads}
+                                    activeThreadId={activeThreadId}
+                                    query={threadQuery}
+                                    onQueryChange={setThreadQuery}
+                                    onSelect={handleSelectThread}
+                                    onNewThread={handleNewThread}
+                                    onDelete={(threadId) => {
+                                        void handleDeleteThread(threadId);
+                                    }}
+                                    isLoading={threadsQuery.isLoading}
+                                    variant="sidebar"
+                                />
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="border-t border-border pt-4">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={handleNewThread}
+                                className="mx-auto flex text-white/45 hover:text-white"
+                                aria-label="Create new agent thread"
+                            >
+                                <PlusIcon className="size-4" />
+                            </Button>
+                        </div>
+                    )
+                ) : (
+                    <div className="space-y-3 border-t border-border pt-4">
+                        <div className="flex items-center justify-between gap-2">
+                            <span className={cn("font-mono text-[10px] uppercase tracking-[1.4px] text-white/30 transition-[max-width,opacity] duration-200", showLabels ? "opacity-100" : hiddenRevealClass)}>Holdings</span>
+                            <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">{holdings.length}</span>
+                        </div>
+
+                        <div className="space-y-1">
+                            {portfolioQuery.isLoading ? (
+                                <TerminalSkeleton lines={3} label="SYNCING" compact={!showLabels} />
+                            ) : holdings.length ? (
+                                holdings.map((holding) => (
+                                    <Link
+                                        key={holding.id}
+                                        to={`/research?ticker=${holding.ticker}`}
+                                        onClick={() => onNavigate?.()}
+                                        className="group flex items-center justify-between gap-3 px-2 py-2 text-white/50 transition-colors hover:text-white"
+                                        title={holding.ticker}
                                     >
-                                        {formatCurrency(holding.marketValue)}
-                                    </span>
-                                </Link>
-                            ))
-                        ) : (
-                            <p className={cn("px-2 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/20 transition-[max-width,opacity] duration-200", showLabels ? "opacity-100" : compactRevealClass)}>No positions</p>
-                        )}
+                                        <span className="font-mono text-[12px] uppercase tracking-[1.4px] text-white">{holding.ticker}</span>
+                                        <span
+                                            className={cn(
+                                                "min-w-0 truncate font-sans text-[12px] text-white/30 transition-[max-width,opacity] duration-200",
+                                                showLabels ? "max-w-full opacity-100" : hiddenRevealClass
+                                            )}
+                                        >
+                                            {formatCurrency(holding.marketValue)}
+                                        </span>
+                                    </Link>
+                                ))
+                            ) : (
+                                <p className={cn("px-2 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/20 transition-[max-width,opacity] duration-200", showLabels ? "opacity-100" : hiddenRevealClass)}>No positions</p>
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
             <div className="space-y-3 border-t border-border pt-4">
-                <div className={cn("space-y-1 transition-[max-width,opacity,padding] duration-200", showLabels ? "opacity-100" : compactRevealClass)}>
+                <div className={cn("space-y-1 transition-[max-width,opacity,padding] duration-200", showLabels ? "opacity-100" : hiddenRevealClass)}>
                     <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Signed In</p>
                     <p className="truncate font-sans text-[12px] text-white">{signedInUser.primary}</p>
                     {signedInUser.secondary ? (
@@ -211,15 +345,17 @@ export function Sidebar({ onOpenPalette, onNavigate, showLabels = false, classNa
                     ) : null}
                 </div>
 
-                <div className="flex items-center justify-between gap-3">
-                    <span className={cn("font-mono text-[10px] uppercase tracking-[1.4px] text-white/30 transition-[max-width,opacity] duration-200", showLabels ? "opacity-100" : compactRevealClass)}>Engine</span>
-                    <Badge variant="outline" className={cn("border-border text-white/70 transition-[max-width,opacity,padding] duration-200", showLabels ? "opacity-100" : "max-w-0 overflow-hidden border-transparent px-0 opacity-0 group-hover/sidebar:delay-200 group-hover/sidebar:max-w-full group-hover/sidebar:border-border group-hover/sidebar:px-[8px] group-hover/sidebar:opacity-100 group-focus-within/sidebar:delay-200 group-focus-within/sidebar:max-w-full group-focus-within/sidebar:border-border group-focus-within/sidebar:px-[8px] group-focus-within/sidebar:opacity-100")}>
-                        {status}
-                    </Badge>
-                </div>
+                {!isAgentMode ? (
+                    <div className="flex items-center justify-between gap-3">
+                        <span className={cn("font-mono text-[10px] uppercase tracking-[1.4px] text-white/30 transition-[max-width,opacity] duration-200", showLabels ? "opacity-100" : hiddenRevealClass)}>Engine</span>
+                        <Badge variant="outline" className={cn("border-border text-white/70 transition-[max-width,opacity,padding] duration-200", showLabels ? "opacity-100" : "max-w-0 overflow-hidden border-transparent px-0 opacity-0")}>
+                            {status}
+                        </Badge>
+                    </div>
+                ) : null}
                 <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
-                    <span>v{version}</span>
-                    <button onClick={logout} className={cn("flex items-center gap-1 text-white/50 transition-colors hover:text-white", showLabels ? "opacity-100" : compactRevealClass)}>
+                    <span>{!isAgentMode ? `v${version}` : "agent console"}</span>
+                    <button onClick={logout} className={cn("flex items-center gap-1 text-white/50 transition-colors hover:text-white", showLabels ? "opacity-100" : hiddenRevealClass)}>
                         LOGOUT <ArrowLeftOnRectangleIcon className="size-3" />
                     </button>
                 </div>
