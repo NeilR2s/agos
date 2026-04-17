@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize the decision engine with the real model pipeline
     decision_engine = DecisionEngine(pipeline=pipeline)
-    app_logger.info("DecisionEngine initialized successfully with real model.")
+    app_logger.info("DecisionEngine initialized successfully.")
     
     yield
     
