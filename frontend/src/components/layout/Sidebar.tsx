@@ -7,7 +7,6 @@ import {
     BriefcaseIcon,
     CommandLineIcon,
     ChatBubbleLeftRightIcon,
-    HomeIcon,
     MagnifyingGlassIcon,
     ArrowLeftOnRectangleIcon,
     PlusIcon,
