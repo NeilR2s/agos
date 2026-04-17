@@ -1,7 +1,5 @@
 import asyncio
 
-from langchain_core.messages import AIMessage
-
 from app.models.agent import AgentMessage, AgentRunRequest, AgentThread
 from app.services.agent.service import AgentService
 from app.core.config import settings
@@ -96,7 +94,7 @@ def test_stream_run_events_emits_terminal_error_for_early_graph_failure(monkeypa
     repository = InMemoryAgentRepository(_thread())
     service.repository = repository
 
-    def fail_build_agent_graph(mode: str):
+    def fail_build_agent_graph(mode: str, run_config=None):
         assert mode == "research"
         raise RuntimeError("graph boom")
 
@@ -138,8 +136,9 @@ def test_stream_run_events_uses_latest_history_and_runtime_config(monkeypatch):
 
     capture = {}
 
-    def build_agent_graph(mode: str):
+    def build_agent_graph(mode: str, run_config=None):
         capture["mode"] = mode
+        capture["run_config"] = run_config
 
         class FakeGraph:
             async def astream_events(self, graph_state, config, version="v2"):
@@ -148,9 +147,24 @@ def test_stream_run_events_uses_latest_history_and_runtime_config(monkeypatch):
                 capture["config"] = config
                 capture["version"] = version
                 yield {
-                    "event": "on_chat_model_end",
-                    "name": "ChatGoogleGenerativeAI",
-                    "data": {"output": AIMessage(content="response")},
+                    "event": "agent.started",
+                    "agent": {"id": "research-lead", "label": "Research Lead", "role": "research-lead"},
+                    "data": {"detail": "Research Lead is taking point."},
+                }
+                yield {
+                    "event": "message.delta",
+                    "agent": {"id": "synthesizer", "label": "Synthesis", "role": "synthesizer"},
+                    "data": {"delta": "response"},
+                }
+                yield {
+                    "event": "synthesis.completed",
+                    "agent": {"id": "synthesizer", "label": "Synthesis", "role": "synthesizer"},
+                    "data": {
+                        "content": "response",
+                        "citations": [],
+                        "workerSummaries": [],
+                        "agentCount": 1,
+                    },
                 }
 
         return FakeGraph()
@@ -171,6 +185,7 @@ def test_stream_run_events_uses_latest_history_and_runtime_config(monkeypatch):
 
     assert capture["mode"] == "research"
     assert capture["version"] == "v2"
+    assert capture["run_config"].modelPreset == "agos-core"
     assert repository.list_messages_calls[-1]["newest_first"] is True
     assert [message.content for message in capture["messages"][1:]] == ["old-3", "old-4", "old-5", "latest prompt"]
     assert not hasattr(capture["context"], "user_id")

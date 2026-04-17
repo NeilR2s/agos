@@ -18,12 +18,13 @@ from app.models.agent import (
     AgentThreadCreate,
     Citation,
 )
+from app.services.agent.configuration import config_to_public_dict, resolve_model_profile
 from app.services.agent.middleware import (
     build_system_prompt,
     derive_thread_title,
     sanitize_preview,
 )
-from app.services.agent.state import AgentRuntimeContext, ToolOutcome
+from app.services.agent.state import AgentRuntimeContext
 from app.services.agent.streaming import build_sse_event, persistable_event, should_persist_event
 
 
@@ -162,6 +163,7 @@ class AgentService:
 
         resolved_mode = payload.mode or thread.mode
         selected_ticker = payload.selectedTicker.upper() if payload.selectedTicker else thread.selectedTicker
+        model_profile = resolve_model_profile(payload.config)
         if thread.mode != resolved_mode or thread.selectedTicker != selected_ticker:
             thread = self.repository.update_thread(
                 user_id=user_id,
@@ -177,11 +179,12 @@ class AgentService:
             id=run_id,
             threadId=thread_id,
             userId=user_id,
-            model=settings.AGENT_MODEL,
+            model=model_profile.model,
             mode=resolved_mode,
             selectedTicker=selected_ticker,
             status="running",
             startedAt=started_at,
+            config=config_to_public_dict(payload.config),
         )
         context = AgentRuntimeContext(
             mode=resolved_mode,
@@ -198,29 +201,21 @@ class AgentService:
         }
 
         sequence = 0
-        persisted_events: list[AgentEvent] = []
         assistant_chunks: list[str] = []
         citations: list[Citation] = []
-        tool_outcomes: list[ToolOutcome] = []
         first_token_at: float | None = None
+        worker_summaries: list[dict] = []
+        agent_count = 0
+        tool_event_count = 0
+        final_content_from_graph: str | None = None
 
-        def stringify_message_content(content: object) -> str:
-            if isinstance(content, str):
-                return content
-            if isinstance(content, list):
-                parts: list[str] = []
-                for item in content:
-                    if isinstance(item, str):
-                        parts.append(item)
-                        continue
-                    if isinstance(item, dict):
-                        text = item.get("text")
-                        if isinstance(text, str):
-                            parts.append(text)
-                return "".join(parts)
-            return ""
-
-        def next_event(event_type: str, data: dict, source: str = "agent") -> AgentSSEEvent:
+        def next_event(
+            event_type: str,
+            data: dict,
+            *,
+            source: str = "agent",
+            agent: dict | None = None,
+        ) -> AgentSSEEvent:
             nonlocal sequence
             sequence += 1
             event = build_sse_event(
@@ -229,9 +224,16 @@ class AgentService:
                 sequence=sequence,
                 event_type=event_type,
                 data=data,
+                agent_id=agent.get("id") if agent else None,
+                agent_label=agent.get("label") if agent else None,
+                agent_role=agent.get("role") if agent else None,
+                parent_agent_id=agent.get("parentId") if agent else None,
             )
             if should_persist_event(event_type):
-                persisted_events.append(persistable_event(event, source=source))
+                try:
+                    self.repository.create_events([persistable_event(event, source=source)])
+                except Exception:
+                    logger.exception("Failed to persist agent event", extra={"thread_id": thread_id, "run_id": run_id, "event_type": event_type})
             return event
 
         try:
@@ -241,6 +243,7 @@ class AgentService:
                 id=str(uuid4()),
                 threadId=thread_id,
                 runId=run_id,
+                agentId=None,
                 role="user",
                 content=payload.message.strip(),
                 citations=[],
@@ -286,14 +289,15 @@ class AgentService:
                 "reasoning.step",
                 {
                     "title": "Context assembly",
-                    "detail": "Initializing multi-agent graph with bound tools.",
+                    "detail": f"Initializing AGOS multi-agent run with up to {payload.config.maxAgents} concurrent agents.",
                 },
             )
 
             from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+
             from app.services.agent.graph import build_agent_graph
 
-            graph = build_agent_graph(resolved_mode)
+            graph = build_agent_graph(resolved_mode, payload.config)
             
             messages = [SystemMessage(content=system_prompt)]
             for msg in history:
@@ -318,69 +322,60 @@ class AgentService:
             token_started_perf = time.perf_counter()
             
             async for event in graph.astream_events(graph_state, config=config, version="v2"):
-                kind = event["event"]
-                name = event["name"]
-                
-                if kind == "on_chat_model_stream" and name != "agent":
-                    chunk = event["data"]["chunk"]
-                    content = stringify_message_content(getattr(chunk, "content", ""))
-                    if content:
-                        if first_token_at is None:
-                            first_token_at = (time.perf_counter() - token_started_perf) * 1000
-                        assistant_chunks.append(content)
-                        yield next_event("message.delta", {"delta": content}, source="assistant")
+                kind = event.get("event")
+                data = event.get("data") if isinstance(event.get("data"), dict) else {}
+                agent = event.get("agent") if isinstance(event.get("agent"), dict) else None
 
-                elif kind == "on_chat_model_end" and name != "agent" and not assistant_chunks:
-                    output = event["data"].get("output")
-                    content = stringify_message_content(getattr(output, "content", ""))
-                    if content:
+                if kind == "message.delta":
+                    content = data.get("delta")
+                    if isinstance(content, str) and content:
                         if first_token_at is None:
                             first_token_at = (time.perf_counter() - token_started_perf) * 1000
                         assistant_chunks.append(content)
-                        yield next_event("message.delta", {"delta": content}, source="assistant")
-                        
-                elif kind == "on_tool_start":
-                    yield next_event(
-                        "tool.started",
-                        {"name": name, "detail": f"Agent invoking {name}."},
-                        source="tool"
-                    )
-                    
-                elif kind == "on_tool_end":
-                    output = event["data"].get("output", {})
-                    if isinstance(output, dict) and "citations" in output:
-                        for raw_cit in output["citations"]:
+                        yield next_event("message.delta", {"delta": content}, source="assistant", agent=agent)
+                    continue
+
+                if kind == "citation.added":
+                    candidate = data.get("citation")
+                    if isinstance(candidate, dict):
+                        try:
+                            citation = Citation(**candidate)
+                            citations.append(citation)
+                            yield next_event("citation.added", {"citation": citation.model_dump(mode="json")}, source="tool", agent=agent)
+                        except Exception:
+                            logger.exception("Invalid citation payload", extra={"thread_id": thread_id, "run_id": run_id})
+                    continue
+
+                if kind == "synthesis.completed":
+                    if isinstance(data.get("content"), str):
+                        final_content_from_graph = data["content"]
+                    payload_citations = data.get("citations")
+                    if isinstance(payload_citations, list):
+                        citations = []
+                        for item in payload_citations:
+                            if not isinstance(item, dict):
+                                continue
                             try:
-                                cit = Citation(**raw_cit) if isinstance(raw_cit, dict) else raw_cit
-                                citations.append(cit)
-                                yield next_event("citation.added", {"citation": cit.model_dump(mode="json")}, source="tool")
+                                citations.append(Citation(**item))
                             except Exception:
-                                pass
-                    yield next_event(
-                        "tool.completed",
-                        {
-                            "name": name,
-                            "summary": output.get("summary", "Tool execution complete.") if isinstance(output, dict) else str(output),
-                            "riskFlags": output.get("risk_flags", []) if isinstance(output, dict) else [],
-                        },
-                        source="tool",
-                    )
-                    if isinstance(output, dict):
-                        tool_outcomes.append(ToolOutcome(
-                            name=name,
-                            summary=output.get("summary", str(output)),
-                            payload=output,
-                            risk_flags=output.get("risk_flags", [])
-                        ))
-                    
-                elif kind == "on_tool_error":
-                    yield next_event(
-                        "tool.error",
-                        {"name": name, "error": str(event["data"].get("error", "Unknown tool error"))},
-                        source="tool"
-                    )
+                                continue
+                    worker_summaries = data.get("workerSummaries") if isinstance(data.get("workerSummaries"), list) else []
+                    agent_count = int(data.get("agentCount") or 0)
+                    yield next_event(kind, data, source="agent", agent=agent)
+                    continue
+
+                if kind in {"tool.started", "tool.completed"}:
+                    tool_event_count += 1 if kind == "tool.completed" else 0
+                    yield next_event(kind, data, source="tool", agent=agent)
+                    continue
+
+                if kind in {"tool.error", "agent.started", "agent.completed", "reasoning.step"}:
+                    yield next_event(kind, data, source="agent" if kind.startswith("agent") or kind == "reasoning.step" else "tool", agent=agent)
+                    continue
 
             assistant_content = "".join(assistant_chunks).strip()
+            if not assistant_content and final_content_from_graph:
+                assistant_content = final_content_from_graph.strip()
             if not assistant_content:
                 assistant_content = (
                     "No model output was returned for this run. Review the trace and retry once the model connection is stable."
@@ -390,6 +385,7 @@ class AgentService:
                 id=str(uuid4()),
                 threadId=thread_id,
                 runId=run_id,
+                agentId="synthesizer",
                 role="assistant",
                 content=assistant_content,
                 citations=citations,
@@ -403,17 +399,20 @@ class AgentService:
             run = self.repository.update_run(
                 thread_id=thread_id,
                 run_id=run_id,
-                model=settings.AGENT_MODEL,
+                model=model_profile.model,
                 status="completed",
                 completedAt=completed_at,
                 latencyMs=latency_ms,
                 ttftMs=first_token_at,
                 summary=sanitize_preview(assistant_content),
                 usage={
-                    "toolCount": len(tool_outcomes),
+                    "toolCount": tool_event_count,
                     "citationCount": len(citations),
                     "tokenCount": assistant_message.tokenCount,
+                    "agentCount": agent_count or payload.config.maxAgents,
+                    "workerSummaries": worker_summaries,
                 },
+                config=config_to_public_dict(payload.config),
                 error=None,
             )
             thread = self.repository.update_thread(
@@ -433,12 +432,13 @@ class AgentService:
                         "citations": [citation.model_dump(mode="json") for citation in citations],
                     },
                     source="assistant",
+                    agent={"id": "synthesizer", "label": "Synthesis", "role": "synthesizer"},
                 ),
                 next_event(
                     "checkpoint.saved",
                     {
                         "messagesPersisted": 2,
-                        "eventCount": len(persisted_events),
+                        "eventCount": sequence,
                         "threadUpdatedAt": thread.updatedAt,
                     },
                     source="persistence",
@@ -452,7 +452,6 @@ class AgentService:
                     source="runtime",
                 ),
             ]
-            self.repository.create_events(persisted_events)
             for event in final_events:
                 yield event
         except Exception as exc:
@@ -480,13 +479,14 @@ class AgentService:
                     run = self.repository.update_run(
                         thread_id=thread_id,
                         run_id=run_id,
-                        model=settings.AGENT_MODEL,
+                        model=model_profile.model,
                         status="error",
                         completedAt=run.completedAt,
                         latencyMs=latency_ms,
                         ttftMs=first_token_at,
                         error=error_message,
                         summary=None,
+                        config=config_to_public_dict(payload.config),
                     )
                 except Exception:
                     logger.exception("Failed to persist errored run", extra={"thread_id": thread_id, "run_id": run_id})
@@ -510,10 +510,6 @@ class AgentService:
                 },
                 source="runtime",
             )
-            try:
-                self.repository.create_events(persisted_events)
-            except Exception:
-                logger.exception("Failed to persist agent events", extra={"thread_id": thread_id, "run_id": run_id})
             yield error_event
 
 
