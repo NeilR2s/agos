@@ -88,7 +88,7 @@ The frontend uses `dev_admin_token` when bypass is enabled, so the backend and e
 - Cron data check: `cd cron && python verify_results.py`
 
 ## Current runtime shape
-
+![System Architecture](assets/architecture.png)
 - `cron` writes `pse_stock_data`, `macro_data`, and `news_sentiment_data`.
 - `backend` reads those containers, manages portfolio state, and persists agent threads, messages, runs, and events.
 - `engine` reads historical prices from Cosmos when possible, falls back to backend chart data when Cosmos history is too sparse, and fetches portfolio state from `backend`.
