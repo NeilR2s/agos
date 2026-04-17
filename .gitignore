@@ -35,3 +35,6 @@ out/
 .DS_Store
 Thumbs.db
 .env
+
+# Research Artifacts
+research/chronos_pse_finetuned/
