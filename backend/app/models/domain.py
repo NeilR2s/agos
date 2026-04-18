@@ -3,14 +3,14 @@ from typing import List, Optional
 
 class HoldingBase(BaseModel):
     ticker: str
-    shares: float
+    shares: float = Field(..., ge=0)
     avgPrice: float = Field(..., gt=0)
 
 class HoldingCreate(HoldingBase):
     pass
 
 class HoldingUpdate(BaseModel):
-    shares: Optional[float] = None
+    shares: Optional[float] = Field(default=None, ge=0)
     avgPrice: Optional[float] = Field(default=None, gt=0)
 
 class Holding(HoldingBase):

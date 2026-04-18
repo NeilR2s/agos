@@ -37,8 +37,12 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         decoded_token = auth.verify_id_token(token)
         return decoded_token
     except Exception as e:
+        # Log the actual error internally to prevent information exposure to the client
+        import logging
+        logging.getLogger(__name__).warning(f"Authentication failed: {e}")
+        
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid authentication credentials: {str(e)}",
+            detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )

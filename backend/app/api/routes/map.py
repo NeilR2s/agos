@@ -58,7 +58,9 @@ async def search_places(query: str = Query(..., min_length=2), limit: int = Quer
         with urlopen(request, timeout=10) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except Exception as exc:  # pragma: no cover - network/provider failures
-        raise HTTPException(status_code=502, detail=f"Geoapify lookup failed: {exc}") from exc
+        import logging
+        logging.getLogger(__name__).error(f"Geoapify lookup failed: {exc}")
+        raise HTTPException(status_code=502, detail="Geocoding service unavailable") from exc
 
     features = payload.get("results", [])
     return {
