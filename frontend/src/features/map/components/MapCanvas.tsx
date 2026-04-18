@@ -476,7 +476,7 @@ export function MapCanvas({
   }, [focusTarget]);
 
   return (
-    <div className="relative min-h-[640px] overflow-hidden border border-white/10 bg-[#171a20]">
+    <div className="relative min-h-[560px] overflow-hidden border border-white/10 bg-[#171a20] xl:min-h-[calc(100dvh-16rem)] xl:max-h-[860px]">
       <div className="absolute left-4 top-4 z-10 border border-white/10 bg-background/90 px-3 py-2 backdrop-blur-sm">
         <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">Map Surface</p>
         <p className="mt-1 font-sans text-[13px] text-white/70">
@@ -492,7 +492,7 @@ export function MapCanvas({
           <p className="mt-1 font-sans text-[13px] text-white">{hoverState.label}</p>
         </div>
       ) : null}
-      <div ref={containerRef} className={cn("h-[640px] w-full", queryMode === "polygon" && "cursor-crosshair")} />
+      <div ref={containerRef} className={cn("h-[560px] w-full xl:h-[calc(100dvh-16rem)] xl:max-h-[860px]", queryMode === "polygon" && "cursor-crosshair")} />
     </div>
   );
 }

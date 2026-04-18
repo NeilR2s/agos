@@ -46,6 +46,14 @@ const getRoundedBoundsKey = (bounds: MapBounds) => ({
   north: Number(bounds.north.toFixed(4)),
 });
 
+const truncateMiddle = (value: string, edge = 10) => {
+  if (value.length <= edge * 2 + 3) {
+    return value;
+  }
+
+  return `${value.slice(0, edge)}...${value.slice(-edge)}`;
+};
+
 export function MapPage() {
   const [layerState, setLayerState] = useState<MapLayerState>(initialLayerState);
   const [selection, setSelection] = useState<MapSelection>(null);
@@ -58,6 +66,7 @@ export function MapPage() {
   const [playing, setPlaying] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [focusTarget, setFocusTarget] = useState<MapFocusTarget | null>(null);
+  const [dismissedInspectorSelectionKey, setDismissedInspectorSelectionKey] = useState<string | null>(null);
 
   const deferredSearchQuery = useDeferredValue(searchQuery.trim());
   const roundedBounds = useMemo(() => getRoundedBoundsKey(mapBounds), [mapBounds]);
@@ -126,6 +135,33 @@ export function MapPage() {
 
     return availableIds[selection.type].has(selection.id) ? selection : null;
   }, [activeEvents, featureData.assets, featureData.connections, featureData.zones, selection, tracks]);
+
+  const selectionSummaryLabel = useMemo(() => {
+    if (!visibleSelection) {
+      return "None";
+    }
+
+    if (visibleSelection.type === "asset") {
+      return featureData.assets.find((item) => item.id === visibleSelection.id)?.name ?? truncateMiddle(visibleSelection.id);
+    }
+
+    if (visibleSelection.type === "zone") {
+      return featureData.zones.find((item) => item.id === visibleSelection.id)?.name ?? truncateMiddle(visibleSelection.id);
+    }
+
+    if (visibleSelection.type === "connection") {
+      return featureData.connections.find((item) => item.id === visibleSelection.id)?.description ?? truncateMiddle(visibleSelection.id);
+    }
+
+    if (visibleSelection.type === "event") {
+      return activeEvents.find((item) => item.id === visibleSelection.id)?.title ?? truncateMiddle(visibleSelection.id);
+    }
+
+    return tracks.find((item) => item.id === visibleSelection.id)?.label ?? truncateMiddle(visibleSelection.id);
+  }, [activeEvents, featureData.assets, featureData.connections, featureData.zones, tracks, visibleSelection]);
+
+  const activeSelectionKey = visibleSelection ? `${visibleSelection.type}:${visibleSelection.id}` : null;
+  const inspectorOpen = Boolean(activeSelectionKey) && dismissedInspectorSelectionKey !== activeSelectionKey;
 
   const summary = useMemo(() => {
     const activePolygon = polygonQuery ? getBoundsFromPolygon(polygonQuery) : null;
@@ -240,124 +276,144 @@ export function MapPage() {
     }
   };
 
+  const handleCloseInspector = () => {
+    if (activeSelectionKey) {
+      setDismissedInspectorSelectionKey(activeSelectionKey);
+    }
+  };
+
   return (
-    <div className="min-h-dvh bg-background px-4 py-4 text-white lg:px-6 lg:py-6">
-      <div className="mx-auto flex max-w-[1800px] flex-col gap-4">
-        <section className="border border-white/10 bg-white/[0.03] px-4 py-5 lg:px-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-[920px]">
+    <div className="min-h-dvh bg-background px-3 py-3 text-white lg:px-4 lg:py-4">
+      <div className="mx-auto flex max-w-[1920px] flex-col gap-2.5">
+        <section className="border border-white/10 bg-white/[0.03] px-4 py-3 lg:px-5">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0 flex-1">
               <Badge variant="outline" className="rounded-none border-white/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[1px] text-white/50">
                 AGOS MAP APPLICATION / TEMPORAL GEOSPATIAL ANALYSIS
               </Badge>
-              <h1 className="mt-4 font-mono text-[36px] uppercase leading-[1.05] tracking-[-0.04em] text-white md:text-[52px]">
+              <h1 className="mt-3 font-mono text-[32px] uppercase leading-[0.98] tracking-[-0.04em] text-white md:text-[44px] xl:text-[48px]">
                 MAP / NETWORK / MOVEMENT / ACTION
               </h1>
-              <p className="mt-4 max-w-[760px] font-sans text-[16px] leading-[1.6] text-white/70">
-                Traverse asset relationships, inspect physical corridors, run backend viewport and polygon queries, resolve live places through Geoapify, and replay movement over time inside a single AGOS geospatial surface.
-              </p>
+              <div className="mt-3 flex min-w-0 flex-col gap-2 border-t border-white/10 pt-3 xl:flex-row xl:flex-wrap xl:items-center xl:gap-5">
+                <div className="min-w-0">
+                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Query</p>
+                  <p className="mt-1 font-sans text-[14px] text-white">{queryMode === "bbox" ? "Viewport" : "Polygon"}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Time</p>
+                  <p className="mt-1 truncate font-sans text-[14px] text-white">{summary.activeTimestamp.replace("T", " ").replace("Z", " UTC")}</p>
+                </div>
+                <div className="min-w-0 xl:max-w-[360px]">
+                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Selection</p>
+                  <p className="mt-1 truncate font-sans text-[14px] text-white">{selectionSummaryLabel}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Mode</p>
+                  <p className="mt-1 font-sans text-[14px] text-white">{playing ? "Playback" : "Static review"}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Window</p>
+                  <p className="mt-1 truncate font-sans text-[14px] text-white/70">{summary.queryLabel}</p>
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:min-w-[340px]">
               {[
                 ["Assets", featureData.assets.length],
                 ["Zones", featureData.zones.length],
                 ["Events", activeEvents.length],
                 ["Tracks", tracks.filter((track) => track.visibleCoordinates.length >= 2).length],
               ].map(([label, value]) => (
-                <div key={label} className="border border-white/10 px-4 py-3">
+                <div key={label} className="border border-white/10 px-3 py-2.5">
                   <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">{label}</p>
-                  <p className="mt-2 font-sans text-[24px] text-white">{value}</p>
+                  <p className="mt-1 font-sans text-[22px] text-white">{value}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)_340px]">
-          <MapControlRail
-            layerState={layerState}
-            queryMode={queryMode}
-            queryLabel={summary.queryLabel}
-            polygonDraftCount={polygonDraft.length}
-            isPolygonCommitted={Boolean(polygonQuery)}
-            searchQuery={searchQuery}
-            searchResults={placeSearchQuery.data ?? []}
-            searchResultsLoading={placeSearchQuery.isFetching}
-            searchResultsError={placeSearchQuery.isError ? (placeSearchQuery.error instanceof Error ? placeSearchQuery.error.message : "Place search failed") : null}
-            onLayerToggle={handleLayerToggle}
-            onQueryModeChange={handleQueryModeChange}
-            onSearchQueryChange={setSearchQuery}
-            onCompletePolygon={handleCompletePolygon}
-            onClearPolygon={handleClearPolygon}
-            onUndoPolygonVertex={handleUndoPolygonVertex}
-            onSelectSearchResult={handleSelectSearchResult}
-          />
-
-          <div className="flex flex-col gap-4">
-            <section className="border border-white/10 bg-white/[0.03] px-4 py-4">
-              <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-4">
-                <div>
-                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Query</p>
-                  <p className="mt-2 font-sans text-[15px] text-white">{queryMode === "bbox" ? "Viewport intersection" : "Polygon intersection"}</p>
-                </div>
-                <div>
-                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Time</p>
-                  <p className="mt-2 font-sans text-[15px] text-white">{summary.activeTimestamp.replace("T", " ").replace("Z", " UTC")}</p>
-                </div>
-                <div>
-                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Selection</p>
-                  <p className="mt-2 font-sans text-[15px] text-white">{visibleSelection ? `${visibleSelection.type.toUpperCase()} / ${visibleSelection.id}` : "NONE"}</p>
-                </div>
-                <div>
-                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Mode</p>
-                  <p className="mt-2 font-sans text-[15px] text-white">{playing ? "PLAYBACK ACTIVE" : "STATIC REVIEW"}</p>
-                </div>
-              </div>
-              {featureQuery.isError ? (
-                <p className="mt-3 border-t border-white/10 pt-3 font-sans text-[14px] leading-[1.6] text-white/55">
-                  {featureQuery.error instanceof Error ? featureQuery.error.message : "Map data request failed."}
-                </p>
-              ) : null}
-            </section>
-
-            <MapCanvas
-              assets={featureData.assets}
-              zones={featureData.zones}
-              connections={featureData.connections}
-              tracks={tracks}
-              events={activeEvents}
+        <section className="grid gap-2.5 xl:grid-cols-[188px_minmax(0,1fr)] xl:items-start">
+          <div className="xl:sticky xl:top-4 xl:max-h-[calc(100dvh-2rem)] xl:overflow-hidden">
+            <MapControlRail
               layerState={layerState}
-              selection={visibleSelection}
               queryMode={queryMode}
-              polygonDraft={polygonDraft}
-              polygonQuery={polygonQuery}
-              focusTarget={focusTarget}
-              onSelectionChange={setSelection}
-              onBoundsChange={setMapBounds}
-              onAddPolygonVertex={handleAddPolygonVertex}
-              onUpdatePolygonVertex={handleUpdatePolygonVertex}
-            />
-
-            <MapTimeline
-              timestamps={timeline}
-              activeIndex={activeTimelineIndex}
-              playing={playing}
-              windowSize={activeTimeWindow}
-              onIndexChange={setTimelineIndex}
-              onTogglePlayback={() => setPlaying((current) => !current)}
-              onWindowSizeChange={setTimeWindow}
+              queryLabel={summary.queryLabel}
+              polygonDraftCount={polygonDraft.length}
+              isPolygonCommitted={Boolean(polygonQuery)}
+              searchQuery={searchQuery}
+              searchResults={placeSearchQuery.data ?? []}
+              searchResultsLoading={placeSearchQuery.isFetching}
+              searchResultsError={placeSearchQuery.isError ? (placeSearchQuery.error instanceof Error ? placeSearchQuery.error.message : "Place search failed") : null}
+              onLayerToggle={handleLayerToggle}
+              onQueryModeChange={handleQueryModeChange}
+              onSearchQueryChange={setSearchQuery}
+              onCompletePolygon={handleCompletePolygon}
+              onClearPolygon={handleClearPolygon}
+              onUndoPolygonVertex={handleUndoPolygonVertex}
+              onSelectSearchResult={handleSelectSearchResult}
             />
           </div>
 
-          <MapDetailRail
-            selection={visibleSelection}
-            assets={featureData.assets}
-            zones={featureData.zones}
-            connections={featureData.connections}
-            tracks={tracks}
-            events={activeEvents}
-            onFitSelection={handleFitSelection}
-          />
+          <div className="relative flex min-w-0 flex-col gap-2.5">
+            {featureQuery.isError ? (
+              <section className="border border-white/10 bg-white/[0.03] px-4 py-3">
+                <p className="font-sans text-[14px] leading-[1.6] text-white/55">
+                  {featureQuery.error instanceof Error ? featureQuery.error.message : "Map data request failed."}
+                </p>
+              </section>
+            ) : null}
+
+            <div className="relative flex min-w-0 flex-col gap-0 overflow-hidden border border-white/10 bg-white/[0.03]">
+              <MapCanvas
+                assets={featureData.assets}
+                zones={featureData.zones}
+                connections={featureData.connections}
+                tracks={tracks}
+                events={activeEvents}
+                layerState={layerState}
+                selection={visibleSelection}
+                queryMode={queryMode}
+                polygonDraft={polygonDraft}
+                polygonQuery={polygonQuery}
+                focusTarget={focusTarget}
+                onSelectionChange={(nextSelection) => {
+                  setSelection(nextSelection);
+                  if (nextSelection) {
+                    setDismissedInspectorSelectionKey(null);
+                  }
+                }}
+                onBoundsChange={setMapBounds}
+                onAddPolygonVertex={handleAddPolygonVertex}
+                onUpdatePolygonVertex={handleUpdatePolygonVertex}
+              />
+
+              <MapTimeline
+                timestamps={timeline}
+                activeIndex={activeTimelineIndex}
+                playing={playing}
+                windowSize={activeTimeWindow}
+                onIndexChange={setTimelineIndex}
+                onTogglePlayback={() => setPlaying((current) => !current)}
+                onWindowSizeChange={setTimeWindow}
+              />
+
+              <MapDetailRail
+                key={visibleSelection ? `${visibleSelection.type}:${visibleSelection.id}` : "none"}
+                className="xl:absolute xl:inset-y-0 xl:right-0 xl:w-[320px] xl:border-l"
+                open={inspectorOpen}
+                selection={visibleSelection}
+                assets={featureData.assets}
+                zones={featureData.zones}
+                connections={featureData.connections}
+                tracks={tracks}
+                events={activeEvents}
+                onFitSelection={handleFitSelection}
+                onClose={handleCloseInspector}
+              />
+            </div>
+          </div>
         </section>
       </div>
     </div>

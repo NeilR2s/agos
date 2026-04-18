@@ -172,19 +172,24 @@ export function Sidebar({
     return (
         <div className={cn("group/sidebar flex h-full w-full flex-col justify-between gap-6 overflow-hidden bg-background px-2 py-4 text-foreground", showLabels && "px-4", className)}>
             <div className={cn("flex min-h-0 flex-1 flex-col", !showLabels ? "gap-5" : "gap-6")}>
-                <div className={cn("relative flex items-center", showLabels ? "justify-between gap-3" : "justify-start")}>
+                <div className={cn("relative flex items-center", showLabels ? "justify-between gap-3" : "justify-center")}>
                     <Link
                         to="/"
                         onClick={() => onNavigate?.()}
                         aria-label="AGOS home"
                         className={cn(
                             "block font-mono text-[14px] uppercase tracking-[1.4px] text-white transition-colors hover:text-white/50",
-                            showLabels ? "flex-none" : "flex-none text-left"
+                            showLabels ? "flex-none" : "flex-none text-center group-hover/sidebar:invisible"
                         )}
                     >
                         <span className="inline-block whitespace-nowrap">AGOS</span>
                     </Link>
-                    <div className={cn("flex items-center gap-1", !showLabels && "pointer-events-none absolute right-0 top-0 opacity-0 transition-opacity duration-150 group-hover/sidebar:pointer-events-auto group-hover/sidebar:opacity-100")}>
+                    <div
+                        className={cn(
+                            "flex items-center gap-1",
+                            !showLabels && "pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-150 group-hover/sidebar:pointer-events-auto group-hover/sidebar:opacity-100"
+                        )}
+                    >
                         {onToggleExpanded ? (
                             <Button
                                 type="button"

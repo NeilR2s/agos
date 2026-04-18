@@ -1,7 +1,13 @@
+import { type ReactNode, useState } from "react";
+
+import { XMarkIcon } from "@heroicons/react/24/outline";
+
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { MapAssetPoint, MapConnectionLine, MapEvent, MapSelection, MapTrack, MapZonePolygon } from "../types";
 
 type MapDetailRailProps = {
+  open: boolean;
   selection: MapSelection;
   assets: MapAssetPoint[];
   zones: MapZonePolygon[];
@@ -9,6 +15,8 @@ type MapDetailRailProps = {
   tracks: MapTrack[];
   events: MapEvent[];
   onFitSelection: () => void;
+  onClose: () => void;
+  className?: string;
 };
 
 const statusTone = {
@@ -27,7 +35,29 @@ const formatTimestamp = (timestamp: string) =>
     timeZone: "UTC",
   }).format(new Date(timestamp));
 
-export function MapDetailRail({ selection, assets, zones, connections, tracks, events, onFitSelection }: MapDetailRailProps) {
+const getInitialTab = (selection: MapSelection): InspectorTab => {
+  if (selection?.type === "event") {
+    return "events";
+  }
+
+  if (selection?.type === "track") {
+    return "track";
+  }
+
+  return "overview";
+};
+
+type InspectorTab = "overview" | "events" | "connections" | "track";
+
+const truncateMiddle = (value: string, edge = 10) => {
+  if (value.length <= edge * 2 + 3) {
+    return value;
+  }
+
+  return `${value.slice(0, edge)}...${value.slice(-edge)}`;
+};
+
+export function MapDetailRail({ open, selection, assets, zones, connections, tracks, events, onFitSelection, onClose, className }: MapDetailRailProps) {
   const selectedAsset = selection?.type === "asset" ? assets.find((asset) => asset.id === selection.id) ?? null : null;
   const selectedZone = selection?.type === "zone" ? zones.find((zone) => zone.id === selection.id) ?? null : null;
   const selectedConnection = selection?.type === "connection" ? connections.find((connection) => connection.id === selection.id) ?? null : null;
@@ -43,95 +73,184 @@ export function MapDetailRail({ selection, assets, zones, connections, tracks, e
       ? events.filter((event) => event.zoneId === selectedZone.id)
       : [];
   const relatedTrack = selectedAsset ? tracks.find((track) => track.assetId === selectedAsset.id) ?? null : null;
+  const [activeTab, setActiveTab] = useState<InspectorTab>(() => getInitialTab(selection));
+  const selectionTitle = selectedAsset?.name
+    ?? selectedZone?.name
+    ?? (selectedConnection ? `${selectedConnection.kind.toUpperCase()} LINK` : null)
+    ?? selectedEvent?.title
+    ?? selectedTrack?.label
+    ?? null;
+  const selectionMeta = selection ? `${selection.type.toUpperCase()} / ${truncateMiddle(selection.id)}` : "No object selected.";
+
+  const tabAvailability = {
+    overview: true,
+    events: Boolean(selectedEvent || relatedEvents.length),
+    connections: Boolean(selectedConnection || relatedConnections.length),
+    track: Boolean(selectedTrack || relatedTrack),
+  };
+
+  const tabLabels: Array<{ key: InspectorTab; label: string; disabled: boolean }> = [
+    { key: "overview", label: "Overview", disabled: !tabAvailability.overview },
+    { key: "events", label: "Events", disabled: !tabAvailability.events },
+    { key: "connections", label: "Links", disabled: !tabAvailability.connections },
+    { key: "track", label: "Track", disabled: !tabAvailability.track },
+  ];
+
+  const overviewContent = !selection ? (
+    <p className="font-sans text-[14px] leading-[1.6] text-white/60">
+      Select an asset, zone, connection, event, or track on the map to inspect its operational context.
+    </p>
+  ) : (
+    <>
+      {selectedAsset ? (
+        <div className="space-y-3">
+          <h2 className="font-sans text-[22px] text-white">{selectedAsset.name}</h2>
+          <p className={cn("font-mono text-[10px] uppercase tracking-[1.2px]", statusTone[selectedAsset.status])}>{selectedAsset.status}</p>
+          <p className="font-sans text-[14px] leading-[1.6] text-white/70">{selectedAsset.description}</p>
+          <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/40">
+            {selectedAsset.location[1].toFixed(4)} / {selectedAsset.location[0].toFixed(4)}
+          </p>
+        </div>
+      ) : null}
+
+      {selectedZone ? (
+        <div className="space-y-3">
+          <h2 className="font-sans text-[22px] text-white">{selectedZone.name}</h2>
+          <p className={cn("font-mono text-[10px] uppercase tracking-[1.2px]", statusTone[selectedZone.status])}>{selectedZone.kind}</p>
+          <p className="font-sans text-[14px] leading-[1.6] text-white/70">{selectedZone.description}</p>
+        </div>
+      ) : null}
+
+      {selectedConnection ? (
+        <div className="space-y-3">
+          <h2 className="font-sans text-[22px] text-white">{selectedConnection.kind.toUpperCase()} LINK</h2>
+          <p className={cn("font-mono text-[10px] uppercase tracking-[1.2px]", statusTone[selectedConnection.status])}>{selectedConnection.status}</p>
+          <p className="font-sans text-[14px] leading-[1.6] text-white/70">{selectedConnection.description}</p>
+        </div>
+      ) : null}
+
+      {selectedEvent ? (
+        <div className="space-y-3">
+          <h2 className="font-sans text-[22px] text-white">{selectedEvent.title}</h2>
+          <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/60">{selectedEvent.kind}</p>
+          <p className="font-sans text-[14px] leading-[1.6] text-white/70">{selectedEvent.detail}</p>
+          <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/40">{formatTimestamp(selectedEvent.timestamp)}</p>
+        </div>
+      ) : null}
+
+      {selectedTrack ? (
+        <div className="space-y-3">
+          <h2 className="font-sans text-[22px] text-white">{selectedTrack.label}</h2>
+          <p className="font-sans text-[14px] leading-[1.6] text-white/70">Movement path with {selectedTrack.points.length} checkpoints.</p>
+        </div>
+      ) : null}
+    </>
+  );
+
+  const eventsContent = selectedEvent ? (
+    <div className="border border-white/10 px-3 py-3">
+      <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/50">{formatTimestamp(selectedEvent.timestamp)}</p>
+      <p className="mt-1 font-sans text-[14px] text-white">{selectedEvent.title}</p>
+      <p className="mt-1 font-sans text-[13px] leading-[1.5] text-white/60">{selectedEvent.detail}</p>
+    </div>
+  ) : relatedEvents.length ? (
+    <div className="space-y-3">
+      {relatedEvents.map((event) => (
+        <div key={event.id} className="border border-white/10 px-3 py-3">
+          <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/50">{formatTimestamp(event.timestamp)}</p>
+          <p className="mt-1 font-sans text-[14px] text-white">{event.title}</p>
+          <p className="mt-1 font-sans text-[13px] leading-[1.5] text-white/60">{event.detail}</p>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <p className="font-sans text-[14px] leading-[1.6] text-white/60">No recent events linked to the current object.</p>
+  );
+
+  const connectionsContent = selectedConnection ? (
+    <div className="border border-white/10 px-3 py-3">
+      <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/50">{selectedConnection.kind}</p>
+      <p className="mt-1 font-sans text-[14px] text-white">{selectedConnection.description}</p>
+    </div>
+  ) : relatedConnections.length ? (
+    <div className="space-y-3">
+      {relatedConnections.map((connection) => (
+        <div key={connection.id} className="border border-white/10 px-3 py-3">
+          <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/50">{connection.kind}</p>
+          <p className="mt-1 font-sans text-[14px] text-white">{connection.description}</p>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <p className="font-sans text-[14px] leading-[1.6] text-white/60">No connected infrastructure in the current selection.</p>
+  );
+
+  const trackContent = selectedTrack ? (
+    <div className="space-y-3">
+      <h2 className="font-sans text-[22px] text-white">{selectedTrack.label}</h2>
+      <p className="font-sans text-[14px] leading-[1.6] text-white/70">Movement path with {selectedTrack.points.length} checkpoints.</p>
+    </div>
+  ) : relatedTrack ? (
+    <p className="font-sans text-[14px] leading-[1.6] text-white/60">{relatedTrack.label} is attached to the selected asset with {relatedTrack.points.length} checkpoints.</p>
+  ) : (
+    <p className="font-sans text-[14px] leading-[1.6] text-white/60">No track is attached to the current object.</p>
+  );
+
+  const tabContent = {
+    overview: overviewContent,
+    events: eventsContent,
+    connections: connectionsContent,
+    track: trackContent,
+  } satisfies Record<InspectorTab, ReactNode>;
 
   return (
-    <aside className="flex flex-col gap-4">
-      <section className="border border-white/10 bg-white/[0.03] p-4">
+    <aside
+      className={cn(
+        "min-h-0 xl:z-20",
+        open ? "block" : "hidden xl:hidden",
+        className
+      )}
+    >
+      <div className="flex h-full min-h-0 flex-col gap-3 bg-background/96 p-3 backdrop-blur-sm xl:border-white/10">
+      <section className="border border-white/10 bg-white/[0.03] p-3.5">
         <div className="flex items-center justify-between gap-3">
           <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">Selected Object</p>
-          {selection ? <Button type="button" size="sm" variant="outline" onClick={onFitSelection}>Fit</Button> : null}
+          <div className="flex items-center gap-2">
+            {selection ? <Button type="button" size="sm" variant="outline" onClick={onFitSelection}>Fit</Button> : null}
+            <Button type="button" size="icon-sm" variant="outline" onClick={onClose} aria-label="Close inspector">
+              <XMarkIcon className="size-4" />
+            </Button>
+          </div>
         </div>
-        {!selection ? (
-          <p className="mt-3 font-sans text-[14px] leading-[1.6] text-white/60">
-            Select an asset, zone, connection, event, or track on the map to inspect its operational context.
-          </p>
-        ) : null}
-
-        {selectedAsset ? (
-          <div className="mt-3 space-y-3">
-            <h2 className="font-sans text-[22px] text-white">{selectedAsset.name}</h2>
-            <p className={["font-mono text-[10px] uppercase tracking-[1.2px]", statusTone[selectedAsset.status]].join(" ")}>{selectedAsset.status}</p>
-            <p className="font-sans text-[14px] leading-[1.6] text-white/70">{selectedAsset.description}</p>
-            <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/40">
-              {selectedAsset.location[1].toFixed(4)} / {selectedAsset.location[0].toFixed(4)}
-            </p>
-          </div>
-        ) : null}
-
-        {selectedZone ? (
-          <div className="mt-3 space-y-3">
-            <h2 className="font-sans text-[22px] text-white">{selectedZone.name}</h2>
-            <p className={["font-mono text-[10px] uppercase tracking-[1.2px]", statusTone[selectedZone.status]].join(" ")}>{selectedZone.kind}</p>
-            <p className="font-sans text-[14px] leading-[1.6] text-white/70">{selectedZone.description}</p>
-          </div>
-        ) : null}
-
-        {selectedConnection ? (
-          <div className="mt-3 space-y-3">
-            <h2 className="font-sans text-[22px] text-white">{selectedConnection.kind.toUpperCase()} LINK</h2>
-            <p className={["font-mono text-[10px] uppercase tracking-[1.2px]", statusTone[selectedConnection.status]].join(" ")}>{selectedConnection.status}</p>
-            <p className="font-sans text-[14px] leading-[1.6] text-white/70">{selectedConnection.description}</p>
-          </div>
-        ) : null}
-
-        {selectedEvent ? (
-          <div className="mt-3 space-y-3">
-            <h2 className="font-sans text-[22px] text-white">{selectedEvent.title}</h2>
-            <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/60">{selectedEvent.kind}</p>
-            <p className="font-sans text-[14px] leading-[1.6] text-white/70">{selectedEvent.detail}</p>
-            <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/40">{formatTimestamp(selectedEvent.timestamp)}</p>
-          </div>
-        ) : null}
-
-        {selectedTrack ? (
-          <div className="mt-3 space-y-3">
-            <h2 className="font-sans text-[22px] text-white">{selectedTrack.label}</h2>
-            <p className="font-sans text-[14px] leading-[1.6] text-white/70">Movement path with {selectedTrack.points.length} checkpoints.</p>
-          </div>
-        ) : null}
-      </section>
-
-      <section className="border border-white/10 bg-white/[0.03] p-4">
-        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">Connections</p>
-        <div className="mt-3 space-y-3">
-          {relatedConnections.length ? relatedConnections.map((connection) => (
-            <div key={connection.id} className="border border-white/10 px-3 py-3">
-              <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/50">{connection.kind}</p>
-              <p className="mt-1 font-sans text-[14px] text-white">{connection.description}</p>
-            </div>
-          )) : <p className="font-sans text-[14px] leading-[1.6] text-white/60">No connected infrastructure in the current selection.</p>}
-        </div>
-      </section>
-
-      <section className="border border-white/10 bg-white/[0.03] p-4">
-        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">Event Stream</p>
-        <div className="mt-3 space-y-3">
-          {relatedEvents.length ? relatedEvents.map((event) => (
-            <div key={event.id} className="border border-white/10 px-3 py-3">
-              <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/50">{formatTimestamp(event.timestamp)}</p>
-              <p className="mt-1 font-sans text-[14px] text-white">{event.title}</p>
-              <p className="mt-1 font-sans text-[13px] leading-[1.5] text-white/60">{event.detail}</p>
-            </div>
-          )) : <p className="font-sans text-[14px] leading-[1.6] text-white/60">No recent events linked to the current object.</p>}
-        </div>
-      </section>
-
-      <section className="border border-white/10 bg-white/[0.03] p-4">
-        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">Track</p>
-        <p className="mt-3 font-sans text-[14px] leading-[1.6] text-white/60">
-          {relatedTrack ? `${relatedTrack.label} is attached to the selected asset with ${relatedTrack.points.length} checkpoints.` : "No track is attached to the current object."}
+        {selectionTitle ? <p className="mt-3 truncate font-sans text-[16px] text-white" title={selectionTitle}>{selectionTitle}</p> : null}
+        <p className="mt-1 truncate font-sans text-[12px] leading-[1.5] text-white/50" title={selection ? selection.id : undefined}>
+          {selectionMeta}
         </p>
       </section>
+
+      <section className="flex min-h-0 flex-1 flex-col border border-white/10 bg-white/[0.03]">
+        <div className="grid grid-cols-4 border-b border-white/10">
+          {tabLabels.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              disabled={tab.disabled}
+              className={cn(
+                "border-r border-white/10 px-2 py-2.5 font-mono text-[10px] uppercase tracking-[1.1px] transition-colors last:border-r-0",
+                activeTab === tab.key ? "bg-white/[0.06] text-white" : "text-white/45 hover:bg-white/[0.03] hover:text-white",
+                tab.disabled && "cursor-not-allowed text-white/20 hover:bg-transparent hover:text-white/20"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <div className="min-h-[240px] flex-1 overflow-y-auto p-3.5 xl:min-h-0">
+          {tabContent[activeTab]}
+        </div>
+      </section>
+      </div>
     </aside>
   );
 }
