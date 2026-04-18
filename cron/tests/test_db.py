@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from db import init_db
+from db import CONTAINERS, init_db
 
 
 @pytest.mark.asyncio
@@ -17,4 +17,4 @@ async def test_init_db():
         await init_db()
 
         mock_client.create_database_if_not_exists.assert_called_once()
-        assert mock_db.create_container_if_not_exists.call_count == 3
+        assert mock_db.create_container_if_not_exists.call_count == len(CONTAINERS)

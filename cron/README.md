@@ -21,11 +21,16 @@
 | `pse_stock_data` | `/ticker` | Daily stock data for listed companies |
 | `macro_data` | `/indicator` | PSA, BSP, and PSE macro or index records |
 | `news_sentiment_data` | `/ticker` | News articles with sentiment and ticker linkage |
+| `map_assets` | `/region` | Seeded operational asset reference data |
+| `map_zones` | `/region` | Seeded monitoring and facility polygons |
+| `map_connections` | `/region` | Seeded network and supply connections |
+| `map_tracks` | `/assetId` | Seeded movement tracks for the map timeline |
+| `map_events` | `/eventDate` | Live or normalized geospatial events |
 
 ## Configuration
 
 - `config.py` is the source of truth for environment names.
-- Core values are `COSMOS_URI`, `COSMOS_PRIMARY_KEY`, `COSMOS_DATABASE_ID`, the three container names, `TAVILY_API_KEY`, `GEMINI_API_KEY`, and `PSE_MAX_CONCURRENCY`.
+- Core values are `COSMOS_URI`, `COSMOS_PRIMARY_KEY`, `COSMOS_DATABASE_ID`, the market/news container names, the map container names, `TAVILY_API_KEY`, `GEMINI_API_KEY`, and `PSE_MAX_CONCURRENCY`.
 - PSA, PSE, and BSP source endpoints are also env-driven.
 
 ## Local run
@@ -46,6 +51,7 @@ python verify_results.py
 ```
 
 `verify_results.py` prints container counts and sample PSA and BSP records from Cosmos.
+The pipeline also idempotently seeds map reference data before scraper execution.
 
 ## Current caveats
 

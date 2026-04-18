@@ -7,6 +7,7 @@ from news_scraper import NewsScraper
 from psa_scraper import PSAScraper
 from pse_scraper import PSEScraper
 from config import settings
+from seed_map_reference_data import seed_map_reference_data
 
 logger = setup_logger("Pipeline")
 
@@ -23,6 +24,7 @@ async def run_pipeline():
 
     async with get_cosmos_client() as client:
         db_client = client.get_database_client(COSMOS_DB_ID)
+        await seed_map_reference_data(db_client, settings)
 
         scrapers = [
             PSAScraper(db_client),

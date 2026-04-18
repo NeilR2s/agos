@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     COSMOS_PSE_CONTAINER: str = "pse_stock_data"
     COSMOS_MACRO_CONTAINER: str = "macro_data"
     COSMOS_NEWS_CONTAINER: str = "news_sentiment_data"
+    COSMOS_MAP_ASSETS_CONTAINER: str = "map_assets"
+    COSMOS_MAP_ZONES_CONTAINER: str = "map_zones"
+    COSMOS_MAP_CONNECTIONS_CONTAINER: str = "map_connections"
+    COSMOS_MAP_TRACKS_CONTAINER: str = "map_tracks"
+    COSMOS_MAP_EVENTS_CONTAINER: str = "map_events"
 
     # PSA OpenStat sources
     PSA_GDP_SOURCE: str = ""

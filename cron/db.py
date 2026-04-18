@@ -13,6 +13,11 @@ CONTAINERS = {
     settings.COSMOS_PSE_CONTAINER: "/ticker",
     settings.COSMOS_MACRO_CONTAINER: "/indicator",
     settings.COSMOS_NEWS_CONTAINER: "/ticker",
+    settings.COSMOS_MAP_ASSETS_CONTAINER: "/region",
+    settings.COSMOS_MAP_ZONES_CONTAINER: "/region",
+    settings.COSMOS_MAP_CONNECTIONS_CONTAINER: "/region",
+    settings.COSMOS_MAP_TRACKS_CONTAINER: "/assetId",
+    settings.COSMOS_MAP_EVENTS_CONTAINER: "/eventDate",
 }
 
 
