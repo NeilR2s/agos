@@ -393,7 +393,7 @@ export function AgentPage() {
             </Button>
           </DialogHeader>
 
-          <div className="agent-scrollbar max-h-[min(70vh,760px)] overflow-y-auto p-5">
+          <div className="scrollbar-hidden max-h-[min(70vh,760px)] overflow-y-auto p-5">
             {activePanel === "run" ? (
               <AgentRunStatus
                 run={activeRun}

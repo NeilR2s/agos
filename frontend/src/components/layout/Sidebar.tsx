@@ -10,6 +10,7 @@ import {
     MagnifyingGlassIcon,
     ArrowLeftOnRectangleIcon,
     PlusIcon,
+    GlobeAltIcon,
 } from "@heroicons/react/24/outline";
 
 import { agentApi, backendClient, getUserId } from "@/api/backend/client";
@@ -39,6 +40,7 @@ const navItems = [
     { to: "/research", label: "Research", icon: MagnifyingGlassIcon, aliases: ["/market"] },
     { to: "/portfolio", label: "Portfolio", icon: BriefcaseIcon, aliases: ["/dashboard"] },
     { to: "/trading", label: "Trading", icon: CommandLineIcon, aliases: [] },
+    { to: "/map", label: "Map", icon: GlobeAltIcon, aliases: [] },
     { to: "/agent", label: "Agent", icon: ChatBubbleLeftRightIcon, aliases: [] },
 ];
 
@@ -170,29 +172,26 @@ export function Sidebar({
     return (
         <div className={cn("group/sidebar flex h-full w-full flex-col justify-between gap-6 overflow-hidden bg-background px-2 py-4 text-foreground", showLabels && "px-4", className)}>
             <div className={cn("flex min-h-0 flex-1 flex-col", !showLabels ? "gap-5" : "gap-6")}>
-                <div className={cn("relative flex items-center", showLabels ? "justify-between gap-3" : "justify-center")}>
+                <div className={cn("relative flex items-center", showLabels ? "justify-between gap-3" : "justify-start")}>
                     <Link
                         to="/"
                         onClick={() => onNavigate?.()}
                         aria-label="AGOS home"
                         className={cn(
                             "block font-mono text-[14px] uppercase tracking-[1.4px] text-white transition-colors hover:text-white/50",
-                            showLabels ? "flex-none" : "flex-1 text-center"
+                            showLabels ? "flex-none" : "flex-none text-left"
                         )}
                     >
                         <span className="inline-block whitespace-nowrap">AGOS</span>
                     </Link>
-                    <div className="flex items-center gap-1">
+                    <div className={cn("flex items-center gap-1", !showLabels && "pointer-events-none absolute right-0 top-0 opacity-0 transition-opacity duration-150 group-hover/sidebar:pointer-events-auto group-hover/sidebar:opacity-100")}>
                         {onToggleExpanded ? (
                             <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon-sm"
                                 onClick={onToggleExpanded}
-                                className={cn(
-                                    "text-white/40 hover:text-white",
-                                    showLabels ? "opacity-100" : "pointer-events-none opacity-0 transition-opacity duration-150 group-hover/sidebar:pointer-events-auto group-hover/sidebar:opacity-100"
-                                )}
+                                className="text-white/40 hover:text-white"
                                 aria-label={showLabels ? "Collapse sidebar" : "Expand sidebar"}
                             >
                                 {showLabels ? <ChevronDoubleLeftIcon className="size-4" /> : <ChevronDoubleRightIcon className="size-4" />}

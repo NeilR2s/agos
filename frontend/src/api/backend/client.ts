@@ -10,6 +10,7 @@ import type {
   AgentThread,
   AgentThreadCreateRequest,
 } from "../../features/agent/types";
+import type { MapBounds, MapFeatureCollection, MapPlaceSearchResult } from "../../features/map/types";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
@@ -147,5 +148,32 @@ export const agentApi = {
     }
 
     return response;
+  },
+};
+
+export const mapApi = {
+  getFeatures(bounds: MapBounds, search = "") {
+    const params = new URLSearchParams({
+      west: bounds.west.toString(),
+      south: bounds.south.toString(),
+      east: bounds.east.toString(),
+      north: bounds.north.toString(),
+      search,
+    });
+
+    return backendJson<MapFeatureCollection>(`/api/v1/map/features?${params.toString()}`);
+  },
+
+  queryPolygon(polygon: [number, number][], search = "") {
+    return backendJson<MapFeatureCollection>("/api/v1/map/query", {
+      method: "POST",
+      body: JSON.stringify({ polygon, search }),
+    });
+  },
+
+  async searchPlaces(query: string, limit = 5) {
+    const params = new URLSearchParams({ query, limit: limit.toString() });
+    const response = await backendJson<{ results: MapPlaceSearchResult[] }>(`/api/v1/map/search?${params.toString()}`);
+    return response.results;
   },
 };

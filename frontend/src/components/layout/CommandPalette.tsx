@@ -4,6 +4,7 @@ import {
   BriefcaseIcon,
   ChatBubbleLeftRightIcon,
   CommandLineIcon,
+  GlobeAltIcon,
   HomeIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
@@ -79,6 +80,14 @@ function CommandPaletteContent({ onOpenChange }: { onOpenChange: (open: boolean)
         description: "Open the AGOS copilot console.",
         icon: ChatBubbleLeftRightIcon,
         onSelect: () => navigate("/agent"),
+      },
+      {
+        id: "nav-map",
+        group: "Navigation",
+        label: "Go to Map",
+        description: "Open the geospatial operations workspace.",
+        icon: GlobeAltIcon,
+        onSelect: () => navigate("/map"),
       },
       {
         id: "nav-landing",
