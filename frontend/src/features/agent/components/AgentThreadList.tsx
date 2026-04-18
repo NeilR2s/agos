@@ -73,7 +73,7 @@ export function AgentThreadList({
           />
         </div>
 
-        <div className="agent-scrollbar min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
+        <div className="scrollbar-hidden min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
           {isLoading ? (
             <p className="px-2 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Loading...</p>
           ) : groups.length ? (

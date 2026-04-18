@@ -141,6 +141,15 @@
     background: #171a20;
   }
 
+  .scrollbar-hidden {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+
   .agent-markdown {
     @apply text-[15px] leading-[1.75] text-white/90;
   }

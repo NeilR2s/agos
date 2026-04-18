@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { agentApi } from "@/api/backend/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DEFAULT_AGENT_RUN_CONFIG, AGENT_CONFIG_STORAGE_KEY } from "@/features/agent/config";
 import { AgentComposer } from "@/features/agent/components/AgentComposer";
 import { AgentRunStatus } from "@/features/agent/components/AgentRunStatus";
@@ -349,41 +350,6 @@ export function AgentPage() {
           onSelectAgent={setSelectedAgentId}
         />
 
-        {activePanel ? (
-          <section className="border border-white/10 bg-[#171a20]">
-            <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
-              <div>
-                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
-                  {activePanel === "run" ? "Run Details" : "Controls"}
-                </p>
-                <p className="mt-1 font-sans text-[13px] leading-[1.5] text-white/55">
-                  {activePanel === "run"
-                    ? "Status, timing, and model telemetry for the active run."
-                    : "Adjust model, generation, and tool settings without losing transcript space."}
-                </p>
-              </div>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setActivePanel(null)}>
-                Close
-              </Button>
-            </div>
-
-            <div className="agent-scrollbar max-h-[360px] overflow-y-auto p-5">
-              {activePanel === "run" ? (
-                <AgentRunStatus
-                  run={activeRun}
-                  isStreaming={stream.isStreaming}
-                  error={stream.error}
-                  citationCount={citations.length}
-                  selectedTicker={selectedTicker}
-                  agentCount={agentCount}
-                />
-              ) : (
-                <AgentSettingsPanel config={runConfig} mode={mode} onChange={setRunConfig} />
-              )}
-            </div>
-          </section>
-        ) : null}
-
         <AgentComposer
           value={composerValue}
           onChange={setComposerValue}
@@ -398,6 +364,51 @@ export function AgentPage() {
           config={runConfig}
         />
       </div>
+
+      <Dialog
+        open={Boolean(activePanel)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setActivePanel(null);
+          }
+        }}
+      >
+        <DialogContent
+          className="overflow-hidden border-white/10 bg-[#171a20] p-0 shadow-none"
+          style={{ width: "min(92vw, 960px)", maxWidth: "none" }}
+        >
+          <DialogHeader className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4 text-left">
+            <div>
+              <DialogTitle className="font-mono text-[11px] uppercase tracking-[1.4px] text-white">
+                {activePanel === "run" ? "Run Details" : "Controls"}
+              </DialogTitle>
+              <p className="mt-1 max-w-[720px] font-sans text-[13px] leading-[1.5] text-white/55">
+                {activePanel === "run"
+                  ? "Status, timing, and model telemetry for the active run."
+                  : "Adjust model, generation, and tool settings without losing transcript space."}
+              </p>
+            </div>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setActivePanel(null)}>
+              Close
+            </Button>
+          </DialogHeader>
+
+          <div className="agent-scrollbar max-h-[min(70vh,760px)] overflow-y-auto p-5">
+            {activePanel === "run" ? (
+              <AgentRunStatus
+                run={activeRun}
+                isStreaming={stream.isStreaming}
+                error={stream.error}
+                citationCount={citations.length}
+                selectedTicker={selectedTicker}
+                agentCount={agentCount}
+              />
+            ) : (
+              <AgentSettingsPanel config={runConfig} mode={mode} onChange={setRunConfig} />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

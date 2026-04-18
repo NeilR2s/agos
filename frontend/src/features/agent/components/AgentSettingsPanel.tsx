@@ -125,7 +125,7 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
           <input
             type="range"
             min="512"
-            max="4096"
+            max="7500"
             step="256"
             value={config.maxOutputTokens}
             onChange={(event) => update("maxOutputTokens", Number(event.target.value))}

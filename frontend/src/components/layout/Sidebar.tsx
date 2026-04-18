@@ -168,7 +168,7 @@ export function Sidebar({
     };
 
     return (
-        <div className={cn("flex h-full w-full flex-col justify-between gap-6 overflow-hidden bg-background px-2 py-4 text-foreground", showLabels && "px-4", className)}>
+        <div className={cn("group/sidebar flex h-full w-full flex-col justify-between gap-6 overflow-hidden bg-background px-2 py-4 text-foreground", showLabels && "px-4", className)}>
             <div className={cn("flex min-h-0 flex-1 flex-col", !showLabels ? "gap-5" : "gap-6")}>
                 <div className={cn("relative flex items-center", showLabels ? "justify-between gap-3" : "justify-center")}>
                     <Link
@@ -189,7 +189,10 @@ export function Sidebar({
                                 variant="ghost"
                                 size="icon-sm"
                                 onClick={onToggleExpanded}
-                                className="text-white/40 hover:text-white"
+                                className={cn(
+                                    "text-white/40 hover:text-white",
+                                    showLabels ? "opacity-100" : "pointer-events-none opacity-0 transition-opacity duration-150 group-hover/sidebar:pointer-events-auto group-hover/sidebar:opacity-100"
+                                )}
                                 aria-label={showLabels ? "Collapse sidebar" : "Expand sidebar"}
                             >
                                 {showLabels ? <ChevronDoubleLeftIcon className="size-4" /> : <ChevronDoubleRightIcon className="size-4" />}
