@@ -74,4 +74,6 @@ def forecast(request: Request, payload: ForecastRequest):
 
         return ForecastResponse(forecasts=result)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        import logging
+        logging.getLogger("agos.engine.api.forecast").error("Forecast evaluation failed", exc_info=True, extra={"extra_info": {"error": str(e)}})
+        raise HTTPException(status_code=500, detail="An internal forecasting error occurred.") from e

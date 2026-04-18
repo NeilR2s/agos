@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from app.core.limiter import limiter
 
 from app.core.decision import DecisionEngine
@@ -61,6 +62,7 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 # Set up CORS
 app.add_middleware(
