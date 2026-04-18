@@ -180,31 +180,4 @@ async def get_run_events(
     return service.list_events(thread_id=thread_id, run_id=run_id)
 
 
-@router.post("/threads/{thread_id}/interrupts/{interrupt_id}/approve")
-async def approve_interrupt(
-    thread_id: str,
-    interrupt_id: str,
-    payload: AgentInterruptDecisionRequest,
-):
-    del thread_id, interrupt_id, payload
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Interrupt approvals are not enabled in V1")
 
-
-@router.post("/threads/{thread_id}/interrupts/{interrupt_id}/reject")
-async def reject_interrupt(
-    thread_id: str,
-    interrupt_id: str,
-    payload: AgentInterruptDecisionRequest,
-):
-    del thread_id, interrupt_id, payload
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Interrupt approvals are not enabled in V1")
-
-
-@router.post("/threads/{thread_id}/interrupts/{interrupt_id}/edit")
-async def edit_interrupt(
-    thread_id: str,
-    interrupt_id: str,
-    payload: AgentInterruptDecisionRequest,
-):
-    del thread_id, interrupt_id, payload
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Interrupt approvals are not enabled in V1")
