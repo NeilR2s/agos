@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     # API Keys
     TAVILY_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
+    GEOAPIFY_KEY: str = ""
 
     # Cosmos DB
     COSMOS_URI: str = ""
