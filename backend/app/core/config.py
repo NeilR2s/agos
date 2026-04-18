@@ -37,15 +37,23 @@ class Settings(BaseSettings):
     COSMOS_URI: str
     COSMOS_PRIMARY_KEY: str
     COSMOS_DATABASE_ID: str
-    COSMOS_PORTFOLIO_CONTAINER: str = ""
-    COSMOS_MACRO_CONTAINER: str = ""
-    COSMOS_NEWS_CONTAINER: str = ""
-    COSMOS_PSE_CONTAINER: str = ""
-    COSMOS_AGENT_THREADS_CONTAINER: str = ""
-    COSMOS_AGENT_MESSAGES_CONTAINER: str = ""
-    COSMOS_AGENT_RUNS_CONTAINER: str = ""
-    COSMOS_AGENT_EVENTS_CONTAINER: str = ""
-    COSMOS_AGENT_CHECKPOINTS_CONTAINER: str = ""
+    COSMOS_PORTFOLIO_CONTAINER: str = "portfolios"
+    COSMOS_MACRO_CONTAINER: str = "macro_data"
+    COSMOS_NEWS_CONTAINER: str = "news_sentiment_data"
+    COSMOS_PSE_CONTAINER: str = "pse_stock_data"
+    COSMOS_AGENT_THREADS_CONTAINER: str = "agent_threads"
+    COSMOS_AGENT_MESSAGES_CONTAINER: str = "agent_messages"
+    COSMOS_AGENT_RUNS_CONTAINER: str = "agent_runs"
+    COSMOS_AGENT_EVENTS_CONTAINER: str = "agent_events"
+    COSMOS_AGENT_CHECKPOINTS_CONTAINER: str = "agent_checkpoints"
+    COSMOS_MAP_ASSETS_CONTAINER: str = "map_assets"
+    COSMOS_MAP_ZONES_CONTAINER: str = "map_zones"
+    COSMOS_MAP_CONNECTIONS_CONTAINER: str = "map_connections"
+    COSMOS_MAP_TRACKS_CONTAINER: str = "map_tracks"
+    COSMOS_MAP_EVENTS_CONTAINER: str = "map_events"
+    MAPTILER_KEY: str = ""
+    GEOAPIFY_KEY: str = ""
+    OPENROUTE_KEY: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
 

@@ -1,0 +1,265 @@
+MAP_TIMELINE = [
+    "2026-04-18T08:00:00Z",
+    "2026-04-18T09:00:00Z",
+    "2026-04-18T10:00:00Z",
+    "2026-04-18T11:00:00Z",
+    "2026-04-18T12:00:00Z",
+]
+
+
+MAP_ASSETS = [
+    {
+        "id": "asset-manila-port",
+        "name": "MANILA PORT NODE",
+        "kind": "asset",
+        "status": "nominal",
+        "location": [120.9709, 14.5906],
+        "zoneId": "zone-manila-port",
+        "description": "Primary ingress point for inbound cargo and maritime telemetry.",
+        "tags": ["port", "logistics", "ingress"],
+    },
+    {
+        "id": "asset-makati-grid",
+        "name": "MAKATI GRID HUB",
+        "kind": "asset",
+        "status": "watch",
+        "location": [121.0244, 14.5547],
+        "zoneId": "zone-makati-core",
+        "description": "Financial district routing hub with elevated alert volume.",
+        "tags": ["finance", "control", "grid"],
+    },
+    {
+        "id": "asset-bgc-ops",
+        "name": "BGC OPS CELL",
+        "kind": "sensor",
+        "status": "nominal",
+        "location": [121.0509, 14.5513],
+        "zoneId": "zone-bgc",
+        "description": "Operational sensor node aggregating urban mobility signals.",
+        "tags": ["sensor", "urban", "telemetry"],
+    },
+    {
+        "id": "asset-subic-yard",
+        "name": "SUBIC YARD",
+        "kind": "asset",
+        "status": "critical",
+        "location": [120.2824, 14.8264],
+        "zoneId": "zone-subic",
+        "description": "Northern staging yard currently under disruption review.",
+        "tags": ["yard", "staging", "critical"],
+    },
+    {
+        "id": "asset-cebu-relay",
+        "name": "CEBU RELAY",
+        "kind": "asset",
+        "status": "nominal",
+        "location": [123.9057, 10.3157],
+        "zoneId": "zone-cebu",
+        "description": "Visayas relay point for regional distribution and event capture.",
+        "tags": ["relay", "regional", "distribution"],
+    },
+]
+
+
+MAP_ZONES = [
+    {
+        "id": "zone-manila-port",
+        "name": "MANILA PORT COMPLEX",
+        "kind": "facility",
+        "status": "nominal",
+        "coordinates": [
+            [120.9565, 14.5832],
+            [120.9836, 14.5832],
+            [120.9836, 14.6028],
+            [120.9565, 14.6028],
+        ],
+        "description": "Port perimeter with maritime handling lanes and customs monitoring.",
+    },
+    {
+        "id": "zone-makati-core",
+        "name": "MAKATI CORE",
+        "kind": "coverage",
+        "status": "watch",
+        "coordinates": [
+            [121.0138, 14.5441],
+            [121.0345, 14.5441],
+            [121.0345, 14.5658],
+            [121.0138, 14.5658],
+        ],
+        "description": "Financial district monitoring envelope with dense event activity.",
+    },
+    {
+        "id": "zone-bgc",
+        "name": "BGC SIGNAL CORRIDOR",
+        "kind": "corridor",
+        "status": "nominal",
+        "coordinates": [
+            [121.0394, 14.5415],
+            [121.0617, 14.5415],
+            [121.0617, 14.5617],
+            [121.0394, 14.5617],
+        ],
+        "description": "Urban signal corridor covering BGC routing and sensor clusters.",
+    },
+    {
+        "id": "zone-subic",
+        "name": "SUBIC OPERATING ZONE",
+        "kind": "facility",
+        "status": "critical",
+        "coordinates": [
+            [120.2604, 14.8112],
+            [120.3118, 14.8112],
+            [120.3118, 14.8449],
+            [120.2604, 14.8449],
+        ],
+        "description": "Staging perimeter with flagged supply chain instability.",
+    },
+    {
+        "id": "zone-cebu",
+        "name": "CEBU REGIONAL GRID",
+        "kind": "coverage",
+        "status": "nominal",
+        "coordinates": [
+            [123.8841, 10.3024],
+            [123.9246, 10.3024],
+            [123.9246, 10.3324],
+            [123.8841, 10.3324],
+        ],
+        "description": "Regional relay area for Visayas event and logistics aggregation.",
+    },
+]
+
+
+MAP_CONNECTIONS = [
+    {
+        "id": "conn-port-makati",
+        "sourceId": "asset-manila-port",
+        "targetId": "asset-makati-grid",
+        "kind": "supply",
+        "status": "watch",
+        "description": "Primary supply lane between maritime ingress and financial clearing.",
+    },
+    {
+        "id": "conn-makati-bgc",
+        "sourceId": "asset-makati-grid",
+        "targetId": "asset-bgc-ops",
+        "kind": "fiber",
+        "status": "nominal",
+        "description": "Low-latency fiber backbone between finance and operations.",
+    },
+    {
+        "id": "conn-port-subic",
+        "sourceId": "asset-manila-port",
+        "targetId": "asset-subic-yard",
+        "kind": "road",
+        "status": "critical",
+        "description": "Ground transit route with elevated interruption probability.",
+    },
+    {
+        "id": "conn-bgc-cebu",
+        "sourceId": "asset-bgc-ops",
+        "targetId": "asset-cebu-relay",
+        "kind": "fiber",
+        "status": "nominal",
+        "description": "Southbound relay path feeding the Visayas distribution network.",
+    },
+]
+
+
+MAP_TRACKS = [
+    {
+        "id": "track-convoy-alpha",
+        "assetId": "asset-manila-port",
+        "label": "CONVOY ALPHA",
+        "points": [
+            {"timestamp": "2026-04-18T08:00:00Z", "location": [120.9709, 14.5906]},
+            {"timestamp": "2026-04-18T09:00:00Z", "location": [120.9842, 14.6078]},
+            {"timestamp": "2026-04-18T10:00:00Z", "location": [121.0015, 14.5803], "eventId": "event-transfer-window"},
+            {"timestamp": "2026-04-18T11:00:00Z", "location": [121.0186, 14.5634]},
+            {"timestamp": "2026-04-18T12:00:00Z", "location": [121.0244, 14.5547]},
+        ],
+    },
+    {
+        "id": "track-northbound-beta",
+        "assetId": "asset-subic-yard",
+        "label": "NORTHBOUND BETA",
+        "points": [
+            {"timestamp": "2026-04-18T08:00:00Z", "location": [120.2824, 14.8264]},
+            {"timestamp": "2026-04-18T09:00:00Z", "location": [120.3312, 14.8121]},
+            {"timestamp": "2026-04-18T10:00:00Z", "location": [120.3741, 14.7810]},
+            {"timestamp": "2026-04-18T11:00:00Z", "location": [120.4288, 14.7313], "eventId": "event-route-disruption"},
+            {"timestamp": "2026-04-18T12:00:00Z", "location": [120.4759, 14.6932]},
+        ],
+    },
+    {
+        "id": "track-visayas-echo",
+        "assetId": "asset-cebu-relay",
+        "label": "VISAYAS ECHO",
+        "points": [
+            {"timestamp": "2026-04-18T08:00:00Z", "location": [123.9057, 10.3157]},
+            {"timestamp": "2026-04-18T09:00:00Z", "location": [123.9214, 10.3282], "eventId": "event-field-inspection"},
+            {"timestamp": "2026-04-18T10:00:00Z", "location": [123.9373, 10.3414]},
+            {"timestamp": "2026-04-18T11:00:00Z", "location": [123.9484, 10.3541]},
+            {"timestamp": "2026-04-18T12:00:00Z", "location": [123.9601, 10.3664]},
+        ],
+    },
+]
+
+
+MAP_EVENTS = [
+    {
+        "id": "event-transfer-window",
+        "title": "TRANSFER WINDOW OPENED",
+        "kind": "handoff",
+        "severity": "medium",
+        "timestamp": "2026-04-18T10:00:00Z",
+        "location": [121.0015, 14.5803],
+        "assetId": "asset-manila-port",
+        "zoneId": "zone-manila-port",
+        "detail": "Cargo handoff advanced by 18 minutes after berth congestion cleared.",
+    },
+    {
+        "id": "event-route-disruption",
+        "title": "NORTHERN ROUTE DISRUPTION",
+        "kind": "alert",
+        "severity": "high",
+        "timestamp": "2026-04-18T11:00:00Z",
+        "location": [120.4288, 14.7313],
+        "assetId": "asset-subic-yard",
+        "zoneId": "zone-subic",
+        "detail": "Transit slowdown detected with compounding delay risk across the northbound corridor.",
+    },
+    {
+        "id": "event-field-inspection",
+        "title": "FIELD INSPECTION COMPLETE",
+        "kind": "inspection",
+        "severity": "low",
+        "timestamp": "2026-04-18T09:00:00Z",
+        "location": [123.9214, 10.3282],
+        "assetId": "asset-cebu-relay",
+        "zoneId": "zone-cebu",
+        "detail": "On-site validation completed with nominal downstream telemetry quality.",
+    },
+    {
+        "id": "event-bgc-signal",
+        "title": "SIGNAL DENSITY SPIKE",
+        "kind": "movement",
+        "severity": "medium",
+        "timestamp": "2026-04-18T12:00:00Z",
+        "location": [121.0509, 14.5513],
+        "assetId": "asset-bgc-ops",
+        "zoneId": "zone-bgc",
+        "detail": "BGC sensor mesh detected a sustained mobility surge across the corridor.",
+    },
+    {
+        "id": "event-makati-review",
+        "title": "GRID REVIEW FLAGGED",
+        "kind": "alert",
+        "severity": "medium",
+        "timestamp": "2026-04-18T08:00:00Z",
+        "location": [121.0244, 14.5547],
+        "assetId": "asset-makati-grid",
+        "zoneId": "zone-makati-core",
+        "detail": "Analyst review triggered on elevated routing volatility in the Makati core.",
+    },
+]

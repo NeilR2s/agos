@@ -4,6 +4,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class CosmosDB:
     def __init__(self):
         self.client = CosmosClient(settings.COSMOS_URI, settings.COSMOS_PRIMARY_KEY)
@@ -25,6 +26,49 @@ class CosmosDB:
             self.pse_container = self.database.get_container_client(settings.COSMOS_PSE_CONTAINER)
         except Exception as e:
             logger.error(f"Failed to get read-only data containers: {e}")
+
+        try:
+            self.map_assets_container = self.database.create_container_if_not_exists(
+                id=settings.COSMOS_MAP_ASSETS_CONTAINER,
+                partition_key=PartitionKey(path="/region"),
+            )
+            self.map_zones_container = self.database.create_container_if_not_exists(
+                id=settings.COSMOS_MAP_ZONES_CONTAINER,
+                partition_key=PartitionKey(path="/region"),
+            )
+            self.map_connections_container = self.database.create_container_if_not_exists(
+                id=settings.COSMOS_MAP_CONNECTIONS_CONTAINER,
+                partition_key=PartitionKey(path="/region"),
+            )
+            self.map_tracks_container = self.database.create_container_if_not_exists(
+                id=settings.COSMOS_MAP_TRACKS_CONTAINER,
+                partition_key=PartitionKey(path="/assetId"),
+            )
+            self.map_events_container = self.database.create_container_if_not_exists(
+                id=settings.COSMOS_MAP_EVENTS_CONTAINER,
+                partition_key=PartitionKey(path="/eventDate"),
+            )
+        except Exception as e:
+            logger.error(f"Failed to create or get map containers: {e}")
+            self.map_assets_container = self.database.get_container_client(settings.COSMOS_MAP_ASSETS_CONTAINER)
+            self.map_zones_container = self.database.get_container_client(settings.COSMOS_MAP_ZONES_CONTAINER)
+            self.map_connections_container = self.database.get_container_client(settings.COSMOS_MAP_CONNECTIONS_CONTAINER)
+            self.map_tracks_container = self.database.get_container_client(settings.COSMOS_MAP_TRACKS_CONTAINER)
+            self.map_events_container = self.database.get_container_client(settings.COSMOS_MAP_EVENTS_CONTAINER)
+
+    @staticmethod
+    def _query_items(container, query: str, parameters: list[dict], *, default: list | None = None):
+        try:
+            return list(
+                container.query_items(
+                    query=query,
+                    parameters=parameters,
+                    enable_cross_partition_query=True,
+                )
+            )
+        except exceptions.CosmosHttpResponseError as e:
+            logger.error(f"Cosmos query failed: {e}")
+            return [] if default is None else default
 
     def get_portfolio(self, user_id: str):
         try:
@@ -172,6 +216,41 @@ class CosmosDB:
         except exceptions.CosmosHttpResponseError as e:
             logger.error(f"Error fetching pse data: {e}")
             return []
+
+    def list_map_assets(self):
+        return self._query_items(
+            self.map_assets_container,
+            "SELECT * FROM c",
+            [],
+        )
+
+    def list_map_zones(self):
+        return self._query_items(
+            self.map_zones_container,
+            "SELECT * FROM c",
+            [],
+        )
+
+    def list_map_connections(self):
+        return self._query_items(
+            self.map_connections_container,
+            "SELECT * FROM c",
+            [],
+        )
+
+    def list_map_tracks(self):
+        return self._query_items(
+            self.map_tracks_container,
+            "SELECT * FROM c",
+            [],
+        )
+
+    def list_map_events(self, limit: int = 250):
+        return self._query_items(
+            self.map_events_container,
+            "SELECT * FROM c",
+            [],
+        )
 
 db = None
 
