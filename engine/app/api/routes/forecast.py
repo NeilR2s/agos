@@ -1,3 +1,5 @@
+import asyncio
+
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -34,7 +36,7 @@ class ForecastResponse(BaseModel):
 
 @router.post("/", response_model=ForecastResponse)
 @limiter.limit("10/minute")
-def forecast(request: Request, payload: ForecastRequest):
+async def forecast(request: Request, payload: ForecastRequest):
     """
     Accepts historical price data and returns quantile predictions.
     """
@@ -57,8 +59,9 @@ def forecast(request: Request, payload: ForecastRequest):
             }
         )
 
-        # Predict
-        pred_df = pipeline.predict_df(
+        # Offload CPU-bound predict_df to a thread so the event loop stays free
+        pred_df = await asyncio.to_thread(
+            pipeline.predict_df,
             df,
             prediction_length=payload.prediction_length,
             quantile_levels=payload.quantiles,

@@ -14,8 +14,8 @@ class DecisionEngine:
     Combines Data Fetching -> AI Signal Generation -> Rule-Based Validation.
     """
     
-    def __init__(self, pipeline=None):
-        self.data_provider = DataProvider()
+    def __init__(self, pipeline=None, data_provider: DataProvider | None = None):
+        self.data_provider = data_provider or DataProvider()
         self.ai_module = AIStrategyModule(pipeline=pipeline)
         self.rules_module = RuleBasedModule()
         self.MIN_AI_CONFIDENCE = settings.MIN_AI_CONFIDENCE  # Threshold for the AI signal to be considered

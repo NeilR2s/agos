@@ -9,24 +9,25 @@ from app.core.config import settings
 logger = get_engine_logger(__name__)
 
 class DataProvider:
-    def __init__(self):
+    """Fetches price history and portfolio state for the decision engine.
+
+    Accepts pre-built ``CosmosClient`` (async) and ``httpx.AsyncClient``
+    that are owned by the application lifespan.
+    """
+
+    def __init__(
+        self,
+        *,
+        cosmos_client: Optional[CosmosClient] = None,
+        http_client: Optional[httpx.AsyncClient] = None,
+    ):
         self.cosmos_uri = settings.COSMOS_URI
         self.cosmos_key = settings.COSMOS_PRIMARY_KEY
         self.cosmos_db_id = settings.COSMOS_DATABASE_ID
         self.backend_url = settings.BACKEND_API_URL
         
-        self._cosmos_client: Optional[CosmosClient] = None
-        self._http_client: Optional[httpx.AsyncClient] = None
-
-    async def get_cosmos_client(self) -> CosmosClient:
-        if self._cosmos_client is None:
-            self._cosmos_client = CosmosClient(self.cosmos_uri, credential=self.cosmos_key)
-        return self._cosmos_client
-
-    async def get_http_client(self) -> httpx.AsyncClient:
-        if self._http_client is None:
-            self._http_client = httpx.AsyncClient()
-        return self._http_client
+        self._cosmos_client: Optional[CosmosClient] = cosmos_client
+        self._http_client: Optional[httpx.AsyncClient] = http_client
 
     async def close(self):
         """Closes all persistent clients."""
@@ -91,8 +92,7 @@ class DataProvider:
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
-        client = await self.get_http_client()
-        response = await client.get(url, params=params, headers=headers)
+        response = await self._http_client.get(url, params=params, headers=headers)
         response.raise_for_status()
 
         payload = response.json()
@@ -123,8 +123,7 @@ class DataProvider:
             ]
 
             try:
-                client = await self.get_cosmos_client()
-                database = client.get_database_client(self.cosmos_db_id)
+                database = self._cosmos_client.get_database_client(self.cosmos_db_id)
                 container = database.get_container_client(settings.COSMOS_PSE_CONTAINER)
 
                 items = container.query_items(
@@ -185,8 +184,7 @@ class DataProvider:
             headers["Authorization"] = f"Bearer {token}"
         
         try:
-            client = await self.get_http_client()
-            response = await client.get(url, headers=headers)
+            response = await self._http_client.get(url, headers=headers)
             response.raise_for_status()
             backend_data = response.json()
             

@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 
+import httpx
 import torch
+from azure.cosmos.aio import CosmosClient as AsyncCosmosClient
 from chronos import BaseChronosPipeline
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +12,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from app.core.limiter import limiter
 
+from app.core.data_provider import DataProvider
 from app.core.decision import DecisionEngine
 from app.utils.logger import get_engine_logger
 from app.core.config import settings
@@ -40,16 +43,36 @@ async def lifespan(app: FastAPI):
     )
     app_logger.info("Model loaded and quantized successfully.")
 
-    # Initialize the decision engine with the real model pipeline
-    decision_engine = DecisionEngine(pipeline=pipeline)
+    # --- Create persistent connection pool ---
+    cosmos_client: AsyncCosmosClient | None = None
+    http_client: httpx.AsyncClient | None = None
+
+    if settings.COSMOS_URI and settings.COSMOS_PRIMARY_KEY:
+        cosmos_client = AsyncCosmosClient(settings.COSMOS_URI, credential=settings.COSMOS_PRIMARY_KEY)
+        app_logger.info("Async CosmosDB client created")
+
+    http_client = httpx.AsyncClient()
+    app_logger.info("httpx AsyncClient created")
+
+    data_provider = DataProvider(cosmos_client=cosmos_client, http_client=http_client)
+
+    # Initialize the decision engine with the real model pipeline and injected data provider
+    decision_engine = DecisionEngine(pipeline=pipeline, data_provider=data_provider)
     app_logger.info("DecisionEngine initialized successfully.")
+
+    # Expose on app.state for potential route-level access
+    app.state.data_provider = data_provider
+    app.state.cosmos_client = cosmos_client
+    app.state.http_client = http_client
     
     yield
     
-    # Shutdown logic: Close data provider connections
-    if decision_engine and decision_engine.data_provider:
-        await decision_engine.data_provider.close()
-        app_logger.info("Decision engine data provider closed.")
+    # --- Shutdown: close all persistent connections ---
+    app_logger.info("Shutting down engine connection pool …")
+    if data_provider:
+        await data_provider.close()
+        app_logger.info("DataProvider resources closed.")
+    app_logger.info("Engine connection pool shutdown complete.")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

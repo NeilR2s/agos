@@ -4,7 +4,7 @@ from app.core.config import settings
 router = APIRouter()
 
 @router.get("/health")
-def health_check():
+async def health_check():
     """Returns the status of the API and model loading."""
     from app.main import pipeline
     return {
@@ -14,6 +14,6 @@ def health_check():
     }
 
 @router.get("/version")
-def version():
+async def version():
     """Returns the current API version."""
     return {"version": settings.VERSION}

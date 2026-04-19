@@ -1,3 +1,5 @@
+import asyncio
+
 import pandas as pd
 from typing import List, Optional
 from app.models.schemas import AIRecommendation, TradeAction, PriceDataPoint
@@ -49,8 +51,9 @@ class AIStrategyModule:
             prediction_length = 5
             quantiles = [0.1, 0.5, 0.9]
             
-            # Note: predict_df is synchronous in current Chronos implementation
-            pred_df = self.pipeline.predict_df(
+            # Offload CPU-bound predict_df to a thread so the event loop stays free
+            pred_df = await asyncio.to_thread(
+                self.pipeline.predict_df,
                 df,
                 prediction_length=prediction_length,
                 quantile_levels=quantiles,
