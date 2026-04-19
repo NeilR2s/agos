@@ -51,34 +51,26 @@ const navLinks = [
 ];
 
 export const LandingPage = () => {
-    const heroSentinelRef = useRef<HTMLDivElement | null>(null);
-    const [isHeaderOverHero, setIsHeaderOverHero] = useState(true);
+    const architectureSectionRef = useRef<HTMLElement | null>(null);
+    const [isArchitectureSectionVisible, setIsArchitectureSectionVisible] = useState(false);
 
     useEffect(() => {
-        const sentinel = heroSentinelRef.current;
+        const section = architectureSectionRef.current;
 
-        if (!sentinel) {
+        if (!section) {
             return;
         }
 
-        const updateHeaderState = () => {
-            const { top } = sentinel.getBoundingClientRect();
-            setIsHeaderOverHero(top > 90);
-        };
-
-        updateHeaderState();
-
         const observer = new IntersectionObserver(
             ([entry]) => {
-                setIsHeaderOverHero(entry.isIntersecting);
+                setIsArchitectureSectionVisible(entry.isIntersecting);
             },
             {
-                rootMargin: "100px 0px 0px 0px",
                 threshold: 0,
             },
         );
 
-        observer.observe(sentinel);
+        observer.observe(section);
 
         return () => {
             observer.disconnect();
@@ -91,9 +83,9 @@ export const LandingPage = () => {
             <header
                 className={[
                     "sticky top-0 z-50 border-b transition-[background-color,backdrop-filter] duration-300",
-                    isHeaderOverHero
+                    isArchitectureSectionVisible
                         ? "border-white/1 bg-background"
-                        : "border-white/1 bg-background/28 backdrop-blur-md",
+                        : "border-white/1 bg-background/1 backdrop-blur-md",
                 ].join(" ")}
             >
                 <div className="max-w-[1400px] mx-auto flex items-center justify-between px-8 py-6">
@@ -132,7 +124,7 @@ export const LandingPage = () => {
 
             <main>
                 {/* Hero Section */}
-                <section className="relative overflow-hidden pt-28 -top-18 pb-44 border-b border-white/10">
+                <section className="relative overflow-hidden pt-28 -top-18 pb-56 border-b border-white/10">
                     <div className="absolute inset-0">
                         <img
                             src={homeHeroImage}
@@ -184,11 +176,10 @@ export const LandingPage = () => {
                     {/* Decorative lines */}
                     <div className="absolute top-0 left-1/4 w-px h-full bg-white/5" />
                     <div className="absolute top-0 right-1/4 w-px h-full bg-white/5" />
-                    <div ref={heroSentinelRef} className="absolute bottom-0 h-px w-full" aria-hidden="true" />
                 </section>
 
                 {/* Architecture Section */}
-                <section className="py-32 border-b border-white/10">
+                <section ref={architectureSectionRef} className="py-32 border-b border-white/10">
                     <div className="max-w-[1400px] mx-auto px-8">
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 mb-24">
                             <div className="lg:col-span-5">
