@@ -141,12 +141,12 @@ def _strip_system_fields(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return cleaned
 
 
-def load_map_state(db: CosmosDB) -> dict[str, list[dict[str, Any]]]:
-    assets = sorted(_strip_system_fields(db.list_map_assets()), key=lambda item: item.get("name", item.get("id", "")))
-    zones = sorted(_strip_system_fields(db.list_map_zones()), key=lambda item: item.get("name", item.get("id", "")))
-    connections = sorted(_strip_system_fields(db.list_map_connections()), key=lambda item: item.get("id", ""))
-    tracks = sorted(_strip_system_fields(db.list_map_tracks()), key=lambda item: item.get("id", ""))
-    events = sorted(_strip_system_fields(db.list_map_events()), key=lambda item: item.get("timestamp", ""), reverse=True)
+async def load_map_state(db: CosmosDB) -> dict[str, list[dict[str, Any]]]:
+    assets = sorted(_strip_system_fields(await db.list_map_assets()), key=lambda item: item.get("name", item.get("id", "")))
+    zones = sorted(_strip_system_fields(await db.list_map_zones()), key=lambda item: item.get("name", item.get("id", "")))
+    connections = sorted(_strip_system_fields(await db.list_map_connections()), key=lambda item: item.get("id", ""))
+    tracks = sorted(_strip_system_fields(await db.list_map_tracks()), key=lambda item: item.get("id", ""))
+    events = sorted(_strip_system_fields(await db.list_map_events()), key=lambda item: item.get("timestamp", ""), reverse=True)
 
     return {
         "assets": assets or MAP_ASSETS,
@@ -181,9 +181,9 @@ def expand_connections(assets: list[dict[str, Any]], connections: list[dict[str,
     return expanded
 
 
-def filter_map_features(*, db: CosmosDB, search: str, bounds: BBox | None = None, polygon: list[list[float]] | None = None) -> dict[str, Any]:
+async def filter_map_features(*, db: CosmosDB, search: str, bounds: BBox | None = None, polygon: list[list[float]] | None = None) -> dict[str, Any]:
     normalized_search = search.strip().upper()
-    state = load_map_state(db)
+    state = await load_map_state(db)
     assets = state["assets"]
     zones = state["zones"]
     connections = expand_connections(assets, state["connections"])

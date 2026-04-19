@@ -27,8 +27,8 @@ def _subject(current_user: dict) -> str | None:
     return current_user.get("sub") or current_user.get("uid")
 
 
-def _assert_thread(service: AgentService, user_id: str, thread_id: str) -> AgentThread:
-    thread = service.get_thread(user_id=user_id, thread_id=thread_id)
+async def _assert_thread(service: AgentService, user_id: str, thread_id: str) -> AgentThread:
+    thread = await service.get_thread(user_id=user_id, thread_id=thread_id)
     if thread is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found")
     return thread
@@ -48,7 +48,7 @@ async def list_threads(
     service: AgentService = Depends(get_agent_service),
     current_user: dict = Depends(get_current_user),
 ):
-    return service.list_threads(user_id=_user_id(current_user))
+    return await service.list_threads(user_id=_user_id(current_user))
 
 
 @router.delete("/threads/{thread_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -57,7 +57,7 @@ async def delete_thread(
     service: AgentService = Depends(get_agent_service),
     current_user: dict = Depends(get_current_user),
 ):
-    deleted = service.delete_thread(_user_id(current_user), thread_id)
+    deleted = await service.delete_thread(_user_id(current_user), thread_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found")
 
@@ -68,7 +68,7 @@ async def generate_thread_title(
     service: AgentService = Depends(get_agent_service),
     current_user: dict = Depends(get_current_user),
 ):
-    _assert_thread(service, _user_id(current_user), thread_id)
+    await _assert_thread(service, _user_id(current_user), thread_id)
     return await service.generate_thread_title(_user_id(current_user), thread_id)
 
 @router.get("/threads/{thread_id}", response_model=AgentThread)
@@ -77,7 +77,7 @@ async def get_thread(
     service: AgentService = Depends(get_agent_service),
     current_user: dict = Depends(get_current_user),
 ):
-    return _assert_thread(service, _user_id(current_user), thread_id)
+    return await _assert_thread(service, _user_id(current_user), thread_id)
 
 
 @router.get("/threads/{thread_id}/messages")
@@ -86,8 +86,8 @@ async def list_messages(
     service: AgentService = Depends(get_agent_service),
     current_user: dict = Depends(get_current_user),
 ):
-    _assert_thread(service, _user_id(current_user), thread_id)
-    return service.list_messages(thread_id=thread_id)
+    await _assert_thread(service, _user_id(current_user), thread_id)
+    return await service.list_messages(thread_id=thread_id)
 
 
 @router.get("/threads/{thread_id}/runs", response_model=list[AgentRun])
@@ -96,8 +96,8 @@ async def list_runs(
     service: AgentService = Depends(get_agent_service),
     current_user: dict = Depends(get_current_user),
 ):
-    _assert_thread(service, _user_id(current_user), thread_id)
-    return service.list_runs(thread_id=thread_id)
+    await _assert_thread(service, _user_id(current_user), thread_id)
+    return await service.list_runs(thread_id=thread_id)
 
 
 @router.post("/threads/{thread_id}/runs", response_model=AgentRunResult)
@@ -110,7 +110,7 @@ async def create_run(
     current_user: dict = Depends(get_current_user),
     token: str | None = Depends(oauth2_scheme),
 ):
-    _assert_thread(service, _user_id(current_user), thread_id)
+    await _assert_thread(service, _user_id(current_user), thread_id)
     try:
         return await service.run_once(
             user_id=_user_id(current_user),
@@ -133,7 +133,7 @@ async def stream_run(
     current_user: dict = Depends(get_current_user),
     token: str | None = Depends(oauth2_scheme),
 ):
-    _assert_thread(service, _user_id(current_user), thread_id)
+    await _assert_thread(service, _user_id(current_user), thread_id)
 
     async def event_generator():
         try:
@@ -162,8 +162,8 @@ async def get_run(
     service: AgentService = Depends(get_agent_service),
     current_user: dict = Depends(get_current_user),
 ):
-    _assert_thread(service, _user_id(current_user), thread_id)
-    run = service.get_run(thread_id=thread_id, run_id=run_id)
+    await _assert_thread(service, _user_id(current_user), thread_id)
+    run = await service.get_run(thread_id=thread_id, run_id=run_id)
     if run is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
     return run
@@ -176,8 +176,5 @@ async def get_run_events(
     service: AgentService = Depends(get_agent_service),
     current_user: dict = Depends(get_current_user),
 ):
-    _assert_thread(service, _user_id(current_user), thread_id)
-    return service.list_events(thread_id=thread_id, run_id=run_id)
-
-
-
+    await _assert_thread(service, _user_id(current_user), thread_id)
+    return await service.list_events(thread_id=thread_id, run_id=run_id)

@@ -13,7 +13,7 @@ async def get_macro_data(
     """
     Retrieve the latest macroeconomic data (e.g., inflation, GDP, PSE market indices).
     """
-    data = db.get_latest_macro_data(indicator=indicator, limit=limit)
+    data = await db.get_latest_macro_data(indicator=indicator, limit=limit)
     return {"data": data}
 
 @router.get("/news")
@@ -25,7 +25,7 @@ async def get_news_data(
     """
     Retrieve the latest news sentiment data.
     """
-    data = db.get_latest_news_data(ticker=ticker, limit=limit)
+    data = await db.get_latest_news_data(ticker=ticker, limit=limit)
     return {"data": data}
 
 @router.get("/pse")
@@ -37,5 +37,5 @@ async def get_pse_data(
     """
     Retrieve the latest daily stock market data from PSE.
     """
-    data = db.get_latest_pse_data(ticker=ticker, limit=limit)
+    data = await db.get_latest_pse_data(ticker=ticker, limit=limit)
     return {"data": data}

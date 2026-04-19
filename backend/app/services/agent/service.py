@@ -38,28 +38,28 @@ class AgentService:
     async def create_thread(self, user_id: str, payload: AgentThreadCreate) -> AgentThread:
         selected_ticker = payload.selectedTicker.upper() if payload.selectedTicker else None
         title = payload.title.strip() if payload.title else "New AGOS Session"
-        return self.repository.create_thread(
+        return await self.repository.create_thread(
             user_id=user_id,
             title=title,
             mode=payload.mode,
             selected_ticker=selected_ticker,
         )
 
-    def list_threads(self, user_id: str) -> list[AgentThread]:
-        return self.repository.list_threads(user_id=user_id)
+    async def list_threads(self, user_id: str) -> list[AgentThread]:
+        return await self.repository.list_threads(user_id=user_id)
 
-    def delete_thread(self, user_id: str, thread_id: str) -> bool:
-        return self.repository.delete_thread(user_id=user_id, thread_id=thread_id)
+    async def delete_thread(self, user_id: str, thread_id: str) -> bool:
+        return await self.repository.delete_thread(user_id=user_id, thread_id=thread_id)
 
-    def get_thread(self, user_id: str, thread_id: str) -> Optional[AgentThread]:
-        return self.repository.get_thread(user_id=user_id, thread_id=thread_id)
+    async def get_thread(self, user_id: str, thread_id: str) -> Optional[AgentThread]:
+        return await self.repository.get_thread(user_id=user_id, thread_id=thread_id)
 
     async def generate_thread_title(self, user_id: str, thread_id: str) -> AgentThread:
-        thread = self.get_thread(user_id=user_id, thread_id=thread_id)
+        thread = await self.get_thread(user_id=user_id, thread_id=thread_id)
         if not thread:
             raise LookupError("Thread not found")
         
-        messages = self.list_messages(thread_id=thread_id)
+        messages = await self.list_messages(thread_id=thread_id)
         user_messages = [m for m in messages if m.role == "user"]
         if not user_messages:
             return thread
@@ -90,23 +90,23 @@ class AgentService:
                 logging.getLogger(__name__).warning(f"Title generation failed: {e}")
                 new_title = derive_thread_title(first_msg, thread.selectedTicker)
                 
-        return self.repository.update_thread(
+        return await self.repository.update_thread(
             user_id=user_id,
             thread_id=thread_id,
             title=new_title
         )
 
-    def list_messages(self, thread_id: str) -> list[AgentMessage]:
-        return self.repository.list_messages(thread_id=thread_id)
+    async def list_messages(self, thread_id: str) -> list[AgentMessage]:
+        return await self.repository.list_messages(thread_id=thread_id)
 
-    def list_runs(self, thread_id: str) -> list[AgentRun]:
-        return self.repository.list_runs(thread_id=thread_id)
+    async def list_runs(self, thread_id: str) -> list[AgentRun]:
+        return await self.repository.list_runs(thread_id=thread_id)
 
-    def get_run(self, thread_id: str, run_id: str) -> Optional[AgentRun]:
-        return self.repository.get_run(thread_id=thread_id, run_id=run_id)
+    async def get_run(self, thread_id: str, run_id: str) -> Optional[AgentRun]:
+        return await self.repository.get_run(thread_id=thread_id, run_id=run_id)
 
-    def list_events(self, thread_id: str, run_id: Optional[str] = None) -> list[AgentEvent]:
-        return self.repository.list_events(thread_id=thread_id, run_id=run_id)
+    async def list_events(self, thread_id: str, run_id: Optional[str] = None) -> list[AgentEvent]:
+        return await self.repository.list_events(thread_id=thread_id, run_id=run_id)
 
     async def run_once(
         self,
@@ -131,12 +131,12 @@ class AgentService:
         if run_id is None:
             raise RuntimeError("Run failed to start")
 
-        thread = self.get_thread(user_id=user_id, thread_id=thread_id)
-        run = self.get_run(thread_id=thread_id, run_id=run_id)
+        thread = await self.get_thread(user_id=user_id, thread_id=thread_id)
+        run = await self.get_run(thread_id=thread_id, run_id=run_id)
         if thread is None or run is None:
             raise RuntimeError("Run persistence incomplete")
 
-        messages = self.list_messages(thread_id)
+        messages = await self.list_messages(thread_id)
         assistant_message = next(
             (
                 message
@@ -145,7 +145,7 @@ class AgentService:
             ),
             None,
         )
-        events = self.list_events(thread_id=thread_id, run_id=run_id)
+        events = await self.list_events(thread_id=thread_id, run_id=run_id)
         return AgentRunResult(thread=thread, run=run, assistantMessage=assistant_message, events=events)
 
     async def stream_run_events(
@@ -157,7 +157,7 @@ class AgentService:
         thread_id: str,
         payload: AgentRunRequest,
     ) -> AsyncIterator[AgentSSEEvent]:
-        thread = self.get_thread(user_id=user_id, thread_id=thread_id)
+        thread = await self.get_thread(user_id=user_id, thread_id=thread_id)
         if thread is None:
             raise LookupError("Thread not found")
 
@@ -165,7 +165,7 @@ class AgentService:
         selected_ticker = payload.selectedTicker.upper() if payload.selectedTicker else thread.selectedTicker
         model_profile = resolve_model_profile(payload.config)
         if thread.mode != resolved_mode or thread.selectedTicker != selected_ticker:
-            thread = self.repository.update_thread(
+            thread = await self.repository.update_thread(
                 user_id=user_id,
                 thread_id=thread_id,
                 mode=resolved_mode,
@@ -209,7 +209,7 @@ class AgentService:
         tool_event_count = 0
         final_content_from_graph: str | None = None
 
-        def next_event(
+        async def next_event(
             event_type: str,
             data: dict,
             *,
@@ -231,13 +231,13 @@ class AgentService:
             )
             if should_persist_event(event_type):
                 try:
-                    self.repository.create_events([persistable_event(event, source=source)])
+                    await self.repository.create_events([persistable_event(event, source=source)])
                 except Exception:
                     logger.exception("Failed to persist agent event", extra={"thread_id": thread_id, "run_id": run_id, "event_type": event_type})
             return event
 
         try:
-            self.repository.create_run(run)
+            await self.repository.create_run(run)
 
             user_message = AgentMessage(
                 id=str(uuid4()),
@@ -250,10 +250,10 @@ class AgentService:
                 createdAt=started_at,
                 tokenCount=len(payload.message.split()),
             )
-            self.repository.create_message(user_message)
+            await self.repository.create_message(user_message)
 
             if thread.title == "New AGOS Session":
-                thread = self.repository.update_thread(
+                thread = await self.repository.update_thread(
                     user_id=user_id,
                     thread_id=thread_id,
                     title=derive_thread_title(payload.message, selected_ticker),
@@ -266,7 +266,7 @@ class AgentService:
                 reversed(
                     [
                         message
-                        for message in self.repository.list_messages(
+                        for message in await self.repository.list_messages(
                             thread_id=thread_id,
                             limit=settings.AGENT_HISTORY_WINDOW + 1,
                             newest_first=True,
@@ -277,15 +277,15 @@ class AgentService:
             )
             system_prompt = build_system_prompt(context)
 
-            yield next_event(
+            yield await next_event(
                 "run.started",
                 {
                     "thread": thread.model_dump(mode="json"),
                     "run": run.model_dump(mode="json"),
                 },
             )
-            yield next_event("heartbeat", {"status": "alive"})
-            yield next_event(
+            yield await next_event("heartbeat", {"status": "alive"})
+            yield await next_event(
                 "reasoning.step",
                 {
                     "title": "Context assembly",
@@ -332,7 +332,7 @@ class AgentService:
                         if first_token_at is None:
                             first_token_at = (time.perf_counter() - token_started_perf) * 1000
                         assistant_chunks.append(content)
-                        yield next_event("message.delta", {"delta": content}, source="assistant", agent=agent)
+                        yield await next_event("message.delta", {"delta": content}, source="assistant", agent=agent)
                     continue
 
                 if kind == "citation.added":
@@ -341,7 +341,7 @@ class AgentService:
                         try:
                             citation = Citation(**candidate)
                             citations.append(citation)
-                            yield next_event("citation.added", {"citation": citation.model_dump(mode="json")}, source="tool", agent=agent)
+                            yield await next_event("citation.added", {"citation": citation.model_dump(mode="json")}, source="tool", agent=agent)
                         except Exception:
                             logger.exception("Invalid citation payload", extra={"thread_id": thread_id, "run_id": run_id})
                     continue
@@ -361,16 +361,16 @@ class AgentService:
                                 continue
                     worker_summaries = data.get("workerSummaries") if isinstance(data.get("workerSummaries"), list) else []
                     agent_count = int(data.get("agentCount") or 0)
-                    yield next_event(kind, data, source="agent", agent=agent)
+                    yield await next_event(kind, data, source="agent", agent=agent)
                     continue
 
                 if kind in {"tool.started", "tool.completed"}:
                     tool_event_count += 1 if kind == "tool.completed" else 0
-                    yield next_event(kind, data, source="tool", agent=agent)
+                    yield await next_event(kind, data, source="tool", agent=agent)
                     continue
 
                 if kind in {"tool.error", "agent.started", "agent.completed", "reasoning.step"}:
-                    yield next_event(kind, data, source="agent" if kind.startswith("agent") or kind == "reasoning.step" else "tool", agent=agent)
+                    yield await next_event(kind, data, source="agent" if kind.startswith("agent") or kind == "reasoning.step" else "tool", agent=agent)
                     continue
 
             assistant_content = "".join(assistant_chunks).strip()
@@ -392,11 +392,11 @@ class AgentService:
                 createdAt=utc_now_iso(),
                 tokenCount=len(assistant_content.split()),
             )
-            self.repository.create_message(assistant_message)
+            await self.repository.create_message(assistant_message)
 
             completed_at = utc_now_iso()
             latency_ms = (time.perf_counter() - run_started_perf) * 1000
-            run = self.repository.update_run(
+            run = await self.repository.update_run(
                 thread_id=thread_id,
                 run_id=run_id,
                 model=model_profile.model,
@@ -415,7 +415,7 @@ class AgentService:
                 config=config_to_public_dict(payload.config),
                 error=None,
             )
-            thread = self.repository.update_thread(
+            thread = await self.repository.update_thread(
                 user_id=user_id,
                 thread_id=thread_id,
                 mode=resolved_mode,
@@ -425,7 +425,7 @@ class AgentService:
             )
 
             final_events = [
-                next_event(
+                await next_event(
                     "message.completed",
                     {
                         "message": assistant_message.model_dump(mode="json"),
@@ -434,7 +434,7 @@ class AgentService:
                     source="assistant",
                     agent={"id": "synthesizer", "label": "Synthesis", "role": "synthesizer"},
                 ),
-                next_event(
+                await next_event(
                     "checkpoint.saved",
                     {
                         "messagesPersisted": 2,
@@ -443,7 +443,7 @@ class AgentService:
                     },
                     source="persistence",
                 ),
-                next_event(
+                await next_event(
                     "run.completed",
                     {
                         "thread": thread.model_dump(mode="json"),
@@ -469,14 +469,14 @@ class AgentService:
                 }
             )
             try:
-                persisted_run = self.repository.get_run(thread_id=thread_id, run_id=run_id)
+                persisted_run = await self.repository.get_run(thread_id=thread_id, run_id=run_id)
             except Exception:
                 logger.exception("Failed to load errored run state", extra={"thread_id": thread_id, "run_id": run_id})
                 persisted_run = None
 
             if persisted_run is not None:
                 try:
-                    run = self.repository.update_run(
+                    run = await self.repository.update_run(
                         thread_id=thread_id,
                         run_id=run_id,
                         model=model_profile.model,
@@ -492,7 +492,7 @@ class AgentService:
                     logger.exception("Failed to persist errored run", extra={"thread_id": thread_id, "run_id": run_id})
 
             try:
-                thread = self.repository.update_thread(
+                thread = await self.repository.update_thread(
                     user_id=user_id,
                     thread_id=thread_id,
                     lastRunStatus="error",
@@ -501,7 +501,7 @@ class AgentService:
                 logger.exception("Failed to persist errored thread state", extra={"thread_id": thread_id})
                 thread = thread.model_copy(update={"lastRunStatus": "error"})
 
-            error_event = next_event(
+            error_event = await next_event(
                 "run.error",
                 {
                     "error": error_message,

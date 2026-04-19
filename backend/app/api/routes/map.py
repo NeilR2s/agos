@@ -1,6 +1,5 @@
-import json
+import httpx
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -26,7 +25,7 @@ async def get_map_features(
     search: str = Query(""),
     db: CosmosDB = Depends(get_db),
 ):
-    return filter_map_features(
+    return await filter_map_features(
         db=db,
         search=search,
         bounds=BBox(west=west, south=south, east=east, north=north),
@@ -35,7 +34,7 @@ async def get_map_features(
 
 @router.post("/query")
 async def query_map_features(body: PolygonQueryRequest, db: CosmosDB = Depends(get_db)):
-    return filter_map_features(db=db, search=body.search, polygon=close_polygon(body.polygon))
+    return await filter_map_features(db=db, search=body.search, polygon=close_polygon(body.polygon))
 
 
 @router.get("/search")
@@ -43,20 +42,20 @@ async def search_places(query: str = Query(..., min_length=2), limit: int = Quer
     if not settings.GEOAPIFY_KEY:
         raise HTTPException(status_code=503, detail="Geoapify key is not configured")
 
-    params = urlencode(
-        {
-            "text": query,
-            "format": "json",
-            "filter": "countrycode:ph",
-            "limit": limit,
-            "apiKey": settings.GEOAPIFY_KEY,
-        }
-    )
-    request = Request(f"https://api.geoapify.com/v1/geocode/search?{params}", headers={"Accept": "application/json"})
+    params = {
+        "text": query,
+        "format": "json",
+        "filter": "countrycode:ph",
+        "limit": limit,
+        "apiKey": settings.GEOAPIFY_KEY,
+    }
+    url = f"https://api.geoapify.com/v1/geocode/search?{urlencode(params)}"
 
     try:
-        with urlopen(request, timeout=10) as response:
-            payload = json.loads(response.read().decode("utf-8"))
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers={"Accept": "application/json"}, timeout=10)
+            response.raise_for_status()
+            payload = response.json()
     except Exception as exc:  # pragma: no cover - network/provider failures
         import logging
         logging.getLogger(__name__).error(f"Geoapify lookup failed: {exc}")

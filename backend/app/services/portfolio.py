@@ -9,7 +9,7 @@ class PortfolioService:
         self.scraper = PSEService()
 
     async def get_user_portfolio(self, user_id: str) -> Portfolio:
-        data = self.db.get_portfolio(user_id)
+        data = await self.db.get_portfolio(user_id)
         
         # Only include explicit holding records
         holdings_data = [item for item in data if item.get('type') == 'holding' and 'ticker' in item]
@@ -47,7 +47,7 @@ class PortfolioService:
         )
 
     async def get_holding(self, user_id: str, ticker: str) -> Holding:
-        h_data = self.db.get_holding(user_id, ticker)
+        h_data = await self.db.get_holding(user_id, ticker)
         if not h_data:
             return None
         return await self.enrich_holding(h_data)
@@ -82,27 +82,27 @@ class PortfolioService:
             gainLossPercent=gain_loss_percent
         )
 
-    def add_holding(self, user_id: str, ticker: str, shares: float, avg_price: float):
-        return self.db.upsert_holding(user_id, ticker, shares, avg_price)
+    async def add_holding(self, user_id: str, ticker: str, shares: float, avg_price: float):
+        return await self.db.upsert_holding(user_id, ticker, shares, avg_price)
 
-    def update_holding(self, user_id: str, ticker: str, shares: float = None, avg_price: float = None):
-        existing = self.db.get_holding(user_id, ticker)
+    async def update_holding(self, user_id: str, ticker: str, shares: float = None, avg_price: float = None):
+        existing = await self.db.get_holding(user_id, ticker)
         if not existing:
             return None
         
         new_shares = shares if shares is not None else existing['shares']
         new_avg_price = avg_price if avg_price is not None else existing['avgPrice']
         
-        return self.db.upsert_holding(user_id, ticker, new_shares, new_avg_price)
+        return await self.db.upsert_holding(user_id, ticker, new_shares, new_avg_price)
 
-    def remove_holding(self, user_id: str, ticker: str):
-        return self.db.delete_holding(user_id, ticker)
+    async def remove_holding(self, user_id: str, ticker: str):
+        return await self.db.delete_holding(user_id, ticker)
 
-    def get_cash(self, user_id: str):
-        return self.db.get_cash(user_id)
+    async def get_cash(self, user_id: str):
+        return await self.db.get_cash(user_id)
 
-    def update_cash(self, user_id: str, amount: float):
-        return self.db.upsert_cash(user_id, amount)
+    async def update_cash(self, user_id: str, amount: float):
+        return await self.db.upsert_cash(user_id, amount)
 
-    def remove_cash(self, user_id: str):
-        return self.db.delete_cash(user_id)
+    async def remove_cash(self, user_id: str):
+        return await self.db.delete_cash(user_id)

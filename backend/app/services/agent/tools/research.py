@@ -12,7 +12,7 @@ class ResearchAgentTools:
         self.repository = repository
 
     async def get_latest_news(self, ticker: str, limit: int = 5) -> ToolOutcome:
-        items = self.db.get_latest_news_data(ticker=ticker, limit=limit)
+        items = await self.db.get_latest_news_data(ticker=ticker, limit=limit)
         summary = f"Loaded {len(items)} recent news sentiment records for {ticker.upper()}."
         citations = [
             Citation(
@@ -33,7 +33,7 @@ class ResearchAgentTools:
         )
 
     async def get_latest_macro(self, indicator: str | None = None, limit: int = 5) -> ToolOutcome:
-        items = self.db.get_latest_macro_data(indicator=indicator, limit=limit)
+        items = await self.db.get_latest_macro_data(indicator=indicator, limit=limit)
         summary = f"Loaded {len(items)} macro records for AGOS context."
         citations = [
             Citation(
@@ -53,7 +53,7 @@ class ResearchAgentTools:
         )
 
     async def get_latest_pse_records(self, ticker: str, limit: int = 5) -> ToolOutcome:
-        items = self.db.get_latest_pse_data(ticker=ticker, limit=limit)
+        items = await self.db.get_latest_pse_data(ticker=ticker, limit=limit)
         summary = f"Loaded {len(items)} persisted PSE records for {ticker.upper()}."
         citations = [
             Citation(
@@ -72,7 +72,7 @@ class ResearchAgentTools:
         )
 
     async def search_user_threads(self, user_id: str, limit: int = 10) -> ToolOutcome:
-        threads = self.repository.list_threads(user_id=user_id, limit=limit)
+        threads = await self.repository.list_threads(user_id=user_id, limit=limit)
         summary = f"Loaded {len(threads)} recent threads for the operator."
         return ToolOutcome(
             name="search_user_threads",

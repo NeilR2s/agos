@@ -45,46 +45,46 @@ class InMemoryAgentRepository:
         self.events = []
         self.list_messages_calls = []
 
-    def get_thread(self, user_id: str, thread_id: str):
+    async def get_thread(self, user_id: str, thread_id: str):
         if self.thread.userId == user_id and self.thread.id == thread_id:
             return self.thread
         return None
 
-    def update_thread(self, user_id: str, thread_id: str, **patch):
+    async def update_thread(self, user_id: str, thread_id: str, **patch):
         assert user_id == self.thread.userId
         assert thread_id == self.thread.id
         self.thread = self.thread.model_copy(update=patch)
         return self.thread
 
-    def create_run(self, run):
+    async def create_run(self, run):
         self.runs[run.id] = run
         return run
 
-    def get_run(self, thread_id: str, run_id: str):
+    async def get_run(self, thread_id: str, run_id: str):
         run = self.runs.get(run_id)
         if run and run.threadId == thread_id:
             return run
         return None
 
-    def update_run(self, thread_id: str, run_id: str, **patch):
-        run = self.get_run(thread_id, run_id)
+    async def update_run(self, thread_id: str, run_id: str, **patch):
+        run = await self.get_run(thread_id, run_id)
         if run is None:
             raise LookupError("Run not found")
         updated = run.model_copy(update=patch)
         self.runs[run_id] = updated
         return updated
 
-    def create_message(self, message: AgentMessage):
+    async def create_message(self, message: AgentMessage):
         self.messages.append(message)
         return message
 
-    def list_messages(self, thread_id: str, limit: int = 100, newest_first: bool = False):
+    async def list_messages(self, thread_id: str, limit: int = 100, newest_first: bool = False):
         self.list_messages_calls.append({"thread_id": thread_id, "limit": limit, "newest_first": newest_first})
         messages = [message for message in self.messages if message.threadId == thread_id]
         messages.sort(key=lambda message: message.createdAt, reverse=newest_first)
         return messages[:limit]
 
-    def create_events(self, events):
+    async def create_events(self, events):
         self.events.extend(events)
         return events
 

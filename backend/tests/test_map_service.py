@@ -1,25 +1,27 @@
+import pytest
 from app.services.map_service import BBox, close_polygon, filter_map_features
 
 
 class FakeMapDb:
-    def list_map_assets(self):
+    async def list_map_assets(self):
         return []
 
-    def list_map_zones(self):
+    async def list_map_zones(self):
         return []
 
-    def list_map_connections(self):
+    async def list_map_connections(self):
         return []
 
-    def list_map_tracks(self):
+    async def list_map_tracks(self):
         return []
 
-    def list_map_events(self):
+    async def list_map_events(self):
         return []
 
 
-def test_filter_map_features_uses_seed_fallback_for_bbox_queries():
-    payload = filter_map_features(
+@pytest.mark.asyncio
+async def test_filter_map_features_uses_seed_fallback_for_bbox_queries():
+    payload = await filter_map_features(
         db=FakeMapDb(),
         search="MANILA",
         bounds=BBox(west=120.9, south=14.5, east=121.05, north=14.65),
@@ -29,8 +31,9 @@ def test_filter_map_features_uses_seed_fallback_for_bbox_queries():
     assert payload["timeline"]
 
 
-def test_filter_map_features_filters_polygon_intersections():
-    payload = filter_map_features(
+@pytest.mark.asyncio
+async def test_filter_map_features_filters_polygon_intersections():
+    payload = await filter_map_features(
         db=FakeMapDb(),
         search="",
         polygon=close_polygon([

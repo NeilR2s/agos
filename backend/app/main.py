@@ -1,7 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
 
-from azure.cosmos import CosmosClient
+from azure.cosmos.aio import CosmosClient
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
@@ -20,17 +20,17 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # --- Startup ---
-    logger.info("Creating shared CosmosDB client …")
+    logger.info("Creating shared async CosmosDB client …")
     cosmos_client = CosmosClient(settings.COSMOS_URI, settings.COSMOS_PRIMARY_KEY)
 
-    db = init_db(cosmos_client)
-    agent_repo = init_agent_repository(cosmos_client)
+    db = await init_db(cosmos_client)
+    agent_repo = await init_agent_repository(cosmos_client)
 
     # Expose on app.state so dependencies / middleware can reach them if needed
     app.state.db = db
     app.state.agent_repo = agent_repo
     app.state.cosmos_client = cosmos_client
-    logger.info("CosmosDB connection pool initialized")
+    logger.info("CosmosDB async connection pool initialized")
 
     yield
 
@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
     close_db()
     close_agent_repository()
     try:
-        cosmos_client.close()
+        await cosmos_client.close()
     except Exception:
         logger.exception("Error closing CosmosClient")
     logger.info("CosmosDB connection pool closed")
