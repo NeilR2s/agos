@@ -6,8 +6,10 @@ import {
     ServerIcon,
     CircleStackIcon
 } from "@heroicons/react/24/outline";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import homeHeroImage from "@/assets/home_hero.jpeg";
 
 const architectureBlocks = [
     {
@@ -49,10 +51,51 @@ const navLinks = [
 ];
 
 export const LandingPage = () => {
+    const heroSentinelRef = useRef<HTMLDivElement | null>(null);
+    const [isHeaderOverHero, setIsHeaderOverHero] = useState(true);
+
+    useEffect(() => {
+        const sentinel = heroSentinelRef.current;
+
+        if (!sentinel) {
+            return;
+        }
+
+        const updateHeaderState = () => {
+            const { top } = sentinel.getBoundingClientRect();
+            setIsHeaderOverHero(top > 90);
+        };
+
+        updateHeaderState();
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                setIsHeaderOverHero(entry.isIntersecting);
+            },
+            {
+                rootMargin: "100px 0px 0px 0px",
+                threshold: 0,
+            },
+        );
+
+        observer.observe(sentinel);
+
+        return () => {
+            observer.disconnect();
+        };
+    }, []);
+
     return (
         <div className="min-h-screen bg-background text-foreground font-sans selection:bg-white selection:text-background">
             {/* Header */}
-            <header className="border-b border-white/10 sticky top-0 bg-background z-50">
+            <header
+                className={[
+                    "sticky top-0 z-50 border-b transition-[background-color,backdrop-filter] duration-300",
+                    isHeaderOverHero
+                        ? "border-white/1 bg-background"
+                        : "border-white/1 bg-background/28 backdrop-blur-md",
+                ].join(" ")}
+            >
                 <div className="max-w-[1400px] mx-auto flex items-center justify-between px-8 py-6">
                     <div className="flex items-center gap-12">
                         <Link to="/" className="font-mono text-[14px] uppercase tracking-[1.4px] text-white">
@@ -89,8 +132,25 @@ export const LandingPage = () => {
 
             <main>
                 {/* Hero Section */}
-                <section className="relative overflow-hidden pt-24 pb-48 border-b border-white/10">
-                    <div className="max-w-[1400px] mx-auto px-8 text-center">
+                <section className="relative overflow-hidden pt-28 -top-18 pb-44 border-b border-white/10">
+                    <div className="absolute inset-0">
+                        <img
+                            src={homeHeroImage}
+                            alt="Night skyline"
+                            className="h-full w-full object-cover object-[center_42%] opacity-68"
+                        />
+                        <div className="absolute inset-0 bg-black/50" />
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(9,11,15,0.14)_0%,rgba(9,11,15,0.22)_22%,rgba(9,11,15,0.42)_48%,rgba(9,11,15,0.62)_72%,rgba(9,11,15,0.78)_100%)]" />
+                        <div
+                            className="absolute left-1/2 top-[12%] h-[66%] w-[min(78vw,1040px)] -translate-x-1/2 rounded-full bg-white/[0.03] backdrop-blur-[9px]"
+                            style={{
+                                WebkitMaskImage: "radial-gradient(ellipse at center, black 0%, black 38%, transparent 72%)",
+                                maskImage: "radial-gradient(ellipse at center, black 0%, black 38%, transparent 72%)",
+                            }}
+                        />
+                    </div>
+
+                    <div className="relative max-w-[1400px] mx-auto px-8 text-center">
                         <div className="flex justify-center mb-12">
                             <Badge variant="outline" className="rounded-none border-white/20 text-white/50 font-mono py-1 px-3 uppercase tracking-[1px] text-[10px]">
                                 AGENTIC GRAPH OBSERVATION SYSTEM — V1.0.0
@@ -122,8 +182,9 @@ export const LandingPage = () => {
                     </div>
 
                     {/* Decorative lines */}
-                    <div className="absolute top-0 left-1/4 w-px h-full bg-white/5 -z-10" />
-                    <div className="absolute top-0 right-1/4 w-px h-full bg-white/5 -z-10" />
+                    <div className="absolute top-0 left-1/4 w-px h-full bg-white/5" />
+                    <div className="absolute top-0 right-1/4 w-px h-full bg-white/5" />
+                    <div ref={heroSentinelRef} className="absolute bottom-0 h-px w-full" aria-hidden="true" />
                 </section>
 
                 {/* Architecture Section */}
