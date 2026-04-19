@@ -18,8 +18,13 @@ def utc_now_iso() -> str:
 
 
 class AgentCosmosRepository:
-    def __init__(self):
-        self.client = CosmosClient(settings.COSMOS_URI, settings.COSMOS_PRIMARY_KEY)
+    """CRUD layer for agent threads, messages, runs, and events.
+
+    Accepts a *shared* ``CosmosClient`` owned by the application lifespan.
+    """
+
+    def __init__(self, client: CosmosClient):
+        self.client = client
         self.database = self.client.get_database_client(settings.COSMOS_DATABASE_ID)
         self.threads_container = self.database.create_container_if_not_exists(
             id=settings.COSMOS_AGENT_THREADS_CONTAINER,
@@ -180,11 +185,28 @@ class AgentCosmosRepository:
         return [AgentEvent.model_validate(item) for item in items]
 
 
-repository: Optional[AgentCosmosRepository] = None
+_repository: Optional[AgentCosmosRepository] = None
+
+
+def init_agent_repository(client: CosmosClient) -> AgentCosmosRepository:
+    """Called once during lifespan startup to wire the shared CosmosClient."""
+    global _repository
+    _repository = AgentCosmosRepository(client)
+    logger.info("AgentCosmosRepository initialized (shared client)")
+    return _repository
+
+
+def close_agent_repository() -> None:
+    """Called during lifespan shutdown."""
+    global _repository
+    _repository = None
+    logger.info("AgentCosmosRepository reference cleared")
 
 
 def get_agent_repository() -> AgentCosmosRepository:
-    global repository
-    if repository is None:
-        repository = AgentCosmosRepository()
-    return repository
+    """Returns the lifespan-managed repository instance."""
+    if _repository is None:
+        raise RuntimeError(
+            "AgentCosmosRepository is not initialised – the application lifespan has not run yet."
+        )
+    return _repository

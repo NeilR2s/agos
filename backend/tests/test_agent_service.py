@@ -90,8 +90,9 @@ class InMemoryAgentRepository:
 
 
 def test_stream_run_events_emits_terminal_error_for_early_graph_failure(monkeypatch):
-    service = AgentService()
     repository = InMemoryAgentRepository(_thread())
+    monkeypatch.setattr("app.db.agent_cosmos._repository", repository)
+    service = AgentService()
     service.repository = repository
 
     def fail_build_agent_graph(mode: str, run_config=None):
@@ -120,7 +121,6 @@ def test_stream_run_events_emits_terminal_error_for_early_graph_failure(monkeypa
 
 
 def test_stream_run_events_uses_latest_history_and_runtime_config(monkeypatch):
-    service = AgentService()
     repository = InMemoryAgentRepository(
         _thread(),
         messages=[
@@ -131,6 +131,8 @@ def test_stream_run_events_uses_latest_history_and_runtime_config(monkeypatch):
             _message("m5", "user", "old-5", "2024-01-01T00:00:05Z"),
         ],
     )
+    monkeypatch.setattr("app.db.agent_cosmos._repository", repository)
+    service = AgentService()
     service.repository = repository
     monkeypatch.setattr(settings, "AGENT_HISTORY_WINDOW", 3)
 

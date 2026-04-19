@@ -30,17 +30,38 @@ def get_runtime(config: RunnableConfig) -> dict:
         raise RuntimeError("Agent runtime config missing")
     return runtime
 
+# Lazy singletons — deferred so import-time doesn't trigger CosmosDB init
+_portfolio_tools: PortfolioAgentTools | None = None
+_market_tools: MarketAgentTools | None = None
+_engine_tools: EngineAgentTools | None = None
 
-portfolio_tools = PortfolioAgentTools()
-market_tools = MarketAgentTools()
-engine_tools = EngineAgentTools()
+
+def _get_portfolio_tools() -> PortfolioAgentTools:
+    global _portfolio_tools
+    if _portfolio_tools is None:
+        _portfolio_tools = PortfolioAgentTools()
+    return _portfolio_tools
+
+
+def _get_market_tools() -> MarketAgentTools:
+    global _market_tools
+    if _market_tools is None:
+        _market_tools = MarketAgentTools()
+    return _market_tools
+
+
+def _get_engine_tools() -> EngineAgentTools:
+    global _engine_tools
+    if _engine_tools is None:
+        _engine_tools = EngineAgentTools()
+    return _engine_tools
 
 
 @tool
 async def get_portfolio_snapshot(config: RunnableConfig) -> dict:
     """Load a snapshot of the operator's current portfolio holdings and total value."""
     runtime = get_runtime(config)
-    outcome = await portfolio_tools.get_portfolio_snapshot(str(runtime["user_id"]))
+    outcome = await _get_portfolio_tools().get_portfolio_snapshot(str(runtime["user_id"]))
     return serialize_outcome(outcome)
 
 
@@ -48,28 +69,28 @@ async def get_portfolio_snapshot(config: RunnableConfig) -> dict:
 async def get_portfolio_holding(ticker: str, config: RunnableConfig) -> dict:
     """Check the operator's current portfolio exposure to a specific ticker."""
     runtime = get_runtime(config)
-    outcome = await portfolio_tools.get_portfolio_holding(str(runtime["user_id"]), ticker)
+    outcome = await _get_portfolio_tools().get_portfolio_holding(str(runtime["user_id"]), ticker)
     return serialize_outcome(outcome)
 
 
 @tool
 async def get_market_overview(ticker: str) -> dict:
     """Get live market overview and details for a specific ticker from the PSE."""
-    outcome = await market_tools.get_market_overview(ticker)
+    outcome = await _get_market_tools().get_market_overview(ticker)
     return serialize_outcome(outcome)
 
 
 @tool
 async def get_financial_data(ticker: str) -> dict:
     """Load raw financial disclosures and statements for a specific ticker."""
-    outcome = await market_tools.get_financial_data(ticker)
+    outcome = await _get_market_tools().get_financial_data(ticker)
     return serialize_outcome(outcome)
 
 
 @tool
 async def get_financial_reports(ticker: str) -> dict:
     """Load parsed financial reports and metrics for a specific ticker."""
-    outcome = await market_tools.get_financial_reports(ticker)
+    outcome = await _get_market_tools().get_financial_reports(ticker)
     return serialize_outcome(outcome)
 
 
@@ -117,7 +138,7 @@ async def evaluate_trade(ticker: str, config: RunnableConfig) -> dict:
     """Request a guarded trade evaluation for a ticker from the ML Engine."""
     context: AgentRuntimeContext = config["configurable"]["context"]
     runtime = get_runtime(config)
-    outcome = await engine_tools.evaluate_trade(
+    outcome = await _get_engine_tools().evaluate_trade(
         user_id=str(runtime["user_id"]),
         ticker=ticker,
         lookback_days=context.lookback_days,

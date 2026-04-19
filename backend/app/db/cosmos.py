@@ -6,8 +6,14 @@ logger = logging.getLogger(__name__)
 
 
 class CosmosDB:
-    def __init__(self):
-        self.client = CosmosClient(settings.COSMOS_URI, settings.COSMOS_PRIMARY_KEY)
+    """Wraps container references for the portfolio/data/map domain.
+
+    Accepts a *shared* ``CosmosClient`` that is owned by the application
+    lifespan so we get a single connection pool and deterministic cleanup.
+    """
+
+    def __init__(self, client: CosmosClient):
+        self.client = client
         self.database = self.client.get_database_client(settings.COSMOS_DATABASE_ID)
         # Ensure portfolio container exists
         try:
@@ -252,10 +258,29 @@ class CosmosDB:
             [],
         )
 
-db = None
+_instance: CosmosDB | None = None
 
-def get_db():
-    global db
-    if db is None:
-        db = CosmosDB()
-    return db
+
+def init_db(client: CosmosClient) -> CosmosDB:
+    """Called once during lifespan startup to wire the shared CosmosClient."""
+    global _instance
+    _instance = CosmosDB(client)
+    logger.info("CosmosDB data layer initialized (shared client)")
+    return _instance
+
+
+def close_db() -> None:
+    """Called during lifespan shutdown. Clears the module reference
+    (the CosmosClient itself is closed by the lifespan owner)."""
+    global _instance
+    _instance = None
+    logger.info("CosmosDB data layer reference cleared")
+
+
+def get_db() -> CosmosDB:
+    """FastAPI-compatible dependency that returns the lifespan-managed instance."""
+    if _instance is None:
+        raise RuntimeError(
+            "CosmosDB is not initialised – the application lifespan has not run yet."
+        )
+    return _instance
