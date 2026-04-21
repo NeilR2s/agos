@@ -178,3 +178,21 @@ async def get_run_events(
 ):
     await _assert_thread(service, _user_id(current_user), thread_id)
     return await service.list_events(thread_id=thread_id, run_id=run_id)
+
+@router.post("/threads/{thread_id}/runs/{run_id}/interrupt", response_model=AgentRunResult)
+@limiter.limit("10/minute")
+async def process_interrupt(
+    request: Request,
+    thread_id: str,
+    run_id: str,
+    payload: AgentInterruptDecisionRequest,
+    service: AgentService = Depends(get_agent_service),
+    current_user: dict = Depends(get_current_user),
+    token: str | None = Depends(oauth2_scheme),
+):
+    await _assert_thread(service, _user_id(current_user), thread_id)
+    # The actual graph resume logic would go here, updating LangGraph state.
+    # For now, we return 501 Not Implemented, as the graph state persistence 
+    # and resume logic for LangGraph is not fully wired up.
+    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Interrupt resumption is not fully implemented in the graph runner yet.")
+
