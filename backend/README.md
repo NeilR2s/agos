@@ -91,5 +91,5 @@ Current backend tests are centered on the agent subsystem. Portfolio, market, an
 
 ## Current caveats
 
-- Portfolio routes accept a caller-supplied `user_id` path value. The frontend passes the authenticated user id, but the backend does not currently enforce a path-to-token match on those routes.
+- Portfolio routes still accept a caller-supplied `user_id` path value, but the backend now enforces a path-to-token match and returns `403` on mismatches.
 - The root FastAPI description still says `Portfolio Manager API`. The actual service surface is wider than that.
