@@ -8,10 +8,15 @@ dependencies = [
     "curl-cffi>=0.7.1",
     "lxml>=5.1.0",
     "pandas>=2.0.0",
-    "SQLAlchemy>=2.0.0",
-    "aiosqlite>=0.20.0",
+    "azure-cosmos>=4.6.0",
     "tenacity>=8.2.0",
     "python-dotenv>=1.0.0",
+    "langchain",
+    "langchain-google-genai",
+    "langchain-community",
+    "tavily-python",
+    "langchain-tavily",
+    "pydantic"
 ]
 
 [tool.ruff]
