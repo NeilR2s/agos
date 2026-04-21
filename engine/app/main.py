@@ -25,23 +25,29 @@ app_logger = get_engine_logger("agos.engine.api")
 pipeline = None
 decision_engine = None
 
+import os
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global pipeline
     global decision_engine
     
     model_path = settings.MODEL_PATH
-    app_logger.info(f"Loading model from {model_path} on CPU...")
+    device = os.environ.get("INFERENCE_DEVICE", "cpu")
+    app_logger.info(f"Loading model from {model_path} on {device}...")
 
-    # Force load onto CPU for Azure constraints
-    pipeline = BaseChronosPipeline.from_pretrained(model_path, device_map="cpu")
+    # Load onto device (cpu or cuda)
+    pipeline = BaseChronosPipeline.from_pretrained(model_path, device_map=device)
 
-    # Memory optimization: Apply PyTorch 8-bit dynamic quantization to linear layers
-    app_logger.info("Applying 8-bit dynamic quantization to linear layers...")
-    pipeline.model = torch.ao.quantization.quantize_dynamic(
-        pipeline.model, {torch.nn.Linear}, dtype=torch.qint8
-    )
-    app_logger.info("Model loaded and quantized successfully.")
+    if device == "cpu":
+        # Memory optimization: Apply PyTorch 8-bit dynamic quantization to linear layers
+        app_logger.info("Applying 8-bit dynamic quantization to linear layers...")
+        pipeline.model = torch.ao.quantization.quantize_dynamic(
+            pipeline.model, {torch.nn.Linear}, dtype=torch.qint8
+        )
+        app_logger.info("Model loaded and quantized successfully.")
+    else:
+        app_logger.info("Model loaded without quantization (GPU path).")
 
     # --- Create persistent connection pool ---
     cosmos_client: AsyncCosmosClient | None = None
