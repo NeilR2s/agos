@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -14,21 +15,17 @@ class StockApi:
     """A minimal, asynchronous API client for the Philippine Stock Exchange (PSE) Edge portal."""
 
     # TODO: hide these ugly ass connection strings in a config
-    SCRAPE_URL = "https://edge.pse.com.ph/companyDirectory/search.ax"
-    FORM_URL = "https://edge.pse.com.ph/companyDirectory/form.do"
-    CHART_ENDPOINT = "https://edge.pse.com.ph/common/DisclosureCht.ax"
-    DISCLOSURE_ENDPOINT = "https://edge.pse.com.ph/announcements/search.ax"
-    FINANCIAL_ENDPOINT = "https://edge.pse.com.ph/financialReports/search.ax"
-    REPORT_ENDPOINT_TEMPLATE = (
-        "https://edge.pse.com.ph/companyPage/financial_reports_view.do?cmpy_id={cmpy_id}"
-    )
-    INDEX_SUMMARY_ENDPOINT = "https://edge.pse.com.ph/index/form.do"
-    STOCK_DATA_ENDPOINT = (
-        "https://edge.pse.com.ph/companyPage/stockData.do?cmpy_id={cmpy_id}&security_id={sec_id}"
-    )
-    DIVIDEND_ENDPOINT = "https://edge.pse.com.ph/companyPage/dividends_and_rights_list.ax?DividendsOrRights=Dividends"
-    TRI_ENDPOINT = "https://frames.pse.com.ph/compositeSector"
-    BSP_USD_ENDPOINT = "https://www.bsp.gov.ph/_api/web/lists/getByTitle('Exchange%20Rate')/items"
+    SCRAPE_URL = os.environ.get("PSE_DIRECTORY_SEARCH_SOURCE", "https://edge.pse.com.ph/companyDirectory/search.ax")
+    FORM_URL = os.environ.get("PSE_DIRECTORY_FORM_SOURCE", "https://edge.pse.com.ph/companyDirectory/form.do")
+    CHART_ENDPOINT = os.environ.get("PSE_CHART_ENDPOINT", "https://edge.pse.com.ph/common/DisclosureCht.ax")
+    DISCLOSURE_ENDPOINT = os.environ.get("PSE_DISCLOSURE_ENDPOINT", "https://edge.pse.com.ph/announcements/search.ax")
+    FINANCIAL_ENDPOINT = os.environ.get("PSE_FINANCIAL_ENDPOINT", "https://edge.pse.com.ph/financialReports/search.ax")
+    REPORT_ENDPOINT_TEMPLATE = os.environ.get("PSE_REPORT_ENDPOINT_TEMPLATE", "https://edge.pse.com.ph/companyPage/financial_reports_view.do?cmpy_id={cmpy_id}")
+    INDEX_SUMMARY_ENDPOINT = os.environ.get("PSE_INDEX_SUMMARY_ENDPOINT", "https://edge.pse.com.ph/index/form.do")
+    STOCK_DATA_ENDPOINT = os.environ.get("PSE_STOCK_DATA_ENDPOINT", "https://edge.pse.com.ph/companyPage/stockData.do?cmpy_id={cmpy_id}&security_id={sec_id}")
+    DIVIDEND_ENDPOINT = os.environ.get("PSE_DIVIDEND_ENDPOINT", "https://edge.pse.com.ph/companyPage/dividends_and_rights_list.ax?DividendsOrRights=Dividends")
+    TRI_ENDPOINT = os.environ.get("PSE_TRI_ENDPOINT", "https://frames.pse.com.ph/compositeSector")
+    BSP_USD_ENDPOINT = os.environ.get("BSP_USD_ENDPOINT", "https://www.bsp.gov.ph/_api/web/lists/getByTitle('Exchange%20Rate')/items")
 
     def __init__(self, max_concurrency: int = 20, timeout: int = 60):
         self._http_sem = asyncio.Semaphore(max_concurrency)
