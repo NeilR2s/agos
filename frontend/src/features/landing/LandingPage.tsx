@@ -129,6 +129,9 @@ export const LandingPage = () => {
                         <img
                             src={homeHeroImage}
                             alt="Night skyline"
+                            fetchPriority="high"
+                            loading="eager"
+                            decoding="async"
                             className="h-full w-full object-cover object-[center_42%] opacity-68"
                         />
                         <div className="absolute inset-0 bg-black/50" />
@@ -205,7 +208,7 @@ export const LandingPage = () => {
                                         <div className="size-12 border border-white/20 flex items-center justify-center mb-8">
                                             <Icon className="size-5 text-white/40 group-hover:text-white transition-colors" />
                                         </div>
-                                        <h3 className="font-mono text-[12px] uppercase tracking-[2px] text-white/40 mb-4 group-hover:text-white transition-colors">
+                                        <h3 className="font-mono text-[12px] uppercase tracking-[2px] text-white/60 mb-4 group-hover:text-white transition-colors">
                                             {block.title}
                                         </h3>
                                         <p className="font-sans text-[16px] leading-[1.6] text-white/60">
@@ -246,13 +249,13 @@ export const LandingPage = () => {
             {/* Footer */}
             <footer className="border-t border-white/10 py-12">
                 <div className="max-w-[1400px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-8">
-                    <div className="font-mono text-[12px] text-white/30 uppercase tracking-[1.4px]">
+                    <div className="font-mono text-[12px] text-white/55 uppercase tracking-[1.4px]">
                         © 2026 AGOS INFRASTRUCTURE
                     </div>
                     <div className="flex gap-8">
-                        <a href="#" className="font-sans text-[12px] text-white/30 hover:text-white transition-colors">API_DOCS</a>
-                        <a href="#" className="font-sans text-[12px] text-white/30 hover:text-white transition-colors">SYSTEM_STATUS</a>
-                        <a href="#" className="font-sans text-[12px] text-white/30 hover:text-white transition-colors">AUDIT_LOGS</a>
+                        <a href="#" className="font-sans text-[12px] text-white/55 hover:text-white transition-colors">API_DOCS</a>
+                        <a href="#" className="font-sans text-[12px] text-white/55 hover:text-white transition-colors">SYSTEM_STATUS</a>
+                        <a href="#" className="font-sans text-[12px] text-white/55 hover:text-white transition-colors">AUDIT_LOGS</a>
                     </div>
                 </div>
             </footer>

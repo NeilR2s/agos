@@ -66,6 +66,9 @@ export function AgentThreadList({
       <div className="flex h-full min-h-0 flex-col px-2">
         <div className="mb-4">
           <Input
+            id="agent-thread-search-sidebar"
+            name="agent-thread-search"
+            aria-label="Search agent thread history"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search history"
@@ -153,6 +156,9 @@ export function AgentThreadList({
       </CardHeader>
       <CardContent className="flex min-h-0 flex-1 flex-col gap-5 px-4 pt-4">
         <Input 
+          id="agent-thread-search-panel"
+          name="agent-thread-search"
+          aria-label="Search agent threads"
           value={query} 
           onChange={(event) => onQueryChange(event.target.value)} 
           placeholder="Search threads..." 

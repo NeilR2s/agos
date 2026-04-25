@@ -97,6 +97,7 @@ export const Dashboard = () => {
             return normalizePortfolio(data);
         },
         refetchInterval: 10000,
+        staleTime: 5000,
     });
 
     const cashQuery = useQuery({
@@ -700,8 +701,11 @@ function HoldingDialog({
                     }}
                 >
                     <div className="space-y-2">
-                        <label className="font-sans text-[14px] text-white/70">Ticker</label>
+                        <label htmlFor="holding-ticker" className="font-sans text-[14px] text-white/70">Ticker</label>
                         <TickerAutocompleteInput
+                            id="holding-ticker"
+                            name="ticker"
+                            ariaLabel="Holding ticker"
                             value={ticker}
                             onChange={setTicker}
                             readOnly={mode === "edit"}
@@ -711,8 +715,10 @@ function HoldingDialog({
                     </div>
 
                     <div className="space-y-2">
-                        <label className="font-sans text-[14px] text-white/70">Shares</label>
+                        <label htmlFor="holding-shares" className="font-sans text-[14px] text-white/70">Shares</label>
                         <input
+                            id="holding-shares"
+                            name="shares"
                             type="number"
                             min="0"
                             step="1"
@@ -724,8 +730,10 @@ function HoldingDialog({
                     </div>
 
                     <div className="space-y-2">
-                        <label className="font-sans text-[14px] text-white/70">Average Price</label>
+                        <label htmlFor="holding-average-price" className="font-sans text-[14px] text-white/70">Average Price</label>
                         <input
+                            id="holding-average-price"
+                            name="avgPrice"
                             type="number"
                             min="0.01"
                             step="0.01"
@@ -798,8 +806,10 @@ function CashDialog({
                     }}
                 >
                     <div className="space-y-2">
-                        <label className="font-sans text-[14px] text-white/70">Amount</label>
+                        <label htmlFor="cash-amount" className="font-sans text-[14px] text-white/70">Amount</label>
                         <input
+                            id="cash-amount"
+                            name="amount"
                             type="number"
                             min="0"
                             step="0.01"

@@ -26,7 +26,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { Drawer, DrawerContent } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer";
 import {
     Card,
     CardContent,
@@ -404,9 +404,11 @@ export const ResearchView = () => {
         placeholderData: keepPreviousData,
     });
 
+    const chartData = chartQuery.isPlaceholderData ? undefined : chartQuery.data;
+
     const closes = useMemo(
-        () => chartQuery.data?.map((point) => point.close).filter((value): value is number => typeof value === "number") ?? [],
-        [chartQuery.data]
+        () => chartData?.map((point) => point.close).filter((value): value is number => typeof value === "number") ?? [],
+        [chartData]
     );
     const forecastHistory = useMemo(() => closes.slice(-60), [closes]);
 
@@ -428,6 +430,8 @@ export const ResearchView = () => {
         placeholderData: keepPreviousData,
     });
 
+    const forecastData = forecastQuery.isPlaceholderData ? undefined : forecastQuery.data;
+
     const combinedChartData = useMemo<ChartSeriesPoint[]>(() => {
         const comparisonMap = new Map<string, number>();
         if (comparisonChartQuery.data) {
@@ -438,7 +442,7 @@ export const ResearchView = () => {
             });
         }
 
-        const historical = chartQuery.data?.map((point, index) => ({
+        const historical = chartData?.map((point, index) => ({
             index,
             price: point.close,
             open: point.open,
@@ -449,14 +453,14 @@ export const ResearchView = () => {
             forecastBandBase: null as number | null,
             forecastBandRange: null as number | null,
             forecastMedian: null as number | null,
-            movingAverage20: calculateMovingAverage(chartQuery.data ?? [], index, 20),
-            movingAverage50: calculateMovingAverage(chartQuery.data ?? [], index, 50),
-            rsi: calculateRSI(chartQuery.data ?? [], index, 14),
+            movingAverage20: calculateMovingAverage(chartData ?? [], index, 20),
+            movingAverage50: calculateMovingAverage(chartData ?? [], index, 50),
+            rsi: calculateRSI(chartData ?? [], index, 14),
             comparisonPrice: comparisonMap.get(point.date) ?? null,
             kind: "historical" as const,
         })) ?? [];
 
-        const forecast = forecastQuery.data?.forecasts ?? null;
+        const forecast = forecastData?.forecasts ?? null;
 
         if (!forecast) return historical;
 
@@ -488,14 +492,14 @@ export const ResearchView = () => {
         });
 
         return [...historical, ...forecastSeries];
-    }, [chartQuery.data, forecastQuery.data, comparisonChartQuery.data]);
+    }, [chartData, forecastData, comparisonChartQuery.data]);
 
-    const overview = marketQuery.data;
+    const overview = !marketQuery.isPlaceholderData && marketQuery.data?.ticker === selectedTicker ? marketQuery.data : null;
     const stockData = useMemo(() => overview?.stockData ?? {}, [overview]);
-    const latestChart = chartQuery.data?.at(-1);
-    const latestForecast = forecastQuery.data?.forecasts?.["q_0.5"]?.at(-1);
-    const latestForecastLow = forecastQuery.data?.forecasts?.["q_0.1"]?.at(-1);
-    const latestForecastHigh = forecastQuery.data?.forecasts?.["q_0.9"]?.at(-1);
+    const latestChart = chartData?.at(-1);
+    const latestForecast = forecastData?.forecasts?.["q_0.5"]?.at(-1);
+    const latestForecastLow = forecastData?.forecasts?.["q_0.1"]?.at(-1);
+    const latestForecastHigh = forecastData?.forecasts?.["q_0.9"]?.at(-1);
 
     const researchSignals = useMemo<SignalItem[]>(() => {
         const latestPrice = overview?.price ?? latestChart?.close ?? null;
@@ -736,7 +740,7 @@ export const ResearchView = () => {
                 <CardContent className="space-y-4">
                     <div className="flex flex-wrap items-start justify-between gap-4 border border-border px-4 py-3">
                         <div className="space-y-2">
-                            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">Window</p>
+                            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/60">Window</p>
                             <div className="flex flex-wrap gap-2">
                                 {chartRangeOptions.map((option) => (
                                     <Button
@@ -759,7 +763,7 @@ export const ResearchView = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">Overlays</p>
+                            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/60">Overlays</p>
                             <div className="flex flex-wrap gap-2">
                                 <Button
                                     type="button"
@@ -805,9 +809,12 @@ export const ResearchView = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">Compare</p>
+                            <label htmlFor="comparison-ticker" className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/60">Compare</label>
                             <div className="flex gap-2">
                                 <TickerAutocompleteInput
+                                    id="comparison-ticker"
+                                    name="comparison-ticker"
+                                    ariaLabel="Comparison ticker"
                                     value={comparisonInput}
                                     onChange={setComparisonInput}
                                     onSelect={(item) => setComparisonTicker(item.ticker)}
@@ -904,14 +911,14 @@ export const ResearchView = () => {
                                     </ResponsiveContainer>
                                 </div>
                             ) : (
-                                <div className="border border-dashed border-white/10 px-4 py-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
+                                <div className="border border-dashed border-white/10 px-4 py-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">
                                     Activity / value histogram unavailable for this series.
                                 </div>
                             )}
 
                             {showRSI ? (
                                 <div className="relative h-[120px] overflow-hidden border border-border px-2 py-3">
-                                    <div className="absolute left-4 top-2 z-10 font-mono text-[8px] uppercase tracking-[1px] text-white/30">
+                                    <div className="absolute left-4 top-2 z-10 font-mono text-[8px] uppercase tracking-[1px] text-white/55">
                                         Relative Strength Index (14)
                                     </div>
                                     <ResponsiveContainer width="100%" height="100%">
@@ -957,45 +964,45 @@ export const ResearchView = () => {
                                 </p>
                                 <div className="mt-2 space-y-1">
                                     <div className="flex items-center justify-between gap-3">
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Date</span>
+                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">Date</span>
                                         <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white">{chartLegendPoint?.date ?? "---"}</span>
                                     </div>
                                     <div className="flex items-center justify-between gap-3">
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Close</span>
+                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">Close</span>
                                         <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white">{formatCurrency(chartLegendPoint?.price)}</span>
                                     </div>
                                     <div className="flex items-center justify-between gap-3">
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Forecast</span>
+                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">Forecast</span>
                                         <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white">{formatCurrency(chartLegendPoint?.forecastMedian)}</span>
                                     </div>
                                     <div className="flex items-center justify-between gap-3">
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">MA 20</span>
+                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">MA 20</span>
                                         <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-[#7f9d83]">{formatCurrency(chartLegendPoint?.movingAverage20)}</span>
                                     </div>
                                     <div className="flex items-center justify-between gap-3">
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">MA 50</span>
+                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">MA 50</span>
                                         <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-[#d1b970]">{formatCurrency(chartLegendPoint?.movingAverage50)}</span>
                                     </div>
                                     <div className="flex items-center justify-between gap-3">
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">RSI</span>
+                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">RSI</span>
                                         <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white">
                                             {chartLegendPoint?.rsi !== null ? chartLegendPoint?.rsi?.toFixed(1) : "---"}
                                         </span>
                                     </div>
                                     {comparisonTicker ? (
                                         <div className="flex items-center justify-between gap-3 border-t border-white/5 pt-1">
-                                            <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Compare {comparisonTicker}</span>
+                                            <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">Compare {comparisonTicker}</span>
                                             <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/70">{formatCurrency(chartLegendPoint?.comparisonPrice)}</span>
                                         </div>
                                     ) : null}
                                     <div className="flex items-center justify-between gap-3">
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">High / Low</span>
+                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">High / Low</span>
                                         <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white">
                                             {formatCurrency(chartLegendPoint?.high)} / {formatCurrency(chartLegendPoint?.low)}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between gap-3">
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Activity / Value</span>
+                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">Activity / Value</span>
                                         <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white">{formatNumber(chartLegendPoint?.value, "en-PH", 0)}</span>
                                     </div>
                                 </div>
@@ -1009,7 +1016,7 @@ export const ResearchView = () => {
                                             Compact market tape with price, movement, and relative activity.
                                         </p>
                                     </div>
-                                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
+                                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">
                                         {marketSnapshotRows.length === 1 ? "1 row" : `${marketSnapshotRows.length} rows`}
                                     </p>
                                 </div>
@@ -1020,7 +1027,7 @@ export const ResearchView = () => {
                                             <div key={row.ticker} className="space-y-3 border-t border-white/10 pt-3 first:border-t-0 first:pt-0">
                                                 <div className="flex items-center justify-between gap-3">
                                                     <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white">{row.ticker}</p>
-                                                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">#{index + 1}</p>
+                                                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">#{index + 1}</p>
                                                 </div>
                                                 <div className="grid gap-2 sm:grid-cols-2">
                                                     <Metric label="Price" value={formatCurrency(row.price)} />
@@ -1162,7 +1169,7 @@ export const ResearchView = () => {
                                                     href={sourceUrl}
                                                     target="_blank"
                                                     rel="noreferrer"
-                                                    className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[1.4px] text-white/30 transition-colors hover:text-white/70"
+                                                    className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[1.4px] text-white/55 transition-colors hover:text-white/70"
                                                 >
                                                     Open article <ArrowTopRightOnSquareIcon className="size-3" />
                                                 </a>
@@ -1188,6 +1195,8 @@ export const ResearchView = () => {
 
             <Drawer open={isTradeDrawerOpen} onOpenChange={setTradeDrawerOpen}>
                 <DrawerContent side="right" className="w-full max-w-[640px] p-0">
+                    <DrawerTitle className="sr-only">Trade Evaluation</DrawerTitle>
+                    <DrawerDescription className="sr-only">Evaluate the selected ticker in the decision engine.</DrawerDescription>
                     <div className="h-full overflow-y-auto px-4 py-4">
                         <TradeWorkbench
                             ticker={selectedTicker}
@@ -1214,7 +1223,7 @@ export const ResearchView = () => {
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-6 py-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-6 py-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/60">
                         <span>
                             {isDisclosureFrameLoaded
                                 ? invertDisclosure ? "Dark filter enabled" : "Original colors"
@@ -1234,7 +1243,7 @@ export const ResearchView = () => {
 
                     <div className="space-y-3 p-6">
                         {!isDisclosureFrameLoaded ? (
-                            <div className="border border-dashed border-white/10 px-4 py-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">
+                            <div className="border border-dashed border-white/10 px-4 py-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/60">
                                 Embedded filing previews can stall or be blocked by the source. If the frame stays blank, use the external link above.
                             </div>
                         ) : null}
@@ -1249,7 +1258,7 @@ export const ResearchView = () => {
                                 />
                             ) : null}
                         </div>
-                        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
+                        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">
                             If the filing refuses to render in-frame, open it externally from the link above.
                         </p>
                     </div>
@@ -1278,7 +1287,7 @@ function MiniMetric({ label, value }: { label: string; value: string }) {
 }
 
 function EmptyState({ label }: { label: string }) {
-    return <p className="py-4 font-mono text-[10px] uppercase tracking-[1.4px] text-white/20">{label}</p>;
+    return <p className="py-4 font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">{label}</p>;
 }
 
 function PriceActionTooltip({
@@ -1441,7 +1450,7 @@ function FinancialReportBlock({
                     </p>
                 </div>
                 {scaleFactor !== undefined ? (
-                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
+                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">
                         Scale {formatNumber(Number(scaleFactor), "en-PH", 0)}
                     </p>
                 ) : null}
@@ -1470,7 +1479,7 @@ function FinancialReportBlock({
                             <div className="grid gap-2 sm:grid-cols-2">
                                 {Object.entries(value).map(([nestedKey, nestedValue]) => (
                                     <div key={nestedKey} className="space-y-1">
-                                        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">{formatLabel(nestedKey)}</p>
+                                        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">{formatLabel(nestedKey)}</p>
                                         <p className="text-right font-mono text-sm tabular-nums text-white/70">{formatStatementValue(nestedValue)}</p>
                                     </div>
                                 ))}
@@ -1498,10 +1507,10 @@ function StatementTable({ title, rows }: { title: string; rows: Record<string, u
     return (
         <div className="space-y-2">
             <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">{title}</p>
-            <div className="overflow-hidden">
-                <table className="w-full border-collapse font-mono text-[12px] tabular-nums">
+            <div className="overflow-x-auto [scrollbar-gutter:stable]">
+                <table className="min-w-[520px] w-full border-collapse font-mono text-[12px] tabular-nums">
                     <thead>
-                        <tr className="border-b border-white/10 text-white/40">
+                        <tr className="border-b border-white/10 text-white/60">
                             <th className="py-2 pr-4 text-left font-normal uppercase tracking-[1.4px]">Item</th>
                             {valueHeaders.map((header) => (
                                 <th key={header} className="py-2 pl-4 text-right font-normal uppercase tracking-[1.4px]">

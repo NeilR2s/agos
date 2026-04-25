@@ -13,7 +13,7 @@ import {
     GlobeAltIcon,
 } from "@heroicons/react/24/outline";
 
-import { agentApi, backendClient, getUserId } from "@/api/backend/client";
+import { agentApi, backendClient } from "@/api/backend/client";
 import { engineClient } from "@/api/engine/client";
 import { AgentThreadList } from "@/features/agent/components/AgentThreadList";
 import { Badge } from "@/components/ui/badge";
@@ -57,9 +57,9 @@ export function Sidebar({
     const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
     const queryClient = useQueryClient();
-    const userId = getUserId();
     const authUser = useAuthStore((state) => state.user);
     const logout = useAuthStore((state) => state.logout);
+    const userId = authUser?.uid ?? "";
     const signedInUser = getSignedInUserIdentity(authUser);
     const [threadQuery, setThreadQuery] = useState("");
     const activeThreadId = searchParams.get("thread");
@@ -67,7 +67,7 @@ export function Sidebar({
     const currentTicker = searchParams.get("ticker");
 
     const portfolioQuery = useQuery({
-        queryKey: ["sidebar-portfolio", userId],
+        queryKey: ["portfolio", userId],
         queryFn: async () => {
             const { data, error } = await backendClient.GET("/api/v1/portfolio/{user_id}", {
                 params: { path: { user_id: userId } },
@@ -76,27 +76,31 @@ export function Sidebar({
             if (error) throw error;
             return normalizePortfolio(data);
         },
+        enabled: Boolean(userId),
         refetchInterval: 10000,
+        staleTime: 5000,
     });
 
     const healthQuery = useQuery({
-        queryKey: ["sidebar-engine-health"],
+        queryKey: ["engine-health"],
         queryFn: async () => {
             const { data, error } = await engineClient.GET("/api/v1/health", {});
             if (error) throw error;
             return normalizeEngineHealth(data);
         },
         refetchInterval: 30000,
+        staleTime: 10000,
     });
 
     const versionQuery = useQuery({
-        queryKey: ["sidebar-engine-version"],
+        queryKey: ["engine-version"],
         queryFn: async () => {
             const { data, error } = await engineClient.GET("/api/v1/version", {});
             if (error) throw error;
             return data as Record<string, unknown>;
         },
         refetchInterval: 30000,
+        staleTime: 10000,
     });
 
     const threadsQuery = useQuery({

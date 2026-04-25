@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 
@@ -86,6 +86,11 @@ export function TradeWorkbench({
   className,
 }: TradeWorkbenchProps) {
   const [tickerInput, setTickerInput] = useState(ticker);
+  const generatedId = useId().replace(/:/g, "");
+  const tickerInputId = `trade-ticker-${generatedId}`;
+  const actionInputId = `trade-action-${generatedId}`;
+  const quantityInputId = `trade-quantity-${generatedId}`;
+  const reasonInputId = `trade-reason-${generatedId}`;
   const authUser = useAuthStore((state) => state.user);
   const signedInUser = getSignedInUserIdentity(authUser);
   const [decision, setDecision] = useState<TradeDecision | null>(null);
@@ -301,9 +306,12 @@ export function TradeWorkbench({
         </CardHeader>
         <CardContent className="space-y-4 overflow-visible">
           <div className="space-y-2">
-            <label className="font-sans text-[14px] text-white/70">Ticker</label>
+            <label htmlFor={tickerInputId} className="font-sans text-[14px] text-white/70">Ticker</label>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
               <TickerAutocompleteInput
+                id={tickerInputId}
+                name="ticker"
+                ariaLabel="Trading ticker"
                 value={tickerInput}
                 onChange={setTickerInput}
                 onSelect={(item) => onTickerChange(item.ticker)}
@@ -353,8 +361,9 @@ export function TradeWorkbench({
                         }}
                       >
                         <div className="space-y-2">
-                          <label className="font-sans text-[14px] text-white/70">Action</label>
+                          <label htmlFor={actionInputId} className="font-sans text-[14px] text-white/70">Action</label>
                           <select
+                            id={actionInputId}
                             name="action"
                             defaultValue={decision.action}
                             className="flex h-10 w-full border border-border bg-transparent px-3 py-2 font-sans text-sm text-white outline-none focus:ring-2 focus:ring-ring"
@@ -366,8 +375,9 @@ export function TradeWorkbench({
                         </div>
 
                         <div className="space-y-2">
-                          <label className="font-sans text-[14px] text-white/70">Quantity</label>
+                          <label htmlFor={quantityInputId} className="font-sans text-[14px] text-white/70">Quantity</label>
                           <input
+                            id={quantityInputId}
                             name="quantity"
                             type="number"
                             min="0"
@@ -379,8 +389,9 @@ export function TradeWorkbench({
                         </div>
 
                         <div className="space-y-2">
-                          <label className="font-sans text-[14px] text-white/70">Reason</label>
+                          <label htmlFor={reasonInputId} className="font-sans text-[14px] text-white/70">Reason</label>
                           <textarea
+                            id={reasonInputId}
                             name="reason"
                             required
                             placeholder="Provide technical justification for the override..."

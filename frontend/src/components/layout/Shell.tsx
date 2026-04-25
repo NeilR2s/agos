@@ -1,17 +1,22 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Bars3Icon, CommandLineIcon } from "@heroicons/react/24/outline";
 
 import { Button } from "@/components/ui/button";
-import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { CommandPalette } from "@/components/layout/CommandPalette";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer";
 import { publishOverlayState } from "@/lib/overlay";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/store/authStore";
+
+const CommandPalette = lazy(() => import("@/components/layout/CommandPalette").then((module) => ({ default: module.CommandPalette })));
+const Sidebar = lazy(() => import("@/components/layout/Sidebar").then((module) => ({ default: module.Sidebar })));
+
+const sidebarFallback = <div className="h-full border-r border-border bg-background" />;
 
 export const Shell = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const isAgentRoute = location.pathname === "/agent" || location.pathname.startsWith("/agent/");
+  const { user, token, isLoading, isDevBypass } = useAuthStore();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(() => {
@@ -26,7 +31,10 @@ export const Shell = ({ children }: { children: ReactNode }) => {
   });
   const isPublicRoute = location.pathname === "/" || location.pathname === "/login";
   const isLoginRoute = location.pathname === "/login";
-  const desktopSidebarWidth = isPublicRoute ? 0 : sidebarExpanded ? (isAgentRoute ? 320 : 240) : 72;
+  const hasAuthenticatedSession = Boolean(user || token || isDevBypass);
+  const showProtectedShell = !isPublicRoute && !isLoading && hasAuthenticatedSession;
+  const canUseCommandPalette = !isLoginRoute && showProtectedShell;
+  const desktopSidebarWidth = showProtectedShell ? (sidebarExpanded ? (isAgentRoute ? 320 : 240) : 72) : 0;
 
   useEffect(() => {
     if (!isLoginRoute) {
@@ -42,7 +50,7 @@ export const Shell = ({ children }: { children: ReactNode }) => {
   }, [isLoginRoute]);
 
   useEffect(() => {
-    if (isLoginRoute) {
+    if (!canUseCommandPalette) {
       return;
     }
 
@@ -56,7 +64,20 @@ export const Shell = ({ children }: { children: ReactNode }) => {
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [isLoginRoute]);
+  }, [canUseCommandPalette]);
+
+  useEffect(() => {
+    if (canUseCommandPalette) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setPaletteOpen(false);
+      setMobileNavOpen(false);
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [canUseCommandPalette]);
 
   useEffect(() => {
     publishOverlayState({ commandPaletteOpen: paletteOpen });
@@ -72,7 +93,7 @@ export const Shell = ({ children }: { children: ReactNode }) => {
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
-      {!isPublicRoute ? (
+      {showProtectedShell ? (
         <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-background px-4 py-3 lg:hidden">
           <Link to="/" className="font-mono text-[14px] uppercase tracking-[1.4px] text-white">
             AGOS
@@ -109,41 +130,50 @@ export const Shell = ({ children }: { children: ReactNode }) => {
         </header>
       ) : null}
 
-      {!isPublicRoute ? (
+      {showProtectedShell ? (
         <aside
           className="fixed inset-y-0 left-0 z-40 hidden overflow-hidden border-r border-border bg-background transition-[width] duration-200 lg:block"
           style={{ width: desktopSidebarWidth }}
         >
-          <Sidebar
-            onOpenPalette={() => setPaletteOpen(true)}
-            onNavigate={() => setMobileNavOpen(false)}
-            onToggleExpanded={() => setSidebarExpanded((current) => !current)}
-            showLabels={sidebarExpanded}
-            isAgentMode={isAgentRoute}
-          />
+          <Suspense fallback={sidebarFallback}>
+            <Sidebar
+              onOpenPalette={() => setPaletteOpen(true)}
+              onNavigate={() => setMobileNavOpen(false)}
+              onToggleExpanded={() => setSidebarExpanded((current) => !current)}
+              showLabels={sidebarExpanded}
+              isAgentMode={isAgentRoute}
+            />
+          </Suspense>
         </aside>
       ) : null}
 
-      <main className={cn("min-h-dvh")} style={!isPublicRoute ? { paddingLeft: desktopSidebarWidth } : undefined}>
+      <main className={cn("min-h-dvh")} style={showProtectedShell ? { paddingLeft: desktopSidebarWidth } : undefined}>
         {children}
       </main>
 
-      {!isLoginRoute ? <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} /> : null}
+      {canUseCommandPalette && paletteOpen ? (
+        <Suspense fallback={null}>
+          <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+        </Suspense>
+      ) : null}
 
-      {!isPublicRoute ? (
+      {showProtectedShell ? (
         <Drawer open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
           <DrawerContent side="left" className="max-w-[320px] p-0 lg:hidden">
-            <Sidebar
-              onOpenPalette={() => {
-                setMobileNavOpen(false);
-                setPaletteOpen(true);
-              }}
-              onNavigate={() => setMobileNavOpen(false)}
-              onToggleExpanded={() => setMobileNavOpen(false)}
-              showLabels
-              isAgentMode={isAgentRoute}
-              className="w-full px-4 py-4"
-            />
+            <DrawerTitle className="sr-only">Navigation</DrawerTitle>
+            <DrawerDescription className="sr-only">Primary AGOS workspace navigation.</DrawerDescription>
+            <Suspense fallback={sidebarFallback}>
+              <Sidebar
+                onOpenPalette={() => {
+                  setMobileNavOpen(false);
+                  setPaletteOpen(true);
+                }}
+                onNavigate={() => setMobileNavOpen(false)}
+                showLabels
+                isAgentMode={isAgentRoute}
+                className="w-full px-4 py-4"
+              />
+            </Suspense>
           </DrawerContent>
         </Drawer>
       ) : null}

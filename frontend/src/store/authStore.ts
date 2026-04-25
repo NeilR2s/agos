@@ -3,6 +3,20 @@ import { signInWithPopup, signOut } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 
+const DEV_BYPASS_STORAGE_KEY = "agos.auth.dev-bypass.v1";
+const DEV_ADMIN_TOKEN = "dev_admin_token";
+const DEV_ADMIN_USER = { uid: "dev-admin", displayName: "Dev Admin", email: "dev@admin.com" } as unknown as User;
+
+const isDevBypassAllowed = () => import.meta.env.VITE_ENABLE_DEV_BYPASS === 'true';
+
+const getStoredDevBypass = () => {
+  if (typeof window === "undefined" || !isDevBypassAllowed()) {
+    return false;
+  }
+
+  return window.localStorage.getItem(DEV_BYPASS_STORAGE_KEY) === "1";
+};
+
 interface AuthState {
   user: User | null;
   token: string | null;
@@ -16,11 +30,14 @@ interface AuthState {
   setIsLoading: (isLoading: boolean) => void;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
-  user: null,
-  token: null,
-  isDevBypass: false,
-  isLoading: true,
+export const useAuthStore = create<AuthState>((set, get) => {
+  const storedDevBypass = getStoredDevBypass();
+
+  return ({
+  user: storedDevBypass ? DEV_ADMIN_USER : null,
+  token: storedDevBypass ? DEV_ADMIN_TOKEN : null,
+  isDevBypass: storedDevBypass,
+  isLoading: !storedDevBypass,
   
   loginWithGoogle: async () => {
     if (get().isDevBypass) return;
@@ -35,6 +52,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     if (get().isDevBypass) {
+      window.localStorage.removeItem(DEV_BYPASS_STORAGE_KEY);
       set({ user: null, token: null, isDevBypass: false });
       return;
     }
@@ -47,17 +65,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   toggleDevBypass: () => {
-    const isBypassEnabled = import.meta.env.VITE_ENABLE_DEV_BYPASS === 'true';
-    if (!isBypassEnabled) return; // Only allow if explicitly enabled in env
+    if (!isDevBypassAllowed()) return; // Only allow if explicitly enabled in env
     
     const newBypassState = !get().isDevBypass;
     if (newBypassState) {
+      window.localStorage.setItem(DEV_BYPASS_STORAGE_KEY, "1");
       set({
         isDevBypass: true,
-        token: "dev_admin_token",
-        user: { uid: "dev-admin", displayName: "Dev Admin", email: "dev@admin.com" } as unknown as User,
+        token: DEV_ADMIN_TOKEN,
+        user: DEV_ADMIN_USER,
       });
     } else {
+      window.localStorage.removeItem(DEV_BYPASS_STORAGE_KEY);
       set({
         isDevBypass: false,
         token: null,
@@ -70,7 +89,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setUser: (user) => set({ user }),
   setToken: (token) => set({ token }),
   setIsLoading: (isLoading) => set({ isLoading }),
-}));
+});
+});
 
 // Set up the Firebase listener
 auth.onIdTokenChanged(async (user) => {
@@ -79,11 +99,8 @@ auth.onIdTokenChanged(async (user) => {
 
   if (user) {
     const token = await user.getIdToken();
-    store.setUser(user);
-    store.setToken(token);
+    useAuthStore.setState({ user, token, isLoading: false });
   } else {
-    store.setUser(null);
-    store.setToken(null);
+    useAuthStore.setState({ user: null, token: null, isLoading: false });
   }
-  store.setIsLoading(false);
 });

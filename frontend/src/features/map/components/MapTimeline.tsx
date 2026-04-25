@@ -61,6 +61,9 @@ export function MapTimeline({ timestamps, activeIndex, playing, windowSize, onIn
 
       <div className="border-t border-white/10 px-4 py-3">
         <input
+          id="map-timeline-index"
+          name="map-timeline-index"
+          aria-label="Map timeline position"
           type="range"
           min={0}
           max={Math.max(timestamps.length - 1, 0)}

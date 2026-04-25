@@ -3,12 +3,16 @@ import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/store/authStore";
 
 type LoginFormProps = ComponentProps<"form"> & {
   isSigningIn?: boolean;
 };
 
 export function LoginForm({ className, isSigningIn = false, ...props }: LoginFormProps) {
+  const isDevBypassEnabled = import.meta.env.VITE_ENABLE_DEV_BYPASS === "true";
+  const toggleDevBypass = useAuthStore((state) => state.toggleDevBypass);
+
   return (
     <form
       className={cn(
@@ -50,9 +54,19 @@ export function LoginForm({ className, isSigningIn = false, ...props }: LoginFor
           <Button type="submit" className="w-full" disabled={isSigningIn}>
             {isSigningIn ? "SIGNING IN..." : "LOGIN WITH GOOGLE"}
           </Button>
+          {isDevBypassEnabled ? (
+            <Button type="button" variant="outline" className="w-full" onClick={toggleDevBypass}>
+              LOGIN AS DEV ADMIN
+            </Button>
+          ) : null}
           <p className="font-sans text-[14px] leading-[1.5] text-white/40">
             After authentication you will be sent to Research.
           </p>
+          {isDevBypassEnabled ? (
+            <p className="font-sans text-[12px] leading-[1.5] text-white/30">
+              Dev bypass is enabled in the frontend env and uses the shared local token.
+            </p>
+          ) : null}
         </div>
       </div>
     </form>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { formatCurrency, formatPercent } from "@/lib/format";
 import { APP_OVERLAY_EVENT, type AppOverlayState } from "@/lib/overlay";
@@ -18,6 +18,9 @@ type TickerAutocompleteProps = {
   disabled?: boolean;
   autoFocus?: boolean;
   showHint?: boolean;
+  id?: string;
+  name?: string;
+  ariaLabel?: string;
 };
 
 export function TickerAutocompleteInput({
@@ -31,11 +34,16 @@ export function TickerAutocompleteInput({
   disabled,
   autoFocus,
   showHint = true,
+  id,
+  name,
+  ariaLabel = "Ticker",
 }: TickerAutocompleteProps) {
   const { items } = useTickerCatalog();
+  const generatedId = useId().replace(/:/g, "");
   const [open, setOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputId = id ?? `ticker-${generatedId}`;
 
   const normalized = value.trim().toUpperCase();
 
@@ -85,6 +93,9 @@ export function TickerAutocompleteInput({
       <div className="relative">
         <Input
           ref={inputRef}
+          id={inputId}
+          name={name ?? inputId}
+          aria-label={ariaLabel}
           value={value}
           autoFocus={autoFocus}
           readOnly={readOnly}
@@ -153,7 +164,7 @@ export function TickerAutocompleteInput({
       </div>
 
       {showHint && !readOnly && !disabled ? (
-        <div className="mt-2 flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
+        <div className="mt-2 flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">
           <span>Use</span>
           <Kbd>Tab</Kbd>
           <span>or</span>

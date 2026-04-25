@@ -84,6 +84,9 @@ export function AgentComposer({
       <div className="border border-white/10 bg-[#20242b]">
         <textarea
           ref={textareaRef}
+          id="agent-composer"
+          name="agent-composer"
+          aria-label="Message AGOS"
           value={value}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => {
@@ -93,7 +96,7 @@ export function AgentComposer({
             }
           }}
           placeholder="Direct AGOS across research, portfolio context, execution risk, and grounded web retrieval."
-          className="max-h-[240px] min-h-[104px] w-full resize-none border-0 bg-transparent px-5 py-5 font-sans text-[15px] leading-[1.7] text-white outline-none placeholder:text-white/25"
+          className="max-h-[240px] min-h-[104px] w-full resize-none border-0 bg-transparent px-5 py-5 font-sans text-[15px] leading-[1.7] text-white outline-none placeholder:text-white/40"
         />
         <div className="flex flex-col gap-3 border-t border-white/10 px-5 py-4 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-2">

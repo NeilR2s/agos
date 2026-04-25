@@ -1,22 +1,28 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, type ReactNode } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Shell } from "./components/layout/Shell";
-import { Dashboard } from "./features/portfolio/Dashboard";
-import { ResearchView } from "./features/research/ResearchView";
-import { TradingTerminal } from "./features/trading/TradingTerminal";
 import { LandingPage } from "./features/landing/LandingPage";
-import { AgentPage } from "./features/agent/AgentPage";
 import { LoginPage } from "./features/auth/LoginPage";
 import { Toaster } from "sonner";
 import { AuthGuard } from "./components/auth/AuthGuard";
 
+const ResearchView = lazy(() => import("./features/research/ResearchView").then((module) => ({ default: module.ResearchView })));
+const Dashboard = lazy(() => import("./features/portfolio/Dashboard").then((module) => ({ default: module.Dashboard })));
+const TradingTerminal = lazy(() => import("./features/trading/TradingTerminal").then((module) => ({ default: module.TradingTerminal })));
+const AgentPage = lazy(() => import("./features/agent/AgentPage").then((module) => ({ default: module.AgentPage })));
 const MapPage = lazy(() => import("./features/map/MapPage").then((module) => ({ default: module.MapPage })));
 
-const mapLoadingState = (
+const protectedLoadingState = (
     <div className="min-h-dvh border border-white/10 bg-white/[0.03] px-4 py-6 text-white lg:px-6">
-        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">Loading Map Surface</p>
-        <p className="mt-3 font-sans text-[14px] text-white/70">Initializing geospatial workspace.</p>
+        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/60">Loading Workspace</p>
+        <p className="mt-3 font-sans text-[14px] text-white/70">Initializing AGOS surface.</p>
     </div>
+);
+
+const withProtectedSuspense = (children: ReactNode) => (
+    <AuthGuard>
+        <Suspense fallback={protectedLoadingState}>{children}</Suspense>
+    </AuthGuard>
 );
 
 function App() {
@@ -26,11 +32,11 @@ function App() {
                 <Routes>
                     <Route path="/" element={<LandingPage />} />
                     <Route path="/login" element={<LoginPage />} />
-                    <Route path="/research" element={<AuthGuard><ResearchView /></AuthGuard>} />
-                    <Route path="/portfolio" element={<AuthGuard><Dashboard /></AuthGuard>} />
-                    <Route path="/trading" element={<AuthGuard><TradingTerminal /></AuthGuard>} />
-                    <Route path="/map" element={<AuthGuard><Suspense fallback={mapLoadingState}><MapPage /></Suspense></AuthGuard>} />
-                    <Route path="/agent" element={<AuthGuard><AgentPage /></AuthGuard>} />
+                    <Route path="/research" element={withProtectedSuspense(<ResearchView />)} />
+                    <Route path="/portfolio" element={withProtectedSuspense(<Dashboard />)} />
+                    <Route path="/trading" element={withProtectedSuspense(<TradingTerminal />)} />
+                    <Route path="/map" element={withProtectedSuspense(<MapPage />)} />
+                    <Route path="/agent" element={withProtectedSuspense(<AgentPage />)} />
                 </Routes>
             </Shell>
             <Toaster theme="dark" position="bottom-right" toastOptions={{

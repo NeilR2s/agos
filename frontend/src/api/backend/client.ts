@@ -30,7 +30,10 @@ backendClient.use({
 
 export const getUserId = () => {
   const user = useAuthStore.getState().user;
-  return user?.uid || "user_123";
+  if (!user?.uid) {
+    throw new Error("Authenticated user is unavailable");
+  }
+  return user.uid;
 };
 
 const buildAuthHeaders = (headers?: HeadersInit) => {

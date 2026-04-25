@@ -54,8 +54,10 @@ export function MapControlRail({
   return (
     <aside className="flex min-h-0 flex-col gap-2 xl:h-full xl:overflow-y-auto">
       <section className="border border-white/10 bg-white/[0.03] p-3">
-        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">Search</p>
+        <label htmlFor="map-search" className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/60">Search</label>
         <Input
+          id="map-search"
+          name="map-search"
           value={searchQuery}
           onChange={(event) => onSearchQueryChange(event.target.value)}
           placeholder="FILTER OBJECTS / SEARCH PLACES"

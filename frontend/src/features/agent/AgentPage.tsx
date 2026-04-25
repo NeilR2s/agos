@@ -4,7 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { agentApi } from "@/api/backend/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DEFAULT_AGENT_RUN_CONFIG, AGENT_CONFIG_STORAGE_KEY } from "@/features/agent/config";
 import { AgentComposer } from "@/features/agent/components/AgentComposer";
 import { AgentRunStatus } from "@/features/agent/components/AgentRunStatus";
@@ -382,11 +382,11 @@ export function AgentPage() {
               <DialogTitle className="font-mono text-[11px] uppercase tracking-[1.4px] text-white">
                 {activePanel === "run" ? "Run Details" : "Controls"}
               </DialogTitle>
-              <p className="mt-1 max-w-[720px] font-sans text-[13px] leading-[1.5] text-white/55">
+              <DialogDescription className="mt-1 max-w-[720px] font-sans text-[13px] normal-case leading-[1.5] text-white/60">
                 {activePanel === "run"
                   ? "Status, timing, and model telemetry for the active run."
                   : "Adjust model, generation, and tool settings without losing transcript space."}
-              </p>
+              </DialogDescription>
             </div>
             <Button type="button" variant="ghost" size="sm" onClick={() => setActivePanel(null)}>
               Close

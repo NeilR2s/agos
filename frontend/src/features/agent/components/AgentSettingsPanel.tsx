@@ -75,6 +75,8 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
             <span>{config.temperature.toFixed(2)}</span>
           </div>
           <input
+            id="agent-temperature"
+            name="temperature"
             type="range"
             min="0"
             max="2"
@@ -91,6 +93,8 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
             <span>{config.topP.toFixed(2)}</span>
           </div>
           <input
+            id="agent-top-p"
+            name="topP"
             type="range"
             min="0.1"
             max="1"
@@ -107,6 +111,8 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
             <span>{config.maxAgents}</span>
           </div>
           <input
+            id="agent-max-agents"
+            name="maxAgents"
             type="range"
             min="1"
             max="4"
@@ -123,6 +129,8 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
             <span>{config.maxOutputTokens}</span>
           </div>
           <input
+            id="agent-output-tokens"
+            name="maxOutputTokens"
             type="range"
             min="512"
             max="7500"
