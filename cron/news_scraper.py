@@ -129,7 +129,27 @@ class NewsScraper(BaseScraper):
     Scraper for news sentiment analysis using Tavily and Gemini.
     """
 
-    TRUSTED_SOURCES = ["philstar.com", "inquirer.net", "businessinsider.com", "bworldonline.com"]
+    TRUSTED_SOURCES = [
+        # Industry Standard
+        "philstar.com", 
+        "inquirer.net", 
+        "bworldonline.com",
+        "businessinsider.com", # Note: BI frequently uses a hard paywall for premium/finance content.
+        
+        # Global Finance & Economy
+        "finance.yahoo.com",   
+        "cnbc.com",            
+        "apnews.com",          
+        "theguardian.com",     
+        "investopedia.com",    
+        
+        # Philippines Business & Market News
+        "gmanetwork.com",      
+        "news.abs-cbn.com",    
+        "manilatimes.net",     
+        "pna.gov.ph"
+    ]
+    
     CATEGORIES = [
         "Financials",
         "Industrial",
@@ -137,19 +157,20 @@ class NewsScraper(BaseScraper):
         "Property",
         "Services",
         "Mining&Oil",
-        "Regulatory Changes (philippines)",
+        "Regulatory Changes (Philippines)",
         "Political (Global News)",
     ]
 
     def __init__(self, db_client):
         super().__init__(db_client)
         self.tavily = TavilySearch(
-            max_results=5, include_domains=self.TRUSTED_SOURCES, search_depth="advanced", tavily_api_key=settings.TAVILY_API_KEY
+            max_results=15, include_domains=self.TRUSTED_SOURCES, search_depth="advanced", tavily_api_key=settings.TAVILY_API_KEY
         )
         self.llm = (
             ChatGoogleGenerativeAI(
-                model="gemini-3.1-flash-lite-preview",
+                model="gemini-3-flash-preview",
                 temperature=1,
+                thinking_level = "high",
                 google_api_key=settings.GEMINI_API_KEY,
             )
             .bind_tools([{"google_search": {}}])
