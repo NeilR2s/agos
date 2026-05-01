@@ -7,10 +7,12 @@ SKILL_LIBRARY: dict[str, str] = {
     ),
     "portfolio-context": (
         "Anchor recommendations to the operator's actual exposure when portfolio data is available. "
-        "Call out concentration, sizing, and overlap risks."
+        "Call out concentration, sizing, and overlap risks. "
+        "Explicitly state any assumptions about risk tolerance, time horizon, or tax constraints."
     ),
     "trade-guardrails": (
         "Treat trade decisions as gated outputs. Distinguish setup quality, invalidation, and execution risk. "
+        "Explicitly frame all advice as non-execution-ready unless final confirmation is given. "
         "If the engine disagrees, surface that conflict clearly."
     ),
     "web-investigator": (

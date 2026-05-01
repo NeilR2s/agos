@@ -13,7 +13,9 @@ type AgentComposerProps = {
   onToggleRunPanel: () => void;
   onToggleControlsPanel: () => void;
   activePanel: "run" | "controls" | null;
+  isBusy: boolean;
   isStreaming: boolean;
+  streamStatus: "idle" | "running" | "completed" | "error" | "cancelled";
   selectedTicker?: string | null;
   mode: AgentMode;
   config: AgentRunConfig;
@@ -27,13 +29,16 @@ export function AgentComposer({
   onToggleRunPanel,
   onToggleControlsPanel,
   activePanel,
+  isBusy,
   isStreaming,
+  streamStatus,
   selectedTicker,
   mode,
   config,
 }: AgentComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const selectedModel = AGOS_MODEL_PRESETS.find((preset) => preset.id === config.modelPreset);
+  const actionLabel = isStreaming ? "Running..." : isBusy && streamStatus === "cancelled" ? "Cancelling..." : isBusy ? "Starting..." : "Run Agent";
 
   useEffect(() => {
     const node = textareaRef.current;
@@ -48,7 +53,7 @@ export function AgentComposer({
         <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">
           <span>{selectedModel?.label ?? "AGOS"}</span>
           <span>/</span>
-          <span>{config.maxAgents} agents</span>
+          <span>{config.maxAgents} concurrent workers</span>
           <span>/</span>
           <span>{mode}</span>
           <span>/</span>
@@ -66,7 +71,7 @@ export function AgentComposer({
             aria-expanded={activePanel === "run"}
             className="border-white/15 text-white/75 hover:bg-white/[0.05]"
           >
-            <Bars3BottomLeftIcon className="size-4" /> Run
+            <Bars3BottomLeftIcon className="size-4" /> Trace Details
           </Button>
           <Button
             type="button"
@@ -110,10 +115,10 @@ export function AgentComposer({
             ) : null}
             <Button
               onClick={onSubmit}
-              disabled={isStreaming || !value.trim()}
+              disabled={isBusy || !value.trim()}
               className="min-w-[176px] border border-white bg-white text-[#1f2228] hover:bg-white/90 disabled:border-white/10 disabled:bg-white/[0.14] disabled:text-white/35"
             >
-              {isStreaming ? "Agents Running" : "Send to AGOS"}
+              {actionLabel}
             </Button>
           </div>
         </div>

@@ -147,6 +147,7 @@ export function Sidebar({
         const thread = (threadsQuery.data ?? []).find((item) => item.id === threadId);
         updateAgentSearchParams({
             thread: threadId,
+            run: null,
             mode: thread?.mode ?? currentMode,
             ticker: thread?.selectedTicker ?? null,
         });
@@ -154,7 +155,7 @@ export function Sidebar({
     };
 
     const handleNewThread = () => {
-        updateAgentSearchParams({ thread: null, ticker: currentTicker, mode: currentMode });
+        updateAgentSearchParams({ thread: null, run: null, ticker: currentTicker, mode: currentMode });
         onNavigate?.();
     };
 
@@ -167,6 +168,7 @@ export function Sidebar({
             const nextThread = remaining[0] ?? null;
             updateAgentSearchParams({
                 thread: nextThread?.id ?? null,
+                run: null,
                 mode: nextThread?.mode ?? currentMode,
                 ticker: nextThread?.selectedTicker ?? currentTicker ?? null,
             });

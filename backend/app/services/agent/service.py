@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import asyncio
 import time
 from typing import AsyncIterator, Optional
 from uuid import uuid4
@@ -14,6 +15,7 @@ from app.models.agent import (
     AgentRunRequest,
     AgentRunResult,
     AgentSSEEvent,
+    AgentStructuredOutput,
     AgentThread,
     AgentThreadCreate,
     Citation,
@@ -34,6 +36,7 @@ logger = logging.getLogger(__name__)
 class AgentService:
     def __init__(self):
         self.repository = get_agent_repository()
+        self._cancelled_run_ids: set[str] = set()
 
     async def create_thread(self, user_id: str, payload: AgentThreadCreate) -> AgentThread:
         selected_ticker = payload.selectedTicker.upper() if payload.selectedTicker else None
@@ -74,7 +77,7 @@ class AgentService:
         else:
             try:
                 llm = ChatGoogleGenerativeAI(
-                    model="gemini-3.1-flash-lite-preview",
+                    model="gemini-3.1-flash-lite",
                     google_api_key=settings.GEMINI_API_KEY,
                     temperature=1,
                     thinking_level = "high"
@@ -105,8 +108,31 @@ class AgentService:
     async def get_run(self, thread_id: str, run_id: str) -> Optional[AgentRun]:
         return await self.repository.get_run(thread_id=thread_id, run_id=run_id)
 
-    async def list_events(self, thread_id: str, run_id: Optional[str] = None) -> list[AgentEvent]:
-        return await self.repository.list_events(thread_id=thread_id, run_id=run_id)
+    async def cancel_run(self, *, user_id: str, thread_id: str, run_id: str) -> AgentRun:
+        run = await self.get_run(thread_id=thread_id, run_id=run_id)
+        if run is None:
+            raise LookupError("Run not found")
+        if run.status in {"completed", "error", "cancelled"}:
+            return run
+
+        self._cancelled_run_ids.add(run_id)
+        cancelled = await self.repository.update_run(
+            thread_id=thread_id,
+            run_id=run_id,
+            status="cancelled",
+            completedAt=utc_now_iso(),
+            summary=None,
+            error=None,
+        )
+        await self.repository.update_thread(
+            user_id=user_id,
+            thread_id=thread_id,
+            lastRunStatus="cancelled",
+        )
+        return cancelled
+
+    async def list_events(self, thread_id: str, run_id: Optional[str] = None, limit: int = 2000) -> list[AgentEvent]:
+        return await self.repository.list_events(thread_id=thread_id, run_id=run_id, limit=limit)
 
     async def run_once(
         self,
@@ -208,6 +234,11 @@ class AgentService:
         agent_count = 0
         tool_event_count = 0
         final_content_from_graph: str | None = None
+        structured_output: AgentStructuredOutput | None = None
+
+        def raise_if_cancelled() -> None:
+            if run_id in self._cancelled_run_ids:
+                raise asyncio.CancelledError
 
         async def next_event(
             event_type: str,
@@ -217,6 +248,7 @@ class AgentService:
             agent: dict | None = None,
         ) -> AgentSSEEvent:
             nonlocal sequence
+            raise_if_cancelled()
             sequence += 1
             event = build_sse_event(
                 thread_id=thread_id,
@@ -258,8 +290,6 @@ class AgentService:
                     thread_id=thread_id,
                     title=derive_thread_title(payload.message, selected_ticker),
                 )
-                import asyncio
-
                 asyncio.create_task(self.generate_thread_title(user_id, thread_id))
 
             history = list(
@@ -289,7 +319,7 @@ class AgentService:
                 "reasoning.step",
                 {
                     "title": "Context assembly",
-                    "detail": f"Initializing AGOS multi-agent run with up to {payload.config.maxAgents} concurrent agents.",
+                    "detail": f"Initializing AGOS multi-agent run with up to {payload.config.maxAgents} concurrent workers.",
                 },
             )
 
@@ -322,6 +352,7 @@ class AgentService:
             token_started_perf = time.perf_counter()
             
             async for event in graph.astream_events(graph_state, config=config, version="v2"):
+                raise_if_cancelled()
                 kind = event.get("event")
                 data = event.get("data") if isinstance(event.get("data"), dict) else {}
                 agent = event.get("agent") if isinstance(event.get("agent"), dict) else None
@@ -349,6 +380,12 @@ class AgentService:
                 if kind == "synthesis.completed":
                     if isinstance(data.get("content"), str):
                         final_content_from_graph = data["content"]
+                    structured_candidate = data.get("structuredOutput")
+                    if isinstance(structured_candidate, dict):
+                        try:
+                            structured_output = AgentStructuredOutput(**structured_candidate)
+                        except Exception:
+                            logger.exception("Invalid structured output payload", extra={"thread_id": thread_id, "run_id": run_id})
                     payload_citations = data.get("citations")
                     if isinstance(payload_citations, list):
                         citations = []
@@ -381,6 +418,11 @@ class AgentService:
                     "No model output was returned for this run. Review the trace and retry once the model connection is stable."
                 )
                 
+            persisted_run = await self.repository.get_run(thread_id=thread_id, run_id=run_id)
+            if persisted_run and persisted_run.status == "cancelled":
+                self._cancelled_run_ids.discard(run_id)
+                return
+
             assistant_message = AgentMessage(
                 id=str(uuid4()),
                 threadId=thread_id,
@@ -391,6 +433,7 @@ class AgentService:
                 citations=citations,
                 createdAt=utc_now_iso(),
                 tokenCount=len(assistant_content.split()),
+                structuredOutput=structured_output,
             )
             await self.repository.create_message(assistant_message)
 
@@ -408,6 +451,7 @@ class AgentService:
                 usage={
                     "toolCount": tool_event_count,
                     "citationCount": len(citations),
+                    "sourceCount": len(structured_output.sources) if structured_output else len(citations),
                     "tokenCount": assistant_message.tokenCount,
                     "agentCount": agent_count or payload.config.maxAgents,
                     "workerSummaries": worker_summaries,
@@ -454,6 +498,32 @@ class AgentService:
             ]
             for event in final_events:
                 yield event
+        except asyncio.CancelledError:
+            logger.info("Agent run stream cancelled", extra={"thread_id": thread_id, "run_id": run_id})
+            latency_ms = (time.perf_counter() - run_started_perf) * 1000
+            try:
+                run = await self.repository.update_run(
+                    thread_id=thread_id,
+                    run_id=run_id,
+                    model=model_profile.model,
+                    status="cancelled",
+                    completedAt=utc_now_iso(),
+                    latencyMs=latency_ms,
+                    ttftMs=first_token_at,
+                    summary=None,
+                    config=config_to_public_dict(payload.config),
+                    error=None,
+                )
+                await self.repository.update_thread(
+                    user_id=user_id,
+                    thread_id=thread_id,
+                    lastRunStatus="cancelled",
+                )
+            except Exception:
+                logger.exception("Failed to persist cancelled run", extra={"thread_id": thread_id, "run_id": run_id})
+            finally:
+                self._cancelled_run_ids.discard(run_id)
+            raise
         except Exception as exc:
             logger.exception("Agent run failed", extra={"thread_id": thread_id, "run_id": run_id})
             error_message = str(exc)

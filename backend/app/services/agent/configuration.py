@@ -18,13 +18,13 @@ MODEL_PROFILES: dict[AgentModelPreset, AgentModelProfile] = {
     "agos-swift": AgentModelProfile(
         preset="agos-swift",
         label="AGOS Swift",
-        model="gemini-3.1-flash-lite-preview",
+        model="gemini-3.1-flash-lite",
         description="Fastest AGOS model for low-latency routing, search, and lightweight analysis.",
     ),
     "agos-core": AgentModelProfile(
         preset="agos-core",
         label="AGOS Core",
-        model="gemini-3-flash-preview",
+        model="gemini-3-preview",
         description="Balanced AGOS model for most operator chat, research, and synthesis runs.",
     ),
     "agos-deep": AgentModelProfile(

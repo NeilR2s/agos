@@ -52,6 +52,7 @@ def build_system_prompt(context: AgentRuntimeContext) -> str:
         "Separate facts, evidence, and inference clearly. "
         "If engine output is present, treat the engine as the trade-evaluation authority. "
         "Keep the answer concise, operator-facing, and actionable. "
+        "Always state suitability assumptions (e.g. risk tolerance, horizon) when providing capital allocation advice. "
         f"Current mode: {context.mode}. Selected ticker: {ticker_line}."
     )
 

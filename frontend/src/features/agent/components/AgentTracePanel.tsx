@@ -1,61 +1,153 @@
+import { useMemo, useState } from "react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { buildAgentTraceBuckets, describeEvent, humanizeEventType } from "@/features/agent/lib/traces";
-import type { AgentSSEEvent } from "@/features/agent/types";
+import type { AgentRun, AgentSSEEvent } from "@/features/agent/types";
 
 type AgentTracePanelProps = {
   events: AgentSSEEvent[];
+  run: AgentRun | null;
   selectedAgentId: string | null;
   onSelectAgent: (agentId: string) => void;
+  streamNotice?: string | null;
 };
 
-export function AgentTracePanel({ events, selectedAgentId, onSelectAgent }: AgentTracePanelProps) {
-  const buckets = buildAgentTraceBuckets(events);
+type TraceFilter = "all" | "reasoning" | "tools" | "errors";
+
+const traceFilters: Array<{ value: TraceFilter; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "reasoning", label: "Reasoning" },
+  { value: "tools", label: "Tools" },
+  { value: "errors", label: "Errors" },
+];
+
+export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, streamNotice }: AgentTracePanelProps) {
+  const [filter, setFilter] = useState<TraceFilter>("all");
+  const buckets = useMemo(() => buildAgentTraceBuckets(events), [events]);
   const activeBucket = buckets.find((bucket) => bucket.agentId === selectedAgentId) ?? buckets[0] ?? null;
-  const activeEvents = activeBucket?.events.filter((event) => event.type !== "message.delta") ?? [];
+  const workerSummaries = useMemo(() => {
+    const candidate = run?.usage?.workerSummaries;
+    return Array.isArray(candidate) ? candidate : [];
+  }, [run?.usage]);
+
+  const activeEvents = useMemo(() => {
+    const sourceEvents = activeBucket?.events.filter((event) => event.type !== "message.delta") ?? [];
+    return sourceEvents.filter((event) => matchesTraceFilter(event, filter));
+  }, [activeBucket?.events, filter]);
 
   return (
     <Card size="sm" className="h-full min-h-0 bg-[#1b1f25]">
       <CardHeader className="border-b border-white/10">
-        <CardTitle className="font-mono text-[11px] uppercase tracking-[1.4px]">Agent Trace</CardTitle>
-      </CardHeader>
-      <CardContent className="flex min-h-0 flex-1 flex-col gap-5 py-5">
-        <div className="grid gap-3">
-          {buckets.length ? (
-            buckets.map((bucket) => (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <CardTitle className="font-mono text-[11px] uppercase tracking-[1.4px]">Agent Trace</CardTitle>
+          <div className="flex flex-wrap gap-1.5">
+            {traceFilters.map((item) => (
               <button
-                key={bucket.agentId}
+                key={item.value}
                 type="button"
-                onClick={() => onSelectAgent(bucket.agentId)}
+                onClick={() => setFilter(item.value)}
                 className={cn(
-                  "border px-4 py-4 text-left transition-colors",
-                  bucket.agentId === activeBucket?.agentId ? getActiveBucketTone(bucket.status) : getBucketTone(bucket.status)
+                  "border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.2px] transition-colors",
+                  filter === item.value
+                    ? "border-white/20 bg-white/[0.06] text-white"
+                    : "border-white/10 text-white/45 hover:border-white/20 hover:text-white"
                 )}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-white">{bucket.label}</p>
-                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">{bucket.role.replace(/-/g, " ")}</p>
-                  </div>
-                  <span className={cn("font-mono text-[10px] uppercase tracking-[1.4px]", getStatusLabelTone(bucket.status))}>{bucket.status}</span>
-                </div>
-                <p className="mt-3 line-clamp-3 font-sans text-[13px] leading-[1.6] text-white/75">
-                  {bucket.summary ?? "No summary yet."}
-                </p>
+                {item.label}
               </button>
-            ))
-          ) : (
-            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/25">No trace emitted yet</p>
-          )}
+            ))}
+          </div>
         </div>
+      </CardHeader>
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-5 py-5">
+        {streamNotice ? (
+          <div className="border border-[#36536c] bg-[#1d2630] px-4 py-3">
+            <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-[#a9c4df]">Stream Notice</p>
+            <p className="mt-2 font-sans text-[13px] leading-[1.6] text-white/80">{streamNotice}</p>
+          </div>
+        ) : null}
 
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
-          {activeBucket ? (
-            <>
-              <section className="space-y-3">
+        {workerSummaries.length ? (
+          <section className="space-y-3">
+            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Worker Summaries</p>
+            <div className="grid gap-3 xl:grid-cols-2">
+              {workerSummaries.map((summary, index) => {
+                const agentId = typeof summary?.agentId === "string" ? summary.agentId : `summary-${index}`;
+                const label = typeof summary?.label === "string" ? summary.label : agentId;
+                const role = typeof summary?.role === "string" ? summary.role : "worker";
+                const content = typeof summary?.summary === "string" ? summary.summary : "No summary emitted.";
+                const toolCount = typeof summary?.toolCount === "number" ? summary.toolCount : 0;
+                const isActive = agentId === activeBucket?.agentId;
+
+                return (
+                  <button
+                    key={agentId}
+                    type="button"
+                    onClick={() => onSelectAgent(agentId)}
+                    className={cn(
+                      "border px-4 py-4 text-left transition-colors",
+                      isActive ? "border-white/20 bg-white/[0.06]" : "border-white/10 hover:border-white/20 hover:bg-white/[0.03]"
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-white">{label}</p>
+                        <p className="mt-1 font-mono text-[10px] uppercase tracking-[1.2px] text-white/35">{role.replace(/-/g, " ")}</p>
+                      </div>
+                      <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/35">{toolCount} tools</span>
+                    </div>
+                    <p className="mt-3 line-clamp-3 font-sans text-[13px] leading-[1.6] text-white/75">{content}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
+
+        <div className="grid gap-5 xl:min-h-0 xl:grid-cols-[300px_minmax(0,1fr)]">
+          <section className="space-y-3 xl:min-h-0 xl:overflow-y-auto xl:pr-1">
+            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Workers & Runtime</p>
+            {buckets.length ? (
+              buckets.map((bucket) => (
+                <button
+                  key={bucket.agentId}
+                  type="button"
+                  onClick={() => onSelectAgent(bucket.agentId)}
+                  className={cn(
+                    "w-full border px-4 py-4 text-left transition-colors",
+                    bucket.agentId === activeBucket?.agentId ? getActiveBucketTone(bucket.status) : getBucketTone(bucket.status)
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-white">{bucket.label}</p>
+                      <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">{bucket.role.replace(/-/g, " ")}</p>
+                    </div>
+                    <span className={cn("font-mono text-[10px] uppercase tracking-[1.4px]", getStatusLabelTone(bucket.status))}>{bucket.status}</span>
+                  </div>
+                  <p className="mt-3 line-clamp-3 font-sans text-[13px] leading-[1.6] text-white/75">{bucket.summary ?? "No summary yet."}</p>
+                  <div className="mt-3 flex items-center gap-3 font-mono text-[10px] uppercase tracking-[1.2px] text-white/35">
+                    <span>{bucket.events.length} events</span>
+                    <span>{bucket.toolCount} tools</span>
+                    <span>{bucket.citationCount} sources</span>
+                  </div>
+                </button>
+              ))
+            ) : (
+              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/25">No trace emitted yet</p>
+            )}
+          </section>
+
+          <div className="min-h-0 space-y-5 xl:flex xl:min-h-0 xl:flex-col">
+            <section className="space-y-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
+              <div className="flex items-center justify-between gap-3">
                 <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Timeline</p>
-                {activeEvents.length ? (
+                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/25">{activeBucket?.label ?? "No agent selected"}</p>
+              </div>
+              {activeBucket ? (
+                activeEvents.length ? (
                   activeEvents.map((event) => (
                     <div key={`${event.sequence}-${event.type}`} className={cn("border px-4 py-4", getEventTone(event))}>
                       <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">
@@ -67,36 +159,54 @@ export function AgentTracePanel({ events, selectedAgentId, onSelectAgent }: Agen
                     </div>
                   ))
                 ) : (
-                  <p className="font-sans text-[14px] text-white/45">The selected agent has not emitted timeline events yet.</p>
-                )}
-              </section>
+                  <p className="font-sans text-[14px] text-white/45">No events match the current filter for this agent.</p>
+                )
+              ) : (
+                <p className="font-sans text-[14px] text-white/45">Select a run to inspect its persisted timeline.</p>
+              )}
+            </section>
 
-              <section className="space-y-3">
-                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Sources</p>
-                {activeBucket.citations.length ? (
-                  activeBucket.citations.map((citation, index) => (
-                    <a
-                      key={`${citation.source}-${citation.label}-${index}`}
-                      href={citation.href ?? undefined}
-                      target={citation.href ? "_blank" : undefined}
-                      rel={citation.href ? "noreferrer" : undefined}
-                      className="block border border-white/10 px-4 py-4 transition-colors hover:border-white/20 hover:bg-white/[0.03]"
-                    >
-                      <p className="font-sans text-[13px] leading-[1.5] text-white">{citation.label}</p>
-                      <p className="mt-1 font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">{citation.source}</p>
-                      {citation.excerpt ? <p className="mt-2 font-sans text-[12px] leading-[1.5] text-white/55">{citation.excerpt}</p> : null}
-                    </a>
-                  ))
-                ) : (
-                  <p className="font-sans text-[14px] text-white/45">No captured sources for this agent yet.</p>
-                )}
-              </section>
-            </>
-          ) : null}
+            <section className="space-y-3 xl:min-h-0 xl:max-h-[220px] xl:overflow-y-auto xl:pr-1">
+              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Sources</p>
+              {activeBucket?.citations.length ? (
+                activeBucket.citations.map((citation, index) => (
+                  <a
+                    key={`${citation.source}-${citation.label}-${index}`}
+                    href={citation.href ?? undefined}
+                    target={citation.href ? "_blank" : undefined}
+                    rel={citation.href ? "noreferrer" : undefined}
+                    className="block border border-white/10 px-4 py-4 transition-colors hover:border-white/20 hover:bg-white/[0.03]"
+                  >
+                    <p className="font-sans text-[13px] leading-[1.5] text-white">{citation.label}</p>
+                    <p className="mt-1 font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">{citation.source}</p>
+                    {citation.excerpt ? <p className="mt-2 font-sans text-[12px] leading-[1.5] text-white/55">{citation.excerpt}</p> : null}
+                  </a>
+                ))
+              ) : (
+                <p className="font-sans text-[14px] text-white/45">No captured sources for this agent yet.</p>
+              )}
+            </section>
+          </div>
         </div>
       </CardContent>
     </Card>
   );
+}
+
+function matchesTraceFilter(event: AgentSSEEvent, filter: TraceFilter) {
+  if (filter === "all") {
+    return true;
+  }
+
+  if (filter === "reasoning") {
+    return event.type === "agent.started" || event.type === "agent.completed" || event.type === "reasoning.step";
+  }
+
+  if (filter === "tools") {
+    return event.type.startsWith("tool.") || event.type === "citation.added";
+  }
+
+  return event.type === "tool.error" || (event.type === "agent.completed" && event.data.status === "error");
 }
 
 function getBucketTone(status: "idle" | "running" | "completed" | "error") {
