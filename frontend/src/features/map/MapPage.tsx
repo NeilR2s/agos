@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { mapApi } from "@/api/backend/client";
@@ -54,6 +54,33 @@ const truncateMiddle = (value: string, edge = 10) => {
   return `${value.slice(0, edge)}...${value.slice(-edge)}`;
 };
 
+const homeFocusTarget: MapFocusTarget = {
+  key: "home-extent",
+  geometry: {
+    type: "polygon",
+    coordinates: [
+      [initialBounds.west, initialBounds.south],
+      [initialBounds.east, initialBounds.south],
+      [initialBounds.east, initialBounds.north],
+      [initialBounds.west, initialBounds.north],
+    ],
+  },
+};
+
+function useDebouncedValue<T>(value: T, delay = 300) {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebounced(value);
+    }, delay);
+
+    return () => window.clearTimeout(timeout);
+  }, [delay, value]);
+
+  return debounced;
+}
+
 export function MapPage() {
   const [layerState, setLayerState] = useState<MapLayerState>(initialLayerState);
   const [selection, setSelection] = useState<MapSelection>(null);
@@ -64,31 +91,47 @@ export function MapPage() {
   const [timelineIndex, setTimelineIndex] = useState(0);
   const [timeWindow, setTimeWindow] = useState(5);
   const [playing, setPlaying] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [objectSearchQuery, setObjectSearchQuery] = useState("");
+  const [placeSearchQueryValue, setPlaceSearchQueryValue] = useState("");
+  const [focusedPlaceLabel, setFocusedPlaceLabel] = useState<string | null>(null);
   const [focusTarget, setFocusTarget] = useState<MapFocusTarget | null>(null);
   const [dismissedInspectorSelectionKey, setDismissedInspectorSelectionKey] = useState<string | null>(null);
 
-  const deferredSearchQuery = useDeferredValue(searchQuery.trim());
+  const debouncedObjectSearchQuery = useDebouncedValue(objectSearchQuery.trim(), 350);
+  const debouncedPlaceSearchQuery = useDebouncedValue(placeSearchQueryValue.trim(), 250);
   const roundedBounds = useMemo(() => getRoundedBoundsKey(mapBounds), [mapBounds]);
+  const isPolygonDirty = useMemo(() => {
+    if (!polygonQuery || polygonDraft.length < 3) {
+      return false;
+    }
+
+    return JSON.stringify(closePolygon(polygonDraft)) !== JSON.stringify(polygonQuery);
+  }, [polygonDraft, polygonQuery]);
 
   const featureQuery = useQuery({
-    queryKey: ["map-features", queryMode, roundedBounds, polygonQuery, deferredSearchQuery],
+    queryKey: ["map-features", queryMode, roundedBounds, polygonQuery, debouncedObjectSearchQuery],
     queryFn: async () => {
       if (queryMode === "polygon" && polygonQuery) {
-        return mapApi.queryPolygon(polygonQuery, deferredSearchQuery);
+        return mapApi.queryPolygon(polygonQuery, debouncedObjectSearchQuery);
       }
 
-      return mapApi.getFeatures(roundedBounds, deferredSearchQuery);
+      return mapApi.getFeatures(roundedBounds, debouncedObjectSearchQuery);
     },
     enabled: queryMode === "bbox" || Boolean(polygonQuery),
     placeholderData: (previous) => previous,
   });
 
   const placeSearchQuery = useQuery({
-    queryKey: ["map-place-search", deferredSearchQuery],
-    queryFn: () => mapApi.searchPlaces(deferredSearchQuery, 5),
-    enabled: deferredSearchQuery.length >= 2,
+    queryKey: ["map-place-search", debouncedPlaceSearchQuery],
+    queryFn: () => mapApi.searchPlaces(debouncedPlaceSearchQuery, 5),
+    enabled: debouncedPlaceSearchQuery.length >= 2,
     staleTime: 60_000,
+  });
+
+  const detailQuery = useQuery({
+    queryKey: ["map-object-detail", selection?.type, selection?.id],
+    queryFn: () => mapApi.getObjectDetail(selection!.type, selection!.id),
+    enabled: Boolean(selection),
   });
 
   const featureData = featureQuery.data ?? emptyFeatureCollection;
@@ -121,46 +164,59 @@ export function MapPage() {
     [activeTimeWindow, activeTimelineIndex, featureData.events, timeline]
   );
 
-  const visibleSelection = useMemo(() => {
+  const canvasSelection = useMemo(() => {
     if (!selection) {
       return null;
     }
-    const availableIds = {
-      asset: new Set(featureData.assets.map((asset) => asset.id)),
-      zone: new Set(featureData.zones.map((zone) => zone.id)),
-      connection: new Set(featureData.connections.map((connection) => connection.id)),
-      event: new Set(activeEvents.map((event) => event.id)),
-      track: new Set(tracks.map((track) => track.id)),
-    };
 
-    return availableIds[selection.type].has(selection.id) ? selection : null;
+    if (selection.type === "asset") {
+      return featureData.assets.some((asset) => asset.id === selection.id) ? selection : null;
+    }
+
+    if (selection.type === "zone") {
+      return featureData.zones.some((zone) => zone.id === selection.id) ? selection : null;
+    }
+
+    if (selection.type === "connection") {
+      return featureData.connections.some((connection) => connection.id === selection.id) ? selection : null;
+    }
+
+    if (selection.type === "event") {
+      return activeEvents.some((event) => event.id === selection.id) ? selection : null;
+    }
+
+    return tracks.some((track) => track.id === selection.id && track.visibleCoordinates.length >= 2) ? selection : null;
   }, [activeEvents, featureData.assets, featureData.connections, featureData.zones, selection, tracks]);
 
   const selectionSummaryLabel = useMemo(() => {
-    if (!visibleSelection) {
+    if (!selection) {
       return "None";
     }
 
-    if (visibleSelection.type === "asset") {
-      return featureData.assets.find((item) => item.id === visibleSelection.id)?.name ?? truncateMiddle(visibleSelection.id);
+    if (detailQuery.data?.asset) {
+      return detailQuery.data.asset.name;
     }
 
-    if (visibleSelection.type === "zone") {
-      return featureData.zones.find((item) => item.id === visibleSelection.id)?.name ?? truncateMiddle(visibleSelection.id);
+    if (detailQuery.data?.zone) {
+      return detailQuery.data.zone.name;
     }
 
-    if (visibleSelection.type === "connection") {
-      return featureData.connections.find((item) => item.id === visibleSelection.id)?.description ?? truncateMiddle(visibleSelection.id);
+    if (detailQuery.data?.connection) {
+      return detailQuery.data.connection.description;
     }
 
-    if (visibleSelection.type === "event") {
-      return activeEvents.find((item) => item.id === visibleSelection.id)?.title ?? truncateMiddle(visibleSelection.id);
+    if (detailQuery.data?.event) {
+      return detailQuery.data.event.title;
     }
 
-    return tracks.find((item) => item.id === visibleSelection.id)?.label ?? truncateMiddle(visibleSelection.id);
-  }, [activeEvents, featureData.assets, featureData.connections, featureData.zones, tracks, visibleSelection]);
+    if (detailQuery.data?.track) {
+      return detailQuery.data.track.label;
+    }
 
-  const activeSelectionKey = visibleSelection ? `${visibleSelection.type}:${visibleSelection.id}` : null;
+    return truncateMiddle(selection.id);
+  }, [detailQuery.data, selection]);
+
+  const activeSelectionKey = selection ? `${selection.type}:${selection.id}` : null;
   const inspectorOpen = Boolean(activeSelectionKey) && dismissedInspectorSelectionKey !== activeSelectionKey;
 
   const summary = useMemo(() => {
@@ -193,11 +249,7 @@ export function MapPage() {
   };
 
   const handleUndoPolygonVertex = () => {
-    setPolygonDraft((current) => {
-      const next = current.slice(0, -1);
-      setPolygonQuery(next.length >= 3 && polygonQuery ? closePolygon(next) : polygonQuery ? null : polygonQuery);
-      return next;
-    });
+    setPolygonDraft((current) => current.slice(0, -1));
   };
 
   const handleClearPolygon = () => {
@@ -206,26 +258,15 @@ export function MapPage() {
   };
 
   const handleUpdatePolygonVertex = (index: number, coordinate: [number, number]) => {
-    setPolygonDraft((current) => {
-      const next = current.map((vertex, vertexIndex) => (vertexIndex === index ? coordinate : vertex));
-      if (polygonQuery) {
-        setPolygonQuery(closePolygon(next));
-      }
-      return next;
-    });
+    setPolygonDraft((current) => current.map((vertex, vertexIndex) => (vertexIndex === index ? coordinate : vertex)));
   };
 
   const handleAddPolygonVertex = (coordinate: [number, number]) => {
-    setPolygonDraft((current) => {
-      const next = [...current, coordinate];
-      if (polygonQuery) {
-        setPolygonQuery(closePolygon(next));
-      }
-      return next;
-    });
+    setPolygonDraft((current) => [...current, coordinate]);
   };
 
   const handleSelectSearchResult = (result: MapPlaceSearchResult) => {
+    setFocusedPlaceLabel(result.label);
     setFocusTarget({
       key: `place-${result.id}-${Date.now()}`,
       geometry: { type: "point", coordinates: result.coordinates },
@@ -233,46 +274,54 @@ export function MapPage() {
     setSelection(null);
   };
 
+  const handleResetView = () => {
+    setFocusedPlaceLabel(null);
+    setFocusTarget({ ...homeFocusTarget, key: `home-${Date.now()}` });
+    setSelection(null);
+  };
+
   const handleFitSelection = () => {
-    if (!visibleSelection) {
+    if (!selection) {
       return;
     }
 
-    if (visibleSelection.type === "asset") {
-      const asset = featureData.assets.find((item) => item.id === visibleSelection.id);
+    const detail = detailQuery.data;
+
+    if (selection.type === "asset") {
+      const asset = detail?.asset ?? featureData.assets.find((item) => item.id === selection.id) ?? null;
       if (asset) {
-        setFocusTarget({ key: `selection-${visibleSelection.id}-${Date.now()}`, geometry: { type: "point", coordinates: asset.location } });
+        setFocusTarget({ key: `selection-${selection.id}-${Date.now()}`, geometry: { type: "point", coordinates: asset.location } });
       }
       return;
     }
 
-    if (visibleSelection.type === "event") {
-      const event = activeEvents.find((item) => item.id === visibleSelection.id);
+    if (selection.type === "event") {
+      const event = detail?.event ?? featureData.events.find((item) => item.id === selection.id) ?? null;
       if (event) {
-        setFocusTarget({ key: `selection-${visibleSelection.id}-${Date.now()}`, geometry: { type: "point", coordinates: event.location } });
+        setFocusTarget({ key: `selection-${selection.id}-${Date.now()}`, geometry: { type: "point", coordinates: event.location } });
       }
       return;
     }
 
-    if (visibleSelection.type === "zone") {
-      const zone = featureData.zones.find((item) => item.id === visibleSelection.id);
+    if (selection.type === "zone") {
+      const zone = detail?.zone ?? featureData.zones.find((item) => item.id === selection.id) ?? null;
       if (zone) {
-        setFocusTarget({ key: `selection-${visibleSelection.id}-${Date.now()}`, geometry: { type: "polygon", coordinates: zone.coordinates } });
+        setFocusTarget({ key: `selection-${selection.id}-${Date.now()}`, geometry: { type: "polygon", coordinates: zone.coordinates } });
       }
       return;
     }
 
-    if (visibleSelection.type === "connection") {
-      const connection = featureData.connections.find((item) => item.id === visibleSelection.id);
+    if (selection.type === "connection") {
+      const connection = detail?.connection ?? featureData.connections.find((item) => item.id === selection.id) ?? null;
       if (connection) {
-        setFocusTarget({ key: `selection-${visibleSelection.id}-${Date.now()}`, geometry: { type: "line", coordinates: connection.coordinates } });
+        setFocusTarget({ key: `selection-${selection.id}-${Date.now()}`, geometry: { type: "line", coordinates: connection.coordinates } });
       }
       return;
     }
 
-    const track = tracks.find((item) => item.id === visibleSelection.id);
-    if (track?.visibleCoordinates.length) {
-      setFocusTarget({ key: `selection-${visibleSelection.id}-${Date.now()}`, geometry: { type: "line", coordinates: track.visibleCoordinates } });
+    const track = detail?.track ?? featureData.tracks.find((item) => item.id === selection.id) ?? null;
+    if (track?.points.length) {
+      setFocusTarget({ key: `selection-${selection.id}-${Date.now()}`, geometry: { type: "line", coordinates: track.points.map((point) => point.location) } });
     }
   };
 
@@ -315,6 +364,12 @@ export function MapPage() {
                   <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Window</p>
                   <p className="mt-1 truncate font-sans text-[14px] text-white/70">{summary.queryLabel}</p>
                 </div>
+                {focusedPlaceLabel ? (
+                  <div className="min-w-0 xl:max-w-[260px]">
+                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Focused Place</p>
+                    <p className="mt-1 truncate font-sans text-[14px] text-white/70">{focusedPlaceLabel}</p>
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -342,17 +397,22 @@ export function MapPage() {
               queryLabel={summary.queryLabel}
               polygonDraftCount={polygonDraft.length}
               isPolygonCommitted={Boolean(polygonQuery)}
-              searchQuery={searchQuery}
+              isPolygonDirty={isPolygonDirty}
+              objectSearchQuery={objectSearchQuery}
+              placeSearchQuery={placeSearchQueryValue}
+              focusedPlaceLabel={focusedPlaceLabel}
               searchResults={placeSearchQuery.data ?? []}
               searchResultsLoading={placeSearchQuery.isFetching}
               searchResultsError={placeSearchQuery.isError ? (placeSearchQuery.error instanceof Error ? placeSearchQuery.error.message : "Place search failed") : null}
               onLayerToggle={handleLayerToggle}
               onQueryModeChange={handleQueryModeChange}
-              onSearchQueryChange={setSearchQuery}
+              onObjectSearchQueryChange={setObjectSearchQuery}
+              onPlaceSearchQueryChange={setPlaceSearchQueryValue}
               onCompletePolygon={handleCompletePolygon}
               onClearPolygon={handleClearPolygon}
               onUndoPolygonVertex={handleUndoPolygonVertex}
               onSelectSearchResult={handleSelectSearchResult}
+              onResetView={handleResetView}
             />
           </div>
 
@@ -365,6 +425,12 @@ export function MapPage() {
               </section>
             ) : null}
 
+            {featureQuery.isFetching && featureQuery.data ? (
+              <section className="border border-white/10 bg-white/[0.03] px-4 py-3">
+                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Updating map view...</p>
+              </section>
+            ) : null}
+
             <div className="relative flex min-w-0 flex-col gap-0 overflow-hidden border border-white/10 bg-white/[0.03]">
               <MapCanvas
                 assets={featureData.assets}
@@ -373,7 +439,7 @@ export function MapPage() {
                 tracks={tracks}
                 events={activeEvents}
                 layerState={layerState}
-                selection={visibleSelection}
+                selection={canvasSelection}
                 queryMode={queryMode}
                 polygonDraft={polygonDraft}
                 polygonQuery={polygonQuery}
@@ -400,15 +466,13 @@ export function MapPage() {
               />
 
               <MapDetailRail
-                key={visibleSelection ? `${visibleSelection.type}:${visibleSelection.id}` : "none"}
-                className="xl:absolute xl:inset-y-0 xl:right-0 xl:w-[320px] xl:border-l"
+                key={selection ? `${selection.type}:${selection.id}` : "none"}
+                className="xl:absolute xl:inset-y-0 xl:right-0 xl:w-[340px] xl:border-l"
                 open={inspectorOpen}
-                selection={visibleSelection}
-                assets={featureData.assets}
-                zones={featureData.zones}
-                connections={featureData.connections}
-                tracks={tracks}
-                events={activeEvents}
+                selection={selection}
+                detail={detailQuery.data ?? null}
+                isLoading={detailQuery.isLoading}
+                error={detailQuery.isError ? (detailQuery.error instanceof Error ? detailQuery.error.message : "Inspector request failed") : null}
                 onFitSelection={handleFitSelection}
                 onClose={handleCloseInspector}
               />

@@ -4,47 +4,104 @@
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
 
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  color-scheme: dark;
+
+  --background: oklch(0.115 0 0);
+  --foreground: oklch(1 0 0);
+
+  --card: oklch(0.186 0.003 248);
+  --card-foreground: oklch(1 0 0);
+
+  --popover: oklch(0.186 0.003 248);
+  --popover-foreground: oklch(1 0 0);
+
+  --primary: oklch(1 0 0);
+  --primary-foreground: oklch(0 0 0);
+
+  --secondary: oklch(0.205 0 0);
+  --secondary-foreground: oklch(0.961 0 0);
+
+  --muted: oklch(0.264 0 0);
+  --muted-foreground: oklch(0.723 0.012 252.1);
+
+  --accent: oklch(0.244 0 0);
+  --accent-foreground: oklch(1 0 0);
+
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(1 0 0);
+
+  --border: oklch(1 0 0 / 0.12);
+  --input: oklch(1 0 0 / 0.12);
+  --ring: oklch(1 0 0 / 0.24);
+
+  --chart-1: oklch(0.681 0.214 40.1);
+  --chart-2: oklch(0.891 0.204 149.1);
+  --chart-3: oklch(0.597 0.221 258);
+  --chart-4: oklch(0.625 0.211 284.6);
+  --chart-5: oklch(0.701 0.2 6.6);
+
+  --radius: 0.75rem;
+
+  --sidebar: oklch(0.115 0 0);
+  --sidebar-foreground: oklch(0.961 0 0);
+  --sidebar-primary: oklch(1 0 0);
+  --sidebar-primary-foreground: oklch(0 0 0);
+  --sidebar-accent: oklch(0.205 0 0);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-border: oklch(1 0 0 / 0.12);
+  --sidebar-ring: oklch(1 0 0 / 0.24);
+}
+
+.dark {
+  color-scheme: dark;
+}
+
 @theme inline {
-    /* Fonts */
-    --font-heading: 'Geist Mono Variable', monospace;
-    --font-sans: 'Geist Variable', sans-serif;
-    --font-mono: 'Geist Mono Variable', monospace;
-    
-    /* Colors - xAI inspired */
-    --color-background: #1f2228;
-    --color-foreground: #ffffff;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 
-    --color-primary: #ffffff;
-    --color-primary-foreground: #1f2228;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 12px);
 
-    --color-secondary: rgba(255, 255, 255, 0.05);
-    --color-secondary-foreground: #ffffff;
-
-    --color-destructive: #ff4444;
-    --color-destructive-foreground: #ffffff;
-
-    --color-muted: rgba(255, 255, 255, 0.03);
-    --color-muted-foreground: rgba(255, 255, 255, 0.5);
-
-    --color-accent: rgba(255, 255, 255, 0.08);
-    --color-accent-foreground: #ffffff;
-
-    --color-popover: #1f2228;
-    --color-popover-foreground: #ffffff;
-
-    --color-card: rgba(255, 255, 255, 0.03);
-    --color-card-foreground: #ffffff;
-
-    --color-border: rgba(255, 255, 255, 0.1);
-    --color-border-strong: rgba(255, 255, 255, 0.2);
-    --color-input: rgba(255, 255, 255, 0.2);
-    --color-ring: rgb(59 130 246 / 0.5);
-
-    /* Radius - 0px for brutalism */
-    --radius-sm: 0px;
-    --radius-md: 0px;
-    --radius-lg: 0px;
-    --radius-xl: 0px;
+  --font-heading: 'Geist Variable', sans-serif;
+  --font-sans: 'Geist Variable', sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 @layer base {
@@ -79,9 +136,9 @@
   
   /* Monospace Display Scale */
   .display-hero {
-    @apply font-mono font-light uppercase tracking-normal;
-    font-size: clamp(48px, 20vw, 320px);
-    line-height: 1.1;
+    @apply font-sans font-light tracking-[-0.055em];
+    font-size: clamp(76px, 18vw, 280px);
+    line-height: 0.9;
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -114,7 +171,7 @@
 
   .agent-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.18) #171a20;
+    scrollbar-color: color-mix(in oklch, var(--foreground) 18%, transparent) var(--card);
     scrollbar-gutter: stable;
   }
 
@@ -124,21 +181,21 @@
   }
 
   .agent-scrollbar::-webkit-scrollbar-track {
-    background: #171a20;
+    background: var(--card);
   }
 
   .agent-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.16);
-    border: 2px solid #171a20;
-    border-radius: 0;
+    background: color-mix(in oklch, var(--foreground) 16%, transparent);
+    border: 2px solid var(--card);
+    border-radius: 999px;
   }
 
   .agent-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.24);
+    background: color-mix(in oklch, var(--foreground) 24%, transparent);
   }
 
   .agent-scrollbar::-webkit-scrollbar-corner {
-    background: #171a20;
+    background: var(--card);
   }
 
   .scrollbar-hidden {
@@ -234,11 +291,11 @@
   }
 
   .agent-markdown :not(pre) > code {
-    @apply border border-white/10 bg-white/[0.04] px-1.5 py-0.5 font-mono text-[13px] text-white;
+    @apply rounded-sm border border-border bg-secondary/70 px-1.5 py-0.5 font-mono text-[13px] text-white;
   }
 
   .agent-markdown pre {
-    @apply my-5 overflow-x-auto border border-white/10 bg-[#171a20] p-4 text-[13px] leading-[1.7] text-white;
+    @apply my-5 overflow-x-auto rounded-xl border border-border bg-card p-4 text-[13px] leading-[1.7] text-white;
   }
 
   .agent-markdown pre code {
@@ -246,7 +303,7 @@
   }
 
   .agent-markdown-table-wrap {
-    @apply my-5 overflow-x-auto border border-white/10 bg-[#171a20];
+    @apply my-5 overflow-x-auto rounded-xl border border-border bg-card;
   }
 
   .agent-markdown-table {
