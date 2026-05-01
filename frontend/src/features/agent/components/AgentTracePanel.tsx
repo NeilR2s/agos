@@ -36,6 +36,12 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
     const sourceEvents = activeBucket?.events.filter((event) => event.type !== "message.delta") ?? [];
     return sourceEvents.filter((event) => matchesTraceFilter(event, filter));
   }, [activeBucket?.events, filter]);
+  const eventTotal = events.filter((event) => event.type !== "message.delta").length;
+  const toolTotal = buckets.reduce((sum, bucket) => sum + bucket.toolCount, 0);
+  const sourceTotal = buckets.reduce((sum, bucket) => sum + bucket.citationCount, 0);
+  const completedWorkers = buckets.filter((bucket) => bucket.status === "completed").length;
+  const erroredWorkers = buckets.filter((bucket) => bucket.status === "error").length;
+  const progress = buckets.length ? Math.max(8, ((completedWorkers + erroredWorkers) / buckets.length) * 100) : 0;
 
   return (
     <Card size="sm" className="h-full min-h-0 bg-[#1b1f25]">
@@ -68,6 +74,24 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
             <p className="mt-2 font-sans text-[13px] leading-[1.6] text-white/80">{streamNotice}</p>
           </div>
         ) : null}
+
+        <section className="border border-white/10 bg-[#171a20] px-4 py-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Selected Worker</p>
+              <p className="mt-1 font-sans text-[17px] leading-[1.25] text-white">{activeBucket?.label ?? "No worker selected"}</p>
+            </div>
+            <div className="flex flex-wrap gap-3 font-mono text-[10px] uppercase tracking-[1.2px] text-white/35">
+              <span>{buckets.length} workers</span>
+              <span>{eventTotal} events</span>
+              <span>{toolTotal} tools</span>
+              <span>{sourceTotal} sources</span>
+            </div>
+          </div>
+          <div className="mt-4 h-[7px] border border-white/10 bg-[#0f1318]">
+            <div className="h-full bg-white/35" style={{ width: `${progress}%` }} />
+          </div>
+        </section>
 
         {workerSummaries.length ? (
           <section className="space-y-3">
@@ -106,7 +130,7 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
           </section>
         ) : null}
 
-        <div className="grid gap-5 xl:min-h-0 xl:grid-cols-[300px_minmax(0,1fr)]">
+        <div className="grid gap-4 xl:min-h-0 xl:grid-cols-[280px_minmax(0,1fr)] 2xl:grid-cols-[280px_minmax(0,1fr)_300px]">
           <section className="space-y-3 xl:min-h-0 xl:overflow-y-auto xl:pr-1">
             <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Workers & Runtime</p>
             {buckets.length ? (
@@ -140,53 +164,51 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
             )}
           </section>
 
-          <div className="min-h-0 space-y-5 xl:flex xl:min-h-0 xl:flex-col">
-            <section className="space-y-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
-              <div className="flex items-center justify-between gap-3">
-                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Timeline</p>
-                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/25">{activeBucket?.label ?? "No agent selected"}</p>
-              </div>
-              {activeBucket ? (
-                activeEvents.length ? (
-                  activeEvents.map((event) => (
-                    <div key={`${event.sequence}-${event.type}`} className={cn("border px-4 py-4", getEventTone(event))}>
-                      <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">
-                        <span>{String(event.sequence).padStart(2, "0")}</span>
-                        <span>{humanizeEventType(event.type)}</span>
-                      </div>
-                      <p className="mt-3 font-sans text-[13px] leading-[1.6] text-white/80">{describeEvent(event)}</p>
-                      <p className="mt-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/20">{formatDate(event.timestamp)}</p>
+          <section className="space-y-3 xl:min-h-0 xl:overflow-y-auto xl:pr-1">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Timeline</p>
+              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/25">{activeBucket?.label ?? "No agent selected"}</p>
+            </div>
+            {activeBucket ? (
+              activeEvents.length ? (
+                activeEvents.map((event) => (
+                  <div key={`${event.sequence}-${event.type}`} className={cn("border px-4 py-4", getEventTone(event))}>
+                    <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">
+                      <span>{String(event.sequence).padStart(2, "0")}</span>
+                      <span>{humanizeEventType(event.type)}</span>
                     </div>
-                  ))
-                ) : (
-                  <p className="font-sans text-[14px] text-white/45">No events match the current filter for this agent.</p>
-                )
-              ) : (
-                <p className="font-sans text-[14px] text-white/45">Select a run to inspect its persisted timeline.</p>
-              )}
-            </section>
-
-            <section className="space-y-3 xl:min-h-0 xl:max-h-[220px] xl:overflow-y-auto xl:pr-1">
-              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Sources</p>
-              {activeBucket?.citations.length ? (
-                activeBucket.citations.map((citation, index) => (
-                  <a
-                    key={`${citation.source}-${citation.label}-${index}`}
-                    href={citation.href ?? undefined}
-                    target={citation.href ? "_blank" : undefined}
-                    rel={citation.href ? "noreferrer" : undefined}
-                    className="block border border-white/10 px-4 py-4 transition-colors hover:border-white/20 hover:bg-white/[0.03]"
-                  >
-                    <p className="font-sans text-[13px] leading-[1.5] text-white">{citation.label}</p>
-                    <p className="mt-1 font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">{citation.source}</p>
-                    {citation.excerpt ? <p className="mt-2 font-sans text-[12px] leading-[1.5] text-white/55">{citation.excerpt}</p> : null}
-                  </a>
+                    <p className="mt-3 font-sans text-[13px] leading-[1.6] text-white/80">{describeEvent(event)}</p>
+                    <p className="mt-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/20">{formatDate(event.timestamp)}</p>
+                  </div>
                 ))
               ) : (
-                <p className="font-sans text-[14px] text-white/45">No captured sources for this agent yet.</p>
-              )}
-            </section>
-          </div>
+                <p className="font-sans text-[14px] text-white/45">No events match the current filter for this agent.</p>
+              )
+            ) : (
+              <p className="font-sans text-[14px] text-white/45">Select a run to inspect its persisted timeline.</p>
+            )}
+          </section>
+
+          <section className="space-y-3 xl:col-span-2 xl:min-h-0 xl:max-h-[300px] xl:overflow-y-auto xl:pr-1 2xl:col-span-1 2xl:max-h-none 2xl:border-l 2xl:border-white/10 2xl:pl-4">
+            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Sources</p>
+            {activeBucket?.citations.length ? (
+              activeBucket.citations.map((citation, index) => (
+                <a
+                  key={`${citation.source}-${citation.label}-${index}`}
+                  href={citation.href ?? undefined}
+                  target={citation.href ? "_blank" : undefined}
+                  rel={citation.href ? "noreferrer" : undefined}
+                  className="block border border-white/10 px-4 py-4 transition-colors hover:border-white/20 hover:bg-white/[0.03]"
+                >
+                  <p className="font-sans text-[13px] leading-[1.5] text-white">{citation.label}</p>
+                  <p className="mt-1 font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">{citation.source}</p>
+                  {citation.excerpt ? <p className="mt-2 font-sans text-[12px] leading-[1.5] text-white/55">{citation.excerpt}</p> : null}
+                </a>
+              ))
+            ) : (
+              <p className="font-sans text-[14px] text-white/45">No captured sources for this agent yet.</p>
+            )}
+          </section>
         </div>
       </CardContent>
     </Card>

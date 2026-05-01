@@ -16,8 +16,17 @@ type AgentOutputTabsProps = {
 };
 
 type OutputTab = "summary" | "evidence" | "recommendations" | "memo" | "trace" | "sources";
+type EvidenceFilter = "all" | "high" | "medium" | "low" | "no-source";
 
 type TabItem = { id: OutputTab; label: string; count?: number; disabled?: boolean };
+
+const evidenceFilters: Array<{ value: EvidenceFilter; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "high", label: "High" },
+  { value: "medium", label: "Medium" },
+  { value: "low", label: "Low" },
+  { value: "no-source", label: "No Source" },
+];
 
 const markdownComponents: Components = {
   table({ children }) {
@@ -198,31 +207,129 @@ function EvidenceTab({
   sourceById: Map<string, AgentSourceReference>;
   onSourceClick: (sourceId: string) => void;
 }) {
+  const [filter, setFilter] = useState<EvidenceFilter>("all");
+  const [activeEvidenceId, setActiveEvidenceId] = useState<string | null>(output.evidence[0]?.id ?? null);
+  const visibleEvidence = useMemo(
+    () => output.evidence.filter((item) => matchesEvidenceFilter(item, filter)),
+    [filter, output.evidence]
+  );
+  const resolvedEvidenceId = visibleEvidence.some((item) => item.id === activeEvidenceId)
+    ? activeEvidenceId
+    : visibleEvidence[0]?.id ?? null;
+  const activeEvidence = visibleEvidence.find((item) => item.id === resolvedEvidenceId) ?? null;
+
   if (!output.evidence.length) {
     return <EmptyPanel label="No structured evidence was captured for this run." />;
   }
 
   return (
-    <div className="grid gap-3 xl:grid-cols-2">
-      {output.evidence.map((item) => {
-        const hasSources = item.sourceIds.length > 0;
-        return (
-          <article key={item.id} className={cn("border bg-white/[0.02] px-4 py-4", hasSources ? "border-white/10" : "border-[#5f3941]")}>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">
-                <span>{item.id}</span>
-                <span>{hasSources ? `${item.sourceIds.length} sources` : "no source link"}</span>
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 border border-white/10 bg-white/[0.02] px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Evidence Inspector</p>
+          <p className="mt-1 font-sans text-[12px] leading-[1.5] text-white/45">Filter claims, inspect support, then jump to source records.</p>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {evidenceFilters.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => setFilter(item.value)}
+              className={cn(
+                "border px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[1.2px] transition-colors",
+                filter === item.value ? "border-white/20 bg-white/[0.06] text-white" : "border-white/10 text-white/45 hover:border-white/20 hover:text-white"
+              )}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {visibleEvidence.length ? (
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <div className="space-y-2">
+            {visibleEvidence.map((item) => {
+              const hasSources = item.sourceIds.length > 0;
+              const isActive = item.id === activeEvidence?.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-expanded={isActive}
+                  onClick={() => setActiveEvidenceId(item.id)}
+                  className={cn(
+                    "w-full border px-4 py-4 text-left transition-colors",
+                    !hasSources
+                      ? isActive
+                        ? "border-[#8b5862] bg-[#322229]"
+                        : "border-[#5f3941] bg-[#281c21] hover:bg-[#2d1f25]"
+                      : isActive
+                        ? "border-white/20 bg-white/[0.06]"
+                        : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.03]"
+                  )}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">
+                      <span>{item.id}</span>
+                      <span>{hasSources ? `${item.sourceIds.length} sources` : "no source link"}</span>
+                    </div>
+                    <ConfidenceBadge value={item.confidence} />
+                  </div>
+                  <h3 className="mt-3 line-clamp-2 font-sans text-[15px] leading-[1.35] text-white">{plainText(item.claim)}</h3>
+                  <p className="mt-2 line-clamp-2 font-sans text-[12px] leading-[1.55] text-white/55">{plainText(item.detail)}</p>
+                </button>
+              );
+            })}
+          </div>
+
+          <section className="min-h-[320px] border border-white/10 bg-[#171a20] px-5 py-5">
+            {activeEvidence ? (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Selected Evidence / {activeEvidence.id}</p>
+                    <h3 className="mt-3 font-sans text-[22px] leading-[1.25] text-white">{plainText(activeEvidence.claim)}</h3>
+                  </div>
+                  <ConfidenceBadge value={activeEvidence.confidence} />
+                </div>
+
+                <p className="font-sans text-[14px] leading-[1.7] text-white/75">{plainText(activeEvidence.detail)}</p>
+
+                {activeEvidence.calculation ? (
+                  <Callout label="Calculation" value={activeEvidence.calculation} />
+                ) : null}
+
+                {!activeEvidence.sourceIds.length ? (
+                  <Callout label="Source Link" value="No source citation is attached to this evidence item." tone="risk" />
+                ) : (
+                  <div>
+                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Linked Sources</p>
+                    <SourceChipList sourceIds={activeEvidence.sourceIds} sourceById={sourceById} onSourceClick={onSourceClick} />
+                  </div>
+                )}
+
+                {(activeEvidence.agentIds ?? []).length ? (
+                  <div>
+                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Contributing Agents</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {(activeEvidence.agentIds ?? []).map((agentId) => (
+                        <span key={agentId} className="border border-white/10 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-white/45">
+                          {agentId.replace(/-/g, " ")}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
-              <ConfidenceBadge value={item.confidence} />
-            </div>
-            <h3 className="mt-3 font-sans text-[17px] leading-[1.35] text-white">{plainText(item.claim)}</h3>
-            <p className="mt-2 font-sans text-[13px] leading-[1.65] text-white/70">{plainText(item.detail)}</p>
-            {item.calculation ? <p className="mt-3 border border-white/10 px-3 py-2 font-mono text-[11px] leading-[1.5] text-white/55">{plainText(item.calculation)}</p> : null}
-            {!hasSources ? <Callout label="Source Link" value="No source citation is attached to this evidence item." tone="risk" /> : null}
-            <SourceChipList sourceIds={item.sourceIds} sourceById={sourceById} onSourceClick={onSourceClick} />
-          </article>
-        );
-      })}
+            ) : (
+              <EmptyPanel label="No evidence matches the current filter." />
+            )}
+          </section>
+        </div>
+      ) : (
+        <EmptyPanel label="No evidence matches the current filter." />
+      )}
     </div>
   );
 }
@@ -463,6 +570,12 @@ function plainText(value: string) {
     .replace(/_([^_]+)_/g, "$1")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function matchesEvidenceFilter(item: AgentStructuredOutput["evidence"][number], filter: EvidenceFilter) {
+  if (filter === "all") return true;
+  if (filter === "no-source") return item.sourceIds.length === 0;
+  return item.confidence === filter;
 }
 
 function ConfidenceBadge({ value }: { value: "low" | "medium" | "high" }) {

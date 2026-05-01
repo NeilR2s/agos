@@ -4,7 +4,6 @@ import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { agentApi } from "@/api/backend/client";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DEFAULT_AGENT_RUN_CONFIG, AGENT_CONFIG_STORAGE_KEY } from "@/features/agent/config";
@@ -191,6 +190,8 @@ export function AgentPage() {
 
     return availableRuns.find((candidate) => candidate.id === activeRunId) ?? null;
   }, [activeRunId, availableRuns, stream.run]);
+  const activeRunIndex = activeRun ? availableRuns.findIndex((run) => run.id === activeRun.id) : -1;
+  const activeRunLabel = activeRun && activeRunIndex >= 0 ? formatRunLabel(activeRun, activeRunIndex) : null;
 
   const combinedMessages = useMemo(() => {
     const messages = [...(messagesQuery.data ?? [])];
@@ -475,16 +476,14 @@ export function AgentPage() {
 
   return (
     <div className="flex h-[calc(100dvh-57px)] flex-col overflow-hidden bg-background text-foreground lg:h-[calc(100dvh-1px)]">
-      <header className="border-b border-white/10 px-5 py-4 md:px-6">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="space-y-1">
-            <Badge variant="outline" className="border-border text-white/70">
-              Agent Console
-            </Badge>
-            <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
-              <h1 className="font-sans text-[24px] leading-[1.1] text-white md:text-[28px]">AGOS Copilot</h1>
-              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">{activeThread?.title ?? "new session"}</p>
-            </div>
+      <header className="shrink-0 border-b border-white/10 px-4 py-2.5 md:px-5">
+        <div className="flex min-h-[44px] flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="border border-white/15 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">Agent Console</span>
+            <h1 className="font-sans text-[21px] leading-none text-white md:text-[24px]">AGOS Copilot</h1>
+            <p className="max-w-[68vw] truncate font-mono text-[10px] uppercase tracking-[1.4px] text-white/30 lg:max-w-[520px]">
+              {activeThread?.title ?? "new session"}
+            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">
@@ -492,58 +491,24 @@ export function AgentPage() {
             <span>/</span>
             <span>{selectedTicker ?? "no ticker"}</span>
             <span>/</span>
-            <span>{runConfig.maxAgents} concurrent workers</span>
-            {stream.isStreaming ? (
-              <Button variant="outline" size="sm" onClick={handleStopStreaming}>
-                Cancel Run
-              </Button>
-            ) : stream.status === "cancelled" && stream.run?.id === activeRunId ? (
+            <span>{runConfig.maxAgents} workers</span>
+            {runsQuery.isFetching ? <span>/ refreshing</span> : null}
+            {activeRun ? (
+              <button
+                type="button"
+                onClick={() => setActivePanel("run")}
+                className="border border-white/10 px-2.5 py-1 text-white/55 transition-colors hover:border-white/20 hover:text-white"
+              >
+                {activeRunLabel ?? "Run"} / {activeRun.status}
+              </button>
+            ) : threadId && runsQuery.isLoading ? (
+              <span className="border border-white/10 px-2.5 py-1 text-white/35">loading runs</span>
+            ) : null}
+            {stream.status === "cancelled" && stream.run?.id === activeRunId ? (
               <span className="border border-white/10 px-2.5 py-1 text-white/45">cancelled</span>
             ) : null}
           </div>
         </div>
-
-        {availableRuns.length ? (
-          <div className="mt-4 border-t border-white/10 pt-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Run History</p>
-                <p className="mt-1 font-sans text-[12px] leading-[1.5] text-white/45">Select a run to inspect its persisted trace, worker output, and citations.</p>
-              </div>
-              <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.2px] text-white/30">
-                {runsQuery.isFetching ? <span>Refreshing</span> : null}
-                {activeRun ? <span>{activeRun.status}</span> : null}
-              </div>
-            </div>
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-              {availableRuns.map((run, index) => {
-                const isActive = run.id === activeRunId;
-                return (
-                  <button
-                    key={run.id}
-                    type="button"
-                    onClick={() => handleSelectRun(run.id)}
-                    className={[
-                      "min-w-[180px] border px-3 py-3 text-left transition-colors",
-                      isActive ? "border-white/20 bg-white/[0.06]" : "border-white/10 hover:border-white/20 hover:bg-white/[0.03]",
-                    ].join(" ")}
-                  >
-                    <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/35">{formatRunLabel(run, index)}</p>
-                    <p className="mt-2 font-sans text-[13px] text-white">{run.summary ?? "Inspect run trace"}</p>
-                    <div className="mt-3 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.2px] text-white/30">
-                      <span>{run.status}</span>
-                      <span>{run.mode}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : threadId && runsQuery.isLoading ? (
-          <div className="mt-4 border-t border-white/10 pt-4">
-            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Loading run history</p>
-          </div>
-        ) : null}
       </header>
 
       {threadErrorMessage ? (
@@ -563,7 +528,7 @@ export function AgentPage() {
           </div>
         </div>
       ) : (
-        <div className="min-h-0 flex flex-1 flex-col gap-5 px-5 py-5 md:px-6">
+        <div className="min-h-0 flex flex-1 flex-col gap-3 px-4 py-3 md:px-5">
           {stopStreamNotice ? (
             <section className="border border-[#36536c] bg-[#1d2630] px-4 py-3">
               <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-[#a9c4df]">Stream Stopped</p>
@@ -637,10 +602,43 @@ export function AgentPage() {
             </Button>
           </DialogHeader>
 
-          <div className="scrollbar-hidden max-h-[min(78vh,920px)] overflow-y-auto p-5">
+          <div className="scrollbar-hidden max-h-[min(82vh,940px)] overflow-y-auto p-5">
             {activePanel === "run" ? (
-              <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
-                <div className="space-y-5">
+              <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+                <div className="space-y-4">
+                  <section className="border border-white/10 bg-[#1b1f25] px-4 py-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Run History</p>
+                      {runsQuery.isFetching ? <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/25">Refreshing</span> : null}
+                    </div>
+                    <div className="agent-scrollbar mt-3 max-h-[280px] space-y-2 overflow-y-auto pr-1">
+                      {availableRuns.length ? (
+                        availableRuns.map((run, index) => {
+                          const isActive = run.id === activeRunId;
+                          return (
+                            <button
+                              key={run.id}
+                              type="button"
+                              onClick={() => handleSelectRun(run.id)}
+                              className={[
+                                "w-full border px-3 py-3 text-left transition-colors",
+                                isActive ? "border-white/20 bg-white/[0.06]" : "border-white/10 hover:border-white/20 hover:bg-white/[0.03]",
+                              ].join(" ")}
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/40">{formatRunLabel(run, index)}</p>
+                                <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/30">{run.status}</span>
+                              </div>
+                              <p className="mt-2 line-clamp-2 font-sans text-[13px] leading-[1.45] text-white/80">{run.summary ?? "Inspect run trace"}</p>
+                              <p className="mt-2 font-mono text-[10px] uppercase tracking-[1.2px] text-white/25">{run.mode}</p>
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/25">No persisted runs yet</p>
+                      )}
+                    </div>
+                  </section>
                   <AgentRunStatus
                     run={activeRun}
                     isStreaming={stream.isStreaming && stream.run?.id === activeRunId}

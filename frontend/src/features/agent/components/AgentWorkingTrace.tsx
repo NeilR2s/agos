@@ -13,7 +13,7 @@ type AgentWorkingTraceProps = {
 };
 
 export function AgentWorkingTrace({ events, isStreaming, selectedAgentId, onSelectAgent }: AgentWorkingTraceProps) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(isStreaming);
   const buckets = useMemo(() => buildAgentTraceBuckets(events), [events]);
   const workerBuckets = useMemo(
     () => buckets.filter((bucket) => bucket.role !== "runtime" && bucket.role !== "synthesizer"),

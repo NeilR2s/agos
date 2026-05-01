@@ -44,12 +44,12 @@ export function AgentComposer({
     const node = textareaRef.current;
     if (!node) return;
     node.style.height = "0px";
-    node.style.height = `${Math.min(node.scrollHeight, 240)}px`;
+    node.style.height = `${Math.min(node.scrollHeight, 180)}px`;
   }, [value]);
 
   return (
-    <div className="border-t border-white/10 bg-[#1b1f25] px-5 py-5 backdrop-blur-sm">
-      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <div className="border-t border-white/10 bg-[#1b1f25] px-4 py-3 backdrop-blur-sm md:px-5">
+      <div className="mb-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">
           <span>{selectedModel?.label ?? "AGOS"}</span>
           <span>/</span>
@@ -101,9 +101,9 @@ export function AgentComposer({
             }
           }}
           placeholder="Direct AGOS across research, portfolio context, execution risk, and grounded web retrieval."
-          className="max-h-[240px] min-h-[104px] w-full resize-none border-0 bg-transparent px-5 py-5 font-sans text-[15px] leading-[1.7] text-white outline-none placeholder:text-white/40"
+          className="max-h-[180px] min-h-[72px] w-full resize-none border-0 bg-transparent px-4 py-4 font-sans text-[15px] leading-[1.6] text-white outline-none placeholder:text-white/40 md:px-5"
         />
-        <div className="flex flex-col gap-3 border-t border-white/10 px-5 py-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3 border-t border-white/10 px-4 py-3 md:flex-row md:items-center md:justify-between md:px-5">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Ctrl + Enter to send</p>
           </div>
