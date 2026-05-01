@@ -53,6 +53,67 @@ class Citation(BaseModel):
     meta: dict[str, Any] = Field(default_factory=dict)
 
 
+class AgentSourceReference(BaseModel):
+    id: str
+    label: str
+    source: str
+    kind: str = "reference"
+    href: Optional[str] = None
+    excerpt: Optional[str] = None
+    publishedAt: Optional[str] = None
+    retrievedAt: Optional[str] = None
+    freshness: Literal["current", "recent", "moderate", "stale", "unknown"] = "unknown"
+    agentId: Optional[str] = None
+    agentLabel: Optional[str] = None
+    meta: dict[str, Any] = Field(default_factory=dict)
+
+
+class AgentEvidenceItem(BaseModel):
+    id: str
+    claim: str
+    detail: str
+    confidence: Literal["low", "medium", "high"] = "medium"
+    sourceIds: list[str] = Field(default_factory=list)
+    agentIds: list[str] = Field(default_factory=list)
+    calculation: Optional[str] = None
+
+
+class AgentRecommendation(BaseModel):
+    id: str
+    title: str
+    rationale: str
+    confidence: Literal["low", "medium", "high"] = "medium"
+    risk: str
+    nextAction: str
+    evidenceIds: list[str] = Field(default_factory=list)
+    sourceIds: list[str] = Field(default_factory=list)
+    executionReady: bool = False
+    supportStatus: Literal["supported", "partial", "unsupported"] = "supported"
+    supportReason: Optional[str] = None
+
+
+class AgentDecisionRow(BaseModel):
+    holding: str
+    status: str
+    finding: str
+    suggestedAction: str
+    confidence: Literal["low", "medium", "high"] = "medium"
+    sourceIds: list[str] = Field(default_factory=list)
+
+
+class AgentStructuredOutput(BaseModel):
+    summary: str
+    assumptions: list[str] = Field(default_factory=list)
+    risks: list[str] = Field(default_factory=list)
+    nextSteps: list[str] = Field(default_factory=list)
+    reliabilityWarnings: list[str] = Field(default_factory=list)
+    evidence: list[AgentEvidenceItem] = Field(default_factory=list)
+    recommendations: list[AgentRecommendation] = Field(default_factory=list)
+    decisionTable: list[AgentDecisionRow] = Field(default_factory=list)
+    sources: list[AgentSourceReference] = Field(default_factory=list)
+    executionReady: bool = False
+
+
 class AgentThreadCreate(BaseModel):
     title: Optional[str] = None
     mode: AgentMode = "general"
@@ -82,6 +143,7 @@ class AgentMessage(BaseModel):
     citations: list[Citation] = Field(default_factory=list)
     createdAt: str
     tokenCount: Optional[int] = None
+    structuredOutput: Optional[AgentStructuredOutput] = None
     kind: str = "message"
 
 

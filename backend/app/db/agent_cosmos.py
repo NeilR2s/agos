@@ -176,7 +176,7 @@ class AgentCosmosRepository:
             await self.events_container.upsert_item(event.model_dump(mode="json"))
         return events
 
-    async def list_events(self, thread_id: str, run_id: Optional[str] = None, limit: int = 500) -> list[AgentEvent]:
+    async def list_events(self, thread_id: str, run_id: Optional[str] = None, limit: int = 2000) -> list[AgentEvent]:
         query = "SELECT * FROM c WHERE c.threadId = @threadId"
         parameters = [{"name": "@threadId", "value": thread_id}]
         if run_id:

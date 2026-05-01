@@ -1,21 +1,23 @@
-import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { agentApi } from "@/api/backend/client";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DEFAULT_AGENT_RUN_CONFIG, AGENT_CONFIG_STORAGE_KEY } from "@/features/agent/config";
 import { AgentComposer } from "@/features/agent/components/AgentComposer";
 import { AgentRunStatus } from "@/features/agent/components/AgentRunStatus";
 import { AgentSettingsPanel } from "@/features/agent/components/AgentSettingsPanel";
+import { AgentTracePanel } from "@/features/agent/components/AgentTracePanel";
 import { AgentTranscript } from "@/features/agent/components/AgentTranscript";
 import { useAgentStream } from "@/features/agent/hooks/useAgentStream";
 import { humanizeAgentError } from "@/features/agent/lib/errors";
 import { pickDefaultAgentId } from "@/features/agent/lib/traces";
-import type { AgentMessage, AgentMode, AgentRunConfig, AgentRunRequest, AgentSSEEvent, AgentThread, Citation } from "@/features/agent/types";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import type { AgentMessage, AgentMode, AgentRun, AgentRunConfig, AgentRunRequest, AgentSSEEvent, AgentThread, Citation } from "@/features/agent/types";
+import { formatShortDate } from "@/lib/format";
 
 const allowedModes: AgentMode[] = ["general", "research", "trading"];
 
@@ -72,13 +74,26 @@ const loadStoredConfig = (): AgentRunConfig => {
   }
 };
 
+const resolveQueryError = (error: unknown, fallback: string) => {
+  if (!error) {
+    return null;
+  }
+
+  const detail = error instanceof Error ? error.message : fallback;
+  return humanizeAgentError(detail) ?? detail;
+};
+
+const formatRunLabel = (run: AgentRun, index: number) => {
+  const ordinal = String(index + 1).padStart(2, "0");
+  return `Run ${ordinal} / ${formatShortDate(run.startedAt)}`;
+};
+
 export function AgentPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const stream = useAgentStream();
-  const cancelStream = stream.cancel;
-  const isStreamRunning = stream.isStreaming;
   const resetStream = stream.reset;
+  const cancelStream = stream.cancel;
   const [composerValue, setComposerValue] = useState("");
   const [pendingUserMessage, setPendingUserMessage] = useState<AgentMessage | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -94,8 +109,40 @@ export function AgentPage() {
   }, [runConfig]);
 
   const threadId = searchParams.get("thread");
+  const selectedRunId = searchParams.get("run");
   const selectedTicker = (searchParams.get("ticker") ?? "").trim().toUpperCase() || null;
   const mode = normalizeMode(searchParams.get("mode"));
+
+  const setSearchParamsTransition = useCallback((next: URLSearchParams) => {
+    startTransition(() => {
+      setSearchParams(next, { replace: true });
+    });
+  }, [setSearchParams]);
+
+  const patchSearchParams = useCallback((patch: Record<string, string | null>) => {
+    const next = new URLSearchParams(searchParams);
+    let changed = false;
+
+    Object.entries(patch).forEach(([key, value]) => {
+      const current = next.get(key);
+      if (!value) {
+        if (current !== null) {
+          next.delete(key);
+          changed = true;
+        }
+        return;
+      }
+
+      if (current !== value) {
+        next.set(key, value);
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      setSearchParamsTransition(next);
+    }
+  }, [searchParams, setSearchParamsTransition]);
 
   const activeThreadQuery = useQuery({
     queryKey: ["agent-thread", threadId],
@@ -115,7 +162,21 @@ export function AgentPage() {
     enabled: Boolean(threadId),
   });
 
-  const activeRunId = stream.run?.id ?? runsQuery.data?.[0]?.id ?? null;
+  const availableRuns = useMemo(() => {
+    const runs = runsQuery.data ?? [];
+    if (stream.run && !runs.some((candidate) => candidate.id === stream.run?.id)) {
+      return [stream.run, ...runs];
+    }
+    return runs;
+  }, [runsQuery.data, stream.run]);
+
+  const selectedRunExists = selectedRunId ? availableRuns.some((run) => run.id === selectedRunId) : false;
+  const activeRunId = stream.status === "running" && stream.run?.id
+    ? stream.run.id
+    : selectedRunExists
+      ? selectedRunId
+      : stream.run?.id ?? availableRuns[0]?.id ?? null;
+
   const runEventsQuery = useQuery({
     queryKey: ["agent-run-events", threadId, activeRunId],
     queryFn: () => agentApi.getRunEvents(threadId as string, activeRunId as string),
@@ -123,7 +184,13 @@ export function AgentPage() {
   });
 
   const activeThread = activeThreadQuery.data ?? null;
-  const activeRun = stream.run ?? runsQuery.data?.[0] ?? null;
+  const activeRun = useMemo(() => {
+    if (stream.run?.id === activeRunId) {
+      return stream.run;
+    }
+
+    return availableRuns.find((candidate) => candidate.id === activeRunId) ?? null;
+  }, [activeRunId, availableRuns, stream.run]);
 
   const combinedMessages = useMemo(() => {
     const messages = [...(messagesQuery.data ?? [])];
@@ -139,14 +206,14 @@ export function AgentPage() {
       if (!alreadyPresent) {
         messages.push(stream.completedMessage);
       }
-    } else if (stream.liveMessage && stream.run) {
+    } else if (stream.run && stream.status === "running") {
       messages.push({
         id: `live-${stream.run.id}`,
         threadId: threadId ?? "draft",
         runId: stream.run.id,
         agentId: "synthesizer",
         role: "assistant",
-        content: stream.liveMessage,
+        content: stream.liveMessage ?? "",
         citations: stream.liveCitations,
         createdAt: new Date().toISOString(),
         tokenCount: null,
@@ -155,12 +222,17 @@ export function AgentPage() {
     }
 
     return messages.sort((left, right) => left.createdAt.localeCompare(right.createdAt));
-  }, [messagesQuery.data, pendingUserMessage, stream.completedMessage, stream.liveCitations, stream.liveMessage, stream.run, threadId]);
+  }, [messagesQuery.data, pendingUserMessage, stream.completedMessage, stream.liveCitations, stream.liveMessage, stream.run, stream.status, threadId]);
 
-  const citations = useMemo(() => {
-    const fromMessages = combinedMessages.flatMap((message) => message.citations ?? []);
-    return dedupeCitations([...fromMessages, ...stream.liveCitations]);
-  }, [combinedMessages, stream.liveCitations]);
+  const activeRunMessages = useMemo(
+    () => combinedMessages.filter((message) => message.runId === activeRunId),
+    [activeRunId, combinedMessages]
+  );
+
+  const citations = useMemo(
+    () => dedupeCitations(activeRunMessages.flatMap((message) => message.citations ?? [])),
+    [activeRunMessages]
+  );
 
   const mergedEvents = useMemo(() => {
     const persisted = (runEventsQuery.data ?? []).map<AgentSSEEvent>((event) => ({
@@ -175,8 +247,21 @@ export function AgentPage() {
       parentAgentId: event.parentAgentId ?? undefined,
       data: event.data,
     }));
-    return dedupeEvents([...persisted, ...stream.events]).sort((left, right) => left.sequence - right.sequence);
-  }, [runEventsQuery.data, stream.events]);
+    const liveEvents = stream.run?.id === activeRunId ? stream.events : [];
+    return dedupeEvents([...persisted, ...liveEvents]).sort((left, right) => left.sequence - right.sequence);
+  }, [activeRunId, runEventsQuery.data, stream.events, stream.run?.id]);
+
+  const activeRunError = useMemo(() => {
+    if (stream.run?.id === activeRunId && stream.error) {
+      return stream.error;
+    }
+
+    if (typeof activeRun?.error === "string" && activeRun.error.trim()) {
+      return humanizeAgentError(activeRun.error) ?? activeRun.error;
+    }
+
+    return null;
+  }, [activeRun?.error, activeRunId, stream.error, stream.run?.id]);
 
   useEffect(() => {
     if (!mergedEvents.length) {
@@ -209,33 +294,97 @@ export function AgentPage() {
     setComposerValue("");
     setPendingUserMessage(null);
     setActivePanel(null);
+    resetStream();
+  }, [threadId, resetStream]);
 
-    if (isStreamRunning) {
-      cancelStream();
+  useEffect(() => {
+    if (!stream.run?.id) {
       return;
     }
 
-    resetStream();
-  }, [threadId, cancelStream, isStreamRunning, resetStream]);
+    patchSearchParams({ run: stream.run.id });
+  }, [patchSearchParams, stream.run?.id]);
 
-  const syncQueries = async (nextThreadId: string) => {
+  useEffect(() => {
+    if (!selectedRunId || stream.run?.id === selectedRunId) {
+      return;
+    }
+
+    if (availableRuns.some((run) => run.id === selectedRunId)) {
+      return;
+    }
+
+    patchSearchParams({ run: availableRuns[0]?.id ?? null });
+  }, [availableRuns, patchSearchParams, selectedRunId, stream.run?.id]);
+
+  const syncQueries = useCallback(async (nextThreadId: string) => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["agent-threads"] }),
       queryClient.invalidateQueries({ queryKey: ["agent-thread", nextThreadId] }),
       queryClient.invalidateQueries({ queryKey: ["agent-messages", nextThreadId] }),
       queryClient.invalidateQueries({ queryKey: ["agent-runs", nextThreadId] }),
+      queryClient.invalidateQueries({ queryKey: ["agent-run-events", nextThreadId] }),
     ]);
+  }, [queryClient]);
+
+  useEffect(() => {
+    if (!threadId || (stream.status !== "completed" && stream.status !== "cancelled")) {
+      return;
+    }
+
+    const refreshSoon = window.setTimeout(() => {
+      void syncQueries(threadId);
+    }, 1200);
+    const refreshLater = window.setTimeout(() => {
+      void syncQueries(threadId);
+    }, 4000);
+
+    return () => {
+      window.clearTimeout(refreshSoon);
+      window.clearTimeout(refreshLater);
+    };
+  }, [stream.status, syncQueries, threadId]);
+
+  const handleStartFreshThread = () => {
+    resetStream();
+    setPendingUserMessage(null);
+    setSelectedAgentId(null);
+    patchSearchParams({ thread: null, run: null });
   };
 
-  const setSearchParamsTransition = (next: URLSearchParams) => {
-    startTransition(() => {
-      setSearchParams(next, { replace: true });
-    });
+  const handleStopStreaming = () => {
+    const runIdToCancel = stream.run?.id ?? null;
+    cancelStream();
+    if (threadId && runIdToCancel) {
+      void agentApi.cancelRun(threadId, runIdToCancel)
+        .catch((error) => {
+          const detail = error instanceof Error ? error.message : "Run cancellation failed";
+          toast.error(humanizeAgentError(detail) ?? detail);
+        })
+        .finally(() => {
+          void syncQueries(threadId);
+        });
+      return;
+    }
+
+    if (threadId) {
+      void syncQueries(threadId);
+    }
+  };
+
+  const handleSelectRun = (runId: string) => {
+    patchSearchParams({ run: runId });
+    setActivePanel("run");
   };
 
   const handleSubmit = async () => {
     const trimmed = composerValue.trim();
     if (!trimmed || stream.isStreaming || isSubmittingRef.current) return;
+
+    if (threadId && activeThreadQuery.isError) {
+      toast.error("The active thread is unavailable. Start a new session to continue.");
+      return;
+    }
 
     isSubmittingRef.current = true;
     setIsSubmitting(true);
@@ -253,6 +402,7 @@ export function AgentPage() {
         const next = new URLSearchParams(searchParams);
         next.set("thread", createdThread.id);
         next.set("mode", createdThread.mode);
+        next.delete("run");
         if (createdThread.selectedTicker) {
           next.set("ticker", createdThread.selectedTicker);
         } else {
@@ -304,9 +454,24 @@ export function AgentPage() {
   const agentCount = useMemo(() => {
     const fromRunUsage = activeRun?.usage?.agentCount;
     if (typeof fromRunUsage === "number") return fromRunUsage;
-    const ids = new Set(mergedEvents.map((event) => event.agentId).filter(Boolean));
+    const ids = new Set(
+      mergedEvents
+        .filter((event) => event.agentRole !== "runtime" && event.agentRole !== "synthesizer")
+        .map((event) => event.agentId)
+        .filter(Boolean)
+    );
     return ids.size;
   }, [activeRun?.usage, mergedEvents]);
+
+  const threadErrorMessage = threadId ? resolveQueryError(activeThreadQuery.error, "Thread unavailable") : null;
+  const messageErrorMessage = threadId ? resolveQueryError(messagesQuery.error, "Messages unavailable") : null;
+  const runErrorMessage = threadId ? resolveQueryError(runsQuery.error, "Run history unavailable") : null;
+  const runEventsErrorMessage = activeRunId ? resolveQueryError(runEventsQuery.error, "Trace unavailable") : null;
+  const stopStreamNotice =
+    stream.status === "cancelled" && stream.run?.id === activeRunId
+      ? "Cancellation was requested. Refreshes will continue briefly so final run status, titles, and any persisted output can still appear."
+      : null;
+  const supplementalErrors = [messageErrorMessage, runErrorMessage, runEventsErrorMessage].filter(Boolean) as string[];
 
   return (
     <div className="flex h-[calc(100dvh-57px)] flex-col overflow-hidden bg-background text-foreground lg:h-[calc(100dvh-1px)]">
@@ -318,9 +483,7 @@ export function AgentPage() {
             </Badge>
             <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
               <h1 className="font-sans text-[24px] leading-[1.1] text-white md:text-[28px]">AGOS Copilot</h1>
-              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
-                {activeThread?.title ?? "new session"}
-              </p>
+              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">{activeThread?.title ?? "new session"}</p>
             </div>
           </div>
 
@@ -329,41 +492,122 @@ export function AgentPage() {
             <span>/</span>
             <span>{selectedTicker ?? "no ticker"}</span>
             <span>/</span>
-            <span>{runConfig.maxAgents} agents max</span>
+            <span>{runConfig.maxAgents} concurrent workers</span>
             {stream.isStreaming ? (
-              <Button variant="outline" size="sm" onClick={stream.cancel}>
+              <Button variant="outline" size="sm" onClick={handleStopStreaming}>
                 Cancel Run
               </Button>
+            ) : stream.status === "cancelled" && stream.run?.id === activeRunId ? (
+              <span className="border border-white/10 px-2.5 py-1 text-white/45">cancelled</span>
             ) : null}
           </div>
         </div>
+
+        {availableRuns.length ? (
+          <div className="mt-4 border-t border-white/10 pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Run History</p>
+                <p className="mt-1 font-sans text-[12px] leading-[1.5] text-white/45">Select a run to inspect its persisted trace, worker output, and citations.</p>
+              </div>
+              <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.2px] text-white/30">
+                {runsQuery.isFetching ? <span>Refreshing</span> : null}
+                {activeRun ? <span>{activeRun.status}</span> : null}
+              </div>
+            </div>
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+              {availableRuns.map((run, index) => {
+                const isActive = run.id === activeRunId;
+                return (
+                  <button
+                    key={run.id}
+                    type="button"
+                    onClick={() => handleSelectRun(run.id)}
+                    className={[
+                      "min-w-[180px] border px-3 py-3 text-left transition-colors",
+                      isActive ? "border-white/20 bg-white/[0.06]" : "border-white/10 hover:border-white/20 hover:bg-white/[0.03]",
+                    ].join(" ")}
+                  >
+                    <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/35">{formatRunLabel(run, index)}</p>
+                    <p className="mt-2 font-sans text-[13px] text-white">{run.summary ?? "Inspect run trace"}</p>
+                    <div className="mt-3 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.2px] text-white/30">
+                      <span>{run.status}</span>
+                      <span>{run.mode}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : threadId && runsQuery.isLoading ? (
+          <div className="mt-4 border-t border-white/10 pt-4">
+            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Loading run history</p>
+          </div>
+        ) : null}
       </header>
 
-      <div className="min-h-0 flex flex-1 flex-col gap-5 px-5 py-5 md:px-6">
-        <AgentTranscript
-          messages={combinedMessages}
-          isStreaming={stream.isStreaming}
-          events={mergedEvents}
-          citations={citations}
-          activeRunId={activeRunId}
-          selectedAgentId={selectedAgentId}
-          onSelectAgent={setSelectedAgentId}
-        />
+      {threadErrorMessage ? (
+        <div className="flex min-h-0 flex-1 items-center justify-center px-5 py-5 md:px-6">
+          <div className="w-full max-w-[640px] border border-[#5f3941] bg-[#281c21] px-6 py-6">
+            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-[#d7a5ad]">Thread Unavailable</p>
+            <h2 className="mt-3 font-sans text-[24px] leading-[1.1] text-white">The selected AGOS session could not be loaded.</h2>
+            <p className="mt-3 font-sans text-[14px] leading-[1.7] text-white/75">{threadErrorMessage}</p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={handleStartFreshThread}>
+                Start Fresh Session
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => activeThreadQuery.refetch()}>
+                Retry Load
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="min-h-0 flex flex-1 flex-col gap-5 px-5 py-5 md:px-6">
+          {stopStreamNotice ? (
+            <section className="border border-[#36536c] bg-[#1d2630] px-4 py-3">
+              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-[#a9c4df]">Stream Stopped</p>
+              <p className="mt-2 font-sans text-[13px] leading-[1.6] text-white/80">{stopStreamNotice}</p>
+            </section>
+          ) : null}
 
-        <AgentComposer
-          value={composerValue}
-          onChange={setComposerValue}
-          onSubmit={handleSubmit}
-          onCancel={stream.cancel}
-          onToggleRunPanel={() => setActivePanel((current) => (current === "run" ? null : "run"))}
-          onToggleControlsPanel={() => setActivePanel((current) => (current === "controls" ? null : "controls"))}
-          activePanel={activePanel}
-          isStreaming={stream.isStreaming || isSubmitting}
-          selectedTicker={selectedTicker}
-          mode={mode}
-          config={runConfig}
-        />
-      </div>
+          {supplementalErrors.length ? (
+            <div className="space-y-2">
+              {supplementalErrors.map((message) => (
+                <section key={message} className="border border-[#5f3941] bg-[#281c21] px-4 py-3">
+                  <p className="font-sans text-[13px] leading-[1.6] text-[#d7a5ad]">{message}</p>
+                </section>
+              ))}
+            </div>
+          ) : null}
+
+          <AgentTranscript
+            messages={combinedMessages}
+            isStreaming={stream.isStreaming}
+            events={mergedEvents}
+            citations={citations}
+            activeRunId={activeRunId}
+            selectedAgentId={selectedAgentId}
+            onSelectAgent={setSelectedAgentId}
+          />
+
+          <AgentComposer
+            value={composerValue}
+            onChange={setComposerValue}
+            onSubmit={handleSubmit}
+            onCancel={handleStopStreaming}
+            onToggleRunPanel={() => setActivePanel((current) => (current === "run" ? null : "run"))}
+            onToggleControlsPanel={() => setActivePanel((current) => (current === "controls" ? null : "controls"))}
+            activePanel={activePanel}
+            isBusy={stream.isStreaming || isSubmitting}
+            isStreaming={stream.isStreaming}
+            streamStatus={stream.status}
+            selectedTicker={selectedTicker}
+            mode={mode}
+            config={runConfig}
+          />
+        </div>
+      )}
 
       <Dialog
         open={Boolean(activePanel)}
@@ -375,16 +619,16 @@ export function AgentPage() {
       >
         <DialogContent
           className="overflow-hidden border-white/10 bg-[#171a20] p-0 shadow-none"
-          style={{ width: "min(92vw, 960px)", maxWidth: "none" }}
+          style={{ width: "min(94vw, 1280px)", maxWidth: "none" }}
         >
           <DialogHeader className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4 text-left">
             <div>
               <DialogTitle className="font-mono text-[11px] uppercase tracking-[1.4px] text-white">
-                {activePanel === "run" ? "Run Details" : "Controls"}
+                {activePanel === "run" ? "Run Audit" : "Controls"}
               </DialogTitle>
               <DialogDescription className="mt-1 max-w-[720px] font-sans text-[13px] normal-case leading-[1.5] text-white/60">
                 {activePanel === "run"
-                  ? "Status, timing, and model telemetry for the active run."
+                  ? "Inspect persisted run telemetry, worker summaries, and the agent-by-agent event trail."
                   : "Adjust model, generation, and tool settings without losing transcript space."}
               </DialogDescription>
             </div>
@@ -393,16 +637,39 @@ export function AgentPage() {
             </Button>
           </DialogHeader>
 
-          <div className="scrollbar-hidden max-h-[min(70vh,760px)] overflow-y-auto p-5">
+          <div className="scrollbar-hidden max-h-[min(78vh,920px)] overflow-y-auto p-5">
             {activePanel === "run" ? (
-              <AgentRunStatus
-                run={activeRun}
-                isStreaming={stream.isStreaming}
-                error={stream.error}
-                citationCount={citations.length}
-                selectedTicker={selectedTicker}
-                agentCount={agentCount}
-              />
+              <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
+                <div className="space-y-5">
+                  <AgentRunStatus
+                    run={activeRun}
+                    isStreaming={stream.isStreaming && stream.run?.id === activeRunId}
+                    error={activeRunError}
+                    citationCount={citations.length}
+                    selectedTicker={activeRun?.selectedTicker ?? selectedTicker}
+                    agentCount={agentCount}
+                  />
+                  {activeRun ? (
+                    <div className="border border-white/10 bg-[#1b1f25] px-4 py-4">
+                      <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Run Context</p>
+                      <div className="mt-3 space-y-2 font-sans text-[13px] leading-[1.6] text-white/75">
+                        <p>Mode: {activeRun.mode}</p>
+                        <p>Ticker: {activeRun.selectedTicker ?? "none"}</p>
+                        <p>Started: {formatShortDate(activeRun.startedAt)}</p>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                <AgentTracePanel
+                  key={activeRunId ?? "no-run"}
+                  events={mergedEvents}
+                  run={activeRun}
+                  selectedAgentId={selectedAgentId}
+                  onSelectAgent={setSelectedAgentId}
+                  streamNotice={stopStreamNotice}
+                />
+              </div>
             ) : (
               <AgentSettingsPanel config={runConfig} mode={mode} onChange={setRunConfig} />
             )}

@@ -35,6 +35,11 @@ def override_get_agent_service():
     )
     mock_service.get_run.return_value = mock_run
 
+    async def mock_cancel_run(*args, **kwargs):
+        return mock_run.model_copy(update={"status": "cancelled"})
+
+    mock_service.cancel_run = mock_cancel_run
+
     mock_service.list_threads.return_value = [mock_thread]
     
     async def mock_create_thread(*args, **kwargs):
@@ -100,6 +105,14 @@ def test_get_run():
     assert data["id"] == "test_run_id"
 
 
+def test_cancel_run():
+    response = client.post("/api/v1/agent/threads/test_thread_id/runs/test_run_id/cancel")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == "test_run_id"
+    assert data["status"] == "cancelled"
+
+
 def test_stream_run():
     payload = {"message": "hello", "mode": "research"}
     response = client.post("/api/v1/agent/threads/test_thread_id/runs/stream", json=payload)
@@ -110,4 +123,3 @@ def test_stream_run():
     assert "event: message.delta" in content
     assert "event: run.completed" in content
     assert "data: {\"threadId\": \"test_thread_id\"" in content
-

@@ -10,13 +10,13 @@ export const AGOS_MODEL_PRESETS: Array<{
     id: "agos-swift",
     label: "AGOS Swift",
     subtitle: "Fast routing, grounded search, low-latency chat",
-    backendModel: "gemini-3.1-flash-lite-preview",
+    backendModel: "gemini-3.1-flash-lite",
   },
   {
     id: "agos-core",
     label: "AGOS Core",
     subtitle: "Balanced default for research and synthesis",
-    backendModel: "gemini-3-flash-preview",
+    backendModel: "gemini-3-preview",
   },
   {
     id: "agos-deep",

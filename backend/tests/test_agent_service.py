@@ -1,6 +1,6 @@
 import asyncio
 
-from app.models.agent import AgentMessage, AgentRunRequest, AgentThread
+from app.models.agent import AgentMessage, AgentRun, AgentRunRequest, AgentThread
 from app.services.agent.service import AgentService
 from app.core.config import settings
 
@@ -27,6 +27,18 @@ def _message(message_id: str, role: str, content: str, created_at: str) -> Agent
         citations=[],
         createdAt=created_at,
         tokenCount=len(content.split()),
+    )
+
+
+def _run(run_id: str = "run-1", status: str = "running") -> AgentRun:
+    return AgentRun(
+        id=run_id,
+        threadId="thread-1",
+        userId="user-1",
+        model="gemini-test",
+        mode="research",
+        status=status,
+        startedAt="2024-01-01T00:00:00Z",
     )
 
 
@@ -197,3 +209,32 @@ def test_stream_run_events_uses_latest_history_and_runtime_config(monkeypatch):
         "auth_token": "secret-token",
     }
     assert events[-1].type == "run.completed"
+
+
+def test_cancel_run_marks_running_run_and_thread_cancelled(monkeypatch):
+    repository = InMemoryAgentRepository(_thread())
+    repository.runs["run-1"] = _run()
+    monkeypatch.setattr("app.db.agent_cosmos._repository", repository)
+    service = AgentService()
+    service.repository = repository
+
+    cancelled = asyncio.run(service.cancel_run(user_id="user-1", thread_id="thread-1", run_id="run-1"))
+
+    assert cancelled.status == "cancelled"
+    assert cancelled.completedAt is not None
+    assert repository.thread.lastRunStatus == "cancelled"
+    assert "run-1" in service._cancelled_run_ids
+
+
+def test_cancel_run_leaves_terminal_run_unchanged(monkeypatch):
+    repository = InMemoryAgentRepository(_thread())
+    repository.runs["run-1"] = _run(status="completed")
+    monkeypatch.setattr("app.db.agent_cosmos._repository", repository)
+    service = AgentService()
+    service.repository = repository
+
+    completed = asyncio.run(service.cancel_run(user_id="user-1", thread_id="thread-1", run_id="run-1"))
+
+    assert completed.status == "completed"
+    assert repository.thread.lastRunStatus is None
+    assert "run-1" not in service._cancelled_run_ids

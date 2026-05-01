@@ -116,8 +116,15 @@ export const agentApi = {
     return backendJson<AgentRun>(`/api/v1/agent/threads/${threadId}/runs/${runId}`);
   },
 
-  getRunEvents(threadId: string, runId: string) {
-    return backendJson<AgentEvent[]>(`/api/v1/agent/threads/${threadId}/runs/${runId}/events`);
+  cancelRun(threadId: string, runId: string) {
+    return backendJson<AgentRun>(`/api/v1/agent/threads/${threadId}/runs/${runId}/cancel`, {
+      method: "POST",
+    });
+  },
+
+  getRunEvents(threadId: string, runId: string, limit = 2000) {
+    const params = new URLSearchParams({ limit: String(limit) });
+    return backendJson<AgentEvent[]>(`/api/v1/agent/threads/${threadId}/runs/${runId}/events?${params.toString()}`);
   },
 
   createRun(threadId: string, body: AgentRunRequest) {

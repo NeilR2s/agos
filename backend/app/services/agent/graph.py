@@ -12,6 +12,7 @@ from app.models.agent import AgentRunConfig, Citation
 from app.services.agent.configuration import resolve_model_profile
 from app.services.agent.skills import resolve_skill_prompts
 from app.services.agent.state import AgentRuntimeContext
+from app.services.agent.structured_output import annotate_citation, build_structured_output
 from app.services.agent.tools.registry import (
     SERVER_TOOL_LABELS,
     describe_external_capabilities,
@@ -280,6 +281,16 @@ class ConcurrentAgentGraph:
         worker_specs = build_worker_specs(self.mode, context, self.run_config)
 
         if not settings.GEMINI_API_KEY:
+            worker_summaries = [
+                {
+                    "agentId": spec.agent_id,
+                    "label": spec.label,
+                    "role": spec.role,
+                    "summary": "Gemini is not configured, so AGOS could not run this worker.",
+                    "toolCount": 0,
+                }
+                for spec in worker_specs
+            ]
             for spec in worker_specs:
                 yield {
                     "event": "agent.started",
@@ -309,8 +320,14 @@ class ConcurrentAgentGraph:
                 "data": {
                     "content": fallback,
                     "citations": [],
-                    "workerSummaries": [],
+                    "workerSummaries": worker_summaries,
                     "agentCount": len(worker_specs),
+                    "structuredOutput": build_structured_output(
+                        content=fallback,
+                        context=context,
+                        citations=[],
+                        worker_summaries=worker_summaries,
+                    ).model_dump(mode="json"),
                 },
             }
             return
@@ -325,21 +342,28 @@ class ConcurrentAgentGraph:
             for spec in worker_specs
         ]
 
-        pending = set(tasks)
-        while pending:
-            try:
-                event = await asyncio.wait_for(queue.get(), timeout=0.05)
+        try:
+            pending = set(tasks)
+            while pending:
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=0.05)
+                    yield event
+                except TimeoutError:
+                    pass
+                pending = {task for task in tasks if not task.done()}
+
+            while not queue.empty():
+                yield await queue.get()
+
+            results = [await task for task in tasks]
+            async for event in self._run_synthesis(results, base_messages, context):
                 yield event
-            except TimeoutError:
-                pass
-            pending = {task for task in tasks if not task.done()}
-
-        while not queue.empty():
-            yield await queue.get()
-
-        results = [await task for task in tasks]
-        async for event in self._run_synthesis(results, base_messages, context):
-            yield event
+        finally:
+            pending_tasks = [task for task in tasks if not task.done()]
+            for task in pending_tasks:
+                task.cancel()
+            if pending_tasks:
+                await asyncio.gather(*pending_tasks, return_exceptions=True)
 
     async def _run_worker(
         self,
@@ -433,12 +457,18 @@ class ConcurrentAgentGraph:
                         )
 
                 for citation in _grounding_citations(response):
-                    all_citations.append(citation)
+                    enriched_citation = annotate_citation(
+                        citation,
+                        agent_id=spec.agent_id,
+                        agent_label=spec.label,
+                        tool_name="google_grounding",
+                    )
+                    all_citations.append(enriched_citation)
                     await emit(
                         {
                             "event": "citation.added",
                             "agent": {"id": spec.agent_id, "label": spec.label, "role": spec.role},
-                            "data": {"citation": citation.model_dump(mode="json")},
+                            "data": {"citation": enriched_citation.model_dump(mode="json")},
                         }
                     )
 
@@ -474,12 +504,18 @@ class ConcurrentAgentGraph:
                             output = await tool_index[tool_name].ainvoke(tool_args, config=runnable_config)
                             tool_count += 1
                             for citation in _tool_citations(output):
-                                all_citations.append(citation)
+                                enriched_citation = annotate_citation(
+                                    citation,
+                                    agent_id=spec.agent_id,
+                                    agent_label=spec.label,
+                                    tool_name=tool_name,
+                                )
+                                all_citations.append(enriched_citation)
                                 await emit(
                                     {
                                         "event": "citation.added",
                                         "agent": {"id": spec.agent_id, "label": spec.label, "role": spec.role},
-                                        "data": {"citation": citation.model_dump(mode="json")},
+                                        "data": {"citation": enriched_citation.model_dump(mode="json")},
                                     }
                                 )
                             await emit(
@@ -618,6 +654,23 @@ class ConcurrentAgentGraph:
         if not final_content:
             final_content = self._fallback_synthesis(results, context)
 
+        worker_summaries = [
+            {
+                "agentId": result.agent_id,
+                "label": result.label,
+                "role": result.role,
+                "summary": result.summary,
+                "toolCount": result.tool_count,
+            }
+            for result in results
+        ]
+        structured_output = build_structured_output(
+            content=final_content,
+            context=context,
+            citations=all_citations,
+            worker_summaries=worker_summaries,
+        )
+
         yield {
             "event": "agent.completed",
             "agent": {"id": "synthesizer", "label": "Synthesis", "role": "synthesizer"},
@@ -635,17 +688,9 @@ class ConcurrentAgentGraph:
             "data": {
                 "content": final_content,
                 "citations": [citation.model_dump(mode="json") for citation in all_citations],
-                "workerSummaries": [
-                    {
-                        "agentId": result.agent_id,
-                        "label": result.label,
-                        "role": result.role,
-                        "summary": result.summary,
-                        "toolCount": result.tool_count,
-                    }
-                    for result in results
-                ],
+                "workerSummaries": worker_summaries,
                 "agentCount": len(results),
+                "structuredOutput": structured_output.model_dump(mode="json"),
             },
         }
 
@@ -684,7 +729,9 @@ class ConcurrentAgentGraph:
             f"{global_prompt}\n\n"
             "You are the AGOS synthesis agent. Combine worker outputs into one answer. "
             "Keep the result crisp, operator-facing, and faithful to evidence. "
-            "Present sections for Overview, Evidence, Risks, and Next Step when useful. "
+            "Present sections for Overview, Evidence, Recommendations, Assumptions, Risks, and Next Steps. "
+            "Always include an 'Assumptions' block detailing presumed risk tolerance, horizon, and liquidity needs. "
+            "Frame recommendations as advisory and not execution-ready unless an execution guard explicitly approved it. "
             f"Current mode: {context.mode}. Selected ticker: {context.selected_ticker or 'none'}."
         )
 
@@ -711,6 +758,11 @@ class ConcurrentAgentGraph:
             lines.append(f"- {result.label}: {result.summary}")
         lines.append("Next Step:")
         lines.append("- Review the consolidated evidence and decide whether a deeper rerun or narrower follow-up is needed.")
+        lines.append("Assumptions:")
+        lines.append("- Risk tolerance, liquidity needs, and tax constraints were not explicitly provided.")
+        lines.append("- Recommendations are advisory and not execution-ready.")
+        lines.append("Risks:")
+        lines.append("- Source freshness and execution constraints must be verified before action.")
         return "\n".join(lines)
 
 

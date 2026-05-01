@@ -54,9 +54,11 @@ export function useAgentStream() {
   const [liveCitations, setLiveCitations] = useState<Citation[]>([]);
   const [run, setRun] = useState<AgentRun | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<"idle" | "running" | "completed" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "running" | "completed" | "error" | "cancelled">("idle");
 
   const reset = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
     sawTerminalEventRef.current = false;
     setEvents([]);
     setLiveMessage("");
@@ -71,13 +73,11 @@ export function useAgentStream() {
     abortRef.current?.abort();
     abortRef.current = null;
     sawTerminalEventRef.current = false;
-    setEvents([]);
-    setLiveMessage("");
-    setCompletedMessage(null);
-    setLiveCitations([]);
-    setRun(null);
-    setError(null);
-    setStatus("idle");
+    setRun((current) => current && current.status === "running"
+      ? { ...current, status: "cancelled", completedAt: current.completedAt ?? new Date().toISOString() }
+      : current
+    );
+    setStatus((current) => (current === "running" ? "cancelled" : current));
   }, []);
 
   useEffect(() => () => abortRef.current?.abort(), []);

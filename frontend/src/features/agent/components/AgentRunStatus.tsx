@@ -41,7 +41,7 @@ export function AgentRunStatus({ run, isStreaming, error, citationCount, selecte
         </div>
         <Metric label="Ticker" value={selectedTicker ?? run?.selectedTicker ?? "---"} />
         <Metric label="Model" value={modelLabel} />
-        <Metric label="Agents" value={String(agentCount)} />
+        <Metric label="Workers" value={String(agentCount)} />
         <Metric label="Thinking" value={thinkingLevel} />
         <Metric label="Latency" value={formatDurationMs(run?.latencyMs)} />
         <Metric label="TTFT" value={run?.ttftMs ? `${formatNumber(run.ttftMs, "en-PH", 0)} ms` : "---"} />

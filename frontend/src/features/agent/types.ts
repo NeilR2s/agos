@@ -44,6 +44,67 @@ export interface Citation {
   meta: Record<string, unknown>;
 }
 
+export interface AgentSourceReference {
+  id: string;
+  label: string;
+  source: string;
+  kind: string;
+  href?: string | null;
+  excerpt?: string | null;
+  publishedAt?: string | null;
+  retrievedAt?: string | null;
+  freshness: "current" | "recent" | "moderate" | "stale" | "unknown";
+  agentId?: string | null;
+  agentLabel?: string | null;
+  meta: Record<string, unknown>;
+}
+
+export interface AgentEvidenceItem {
+  id: string;
+  claim: string;
+  detail: string;
+  confidence: "low" | "medium" | "high";
+  sourceIds: string[];
+  agentIds: string[];
+  calculation?: string | null;
+}
+
+export interface AgentRecommendation {
+  id: string;
+  title: string;
+  rationale: string;
+  confidence: "low" | "medium" | "high";
+  risk: string;
+  nextAction: string;
+  evidenceIds: string[];
+  sourceIds: string[];
+  executionReady: boolean;
+  supportStatus?: "supported" | "partial" | "unsupported";
+  supportReason?: string | null;
+}
+
+export interface AgentDecisionRow {
+  holding: string;
+  status: string;
+  finding: string;
+  suggestedAction: string;
+  confidence: "low" | "medium" | "high";
+  sourceIds: string[];
+}
+
+export interface AgentStructuredOutput {
+  summary: string;
+  assumptions: string[];
+  risks: string[];
+  nextSteps: string[];
+  reliabilityWarnings?: string[];
+  evidence: AgentEvidenceItem[];
+  recommendations: AgentRecommendation[];
+  decisionTable: AgentDecisionRow[];
+  sources: AgentSourceReference[];
+  executionReady: boolean;
+}
+
 export interface AgentThread {
   id: string;
   userId: string;
@@ -67,6 +128,7 @@ export interface AgentMessage {
   citations: Citation[];
   createdAt: string;
   tokenCount?: number | null;
+  structuredOutput?: AgentStructuredOutput | null;
   kind: string;
 }
 

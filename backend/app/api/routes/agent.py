@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
 
 from app.core.security import get_current_user, oauth2_scheme
@@ -169,15 +169,30 @@ async def get_run(
     return run
 
 
-@router.get("/threads/{thread_id}/runs/{run_id}/events")
-async def get_run_events(
+@router.post("/threads/{thread_id}/runs/{run_id}/cancel", response_model=AgentRun)
+async def cancel_run(
     thread_id: str,
     run_id: str,
     service: AgentService = Depends(get_agent_service),
     current_user: dict = Depends(get_current_user),
 ):
     await _assert_thread(service, _user_id(current_user), thread_id)
-    return await service.list_events(thread_id=thread_id, run_id=run_id)
+    try:
+        return await service.cancel_run(user_id=_user_id(current_user), thread_id=thread_id, run_id=run_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+@router.get("/threads/{thread_id}/runs/{run_id}/events")
+async def get_run_events(
+    thread_id: str,
+    run_id: str,
+    limit: int = Query(2000, ge=1, le=5000),
+    service: AgentService = Depends(get_agent_service),
+    current_user: dict = Depends(get_current_user),
+):
+    await _assert_thread(service, _user_id(current_user), thread_id)
+    return await service.list_events(thread_id=thread_id, run_id=run_id, limit=limit)
 
 @router.post("/threads/{thread_id}/runs/{run_id}/interrupt", response_model=AgentRunResult)
 @limiter.limit("10/minute")
@@ -195,4 +210,3 @@ async def process_interrupt(
     # For now, we return 501 Not Implemented, as the graph state persistence 
     # and resume logic for LangGraph is not fully wired up.
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Interrupt resumption is not fully implemented in the graph runner yet.")
-

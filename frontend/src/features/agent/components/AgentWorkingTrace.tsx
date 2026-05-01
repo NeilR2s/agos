@@ -15,20 +15,25 @@ type AgentWorkingTraceProps = {
 export function AgentWorkingTrace({ events, isStreaming, selectedAgentId, onSelectAgent }: AgentWorkingTraceProps) {
   const [expanded, setExpanded] = useState(true);
   const buckets = useMemo(() => buildAgentTraceBuckets(events), [events]);
+  const workerBuckets = useMemo(
+    () => buckets.filter((bucket) => bucket.role !== "runtime" && bucket.role !== "synthesizer"),
+    [buckets]
+  );
 
   if (!buckets.length) {
     return null;
   }
 
-  const activeCount = buckets.filter((bucket) => bucket.status === "running").length;
-  const completedCount = buckets.filter((bucket) => bucket.status === "completed").length;
-  const errorCount = buckets.filter((bucket) => bucket.status === "error").length;
+  const countBuckets = workerBuckets.length ? workerBuckets : buckets;
+  const activeCount = countBuckets.filter((bucket) => bucket.status === "running").length;
+  const completedCount = countBuckets.filter((bucket) => bucket.status === "completed").length;
+  const errorCount = countBuckets.filter((bucket) => bucket.status === "error").length;
   const resolvedCount = completedCount + errorCount;
   const toolTotal = buckets.reduce((sum, bucket) => sum + bucket.toolCount, 0);
   const sourceTotal = buckets.reduce((sum, bucket) => sum + bucket.citationCount, 0);
-  const progress = buckets.length ? Math.max(8, (resolvedCount / buckets.length) * 100) : 0;
+  const progress = countBuckets.length ? Math.max(8, (resolvedCount / countBuckets.length) * 100) : 0;
   const duration = formatTraceDuration(events, isStreaming);
-  const title = isStreaming ? "Agents Working" : errorCount ? "Completed With Errors" : "Completed";
+  const title = isStreaming ? "Running" : errorCount ? "Completed With Errors" : "Completed";
 
   return (
     <div className="overflow-hidden border border-white/10 bg-[#14181e]">
@@ -48,12 +53,12 @@ export function AgentWorkingTrace({ events, isStreaming, selectedAgentId, onSele
               />
               <p className="font-sans text-[15px] font-medium text-white">{title}</p>
               <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">
-                <span>{buckets.length} agents</span>
+                <span>{countBuckets.length} total workers</span>
                 {duration ? <span>{duration}</span> : null}
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/28">
-              <span>{isStreaming ? `${activeCount || buckets.length} live` : `${completedCount} complete`}</span>
+              <span>{isStreaming ? `${activeCount || countBuckets.length} live` : `${completedCount} complete`}</span>
               <span>{errorCount} errors</span>
               <span>{toolTotal} tools</span>
               <span>{sourceTotal} sources</span>
@@ -61,7 +66,7 @@ export function AgentWorkingTrace({ events, isStreaming, selectedAgentId, onSele
           </div>
           <div className="flex items-center gap-3">
             <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">
-              {resolvedCount}/{buckets.length}
+              {resolvedCount}/{countBuckets.length}
             </span>
             {expanded ? <ChevronDown className="size-4 text-white/40" /> : <ChevronRight className="size-4 text-white/40" />}
           </div>
@@ -82,7 +87,7 @@ export function AgentWorkingTrace({ events, isStreaming, selectedAgentId, onSele
             />
           </div>
           <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
-            {isStreaming ? "Live trace" : "Completed trace"} / click an agent for its breakdown
+            {isStreaming ? "Live trace" : "Completed trace"} / click a worker for its breakdown
           </p>
         </div>
       </button>

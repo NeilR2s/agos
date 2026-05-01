@@ -5,6 +5,7 @@ import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 
 import { Button } from "@/components/ui/button";
+import { AgentOutputTabs } from "@/features/agent/components/AgentOutputTabs";
 import { AgentWorkingTrace } from "@/features/agent/components/AgentWorkingTrace";
 import type { AgentMessage, AgentSSEEvent, Citation } from "@/features/agent/types";
 
@@ -71,6 +72,15 @@ export function AgentTranscript({
               const showTrace = Boolean(isAssistant && message.runId && activeRunId && message.runId === activeRunId && events.length);
               const msgCitations = showTrace ? citations : message.citations;
 
+              const traceNode = showTrace ? (
+                <AgentWorkingTrace
+                  events={events}
+                  isStreaming={isStreaming}
+                  selectedAgentId={selectedAgentId}
+                  onSelectAgent={onSelectAgent}
+                />
+              ) : null;
+
               return (
                 <article key={message.id} className="space-y-4">
                   <div className="flex items-center justify-between gap-3">
@@ -97,16 +107,11 @@ export function AgentTranscript({
                     ) : null}
                   </div>
 
-                  {showTrace ? (
-                    <AgentWorkingTrace
-                      events={events}
-                      isStreaming={isStreaming}
-                      selectedAgentId={selectedAgentId}
-                      onSelectAgent={onSelectAgent}
-                    />
-                  ) : null}
+                  {isAssistant && message.structuredOutput ? (
+                    <AgentOutputTabs output={message.structuredOutput} markdown={message.content} traceNode={traceNode} />
+                  ) : traceNode}
 
-                  {isAssistant ? (
+                  {isAssistant && !message.structuredOutput && (message.content || !showTrace) ? (
                     <div className="max-w-[980px]">
                       <div className="agent-markdown">
                         <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
@@ -114,13 +119,13 @@ export function AgentTranscript({
                         </ReactMarkdown>
                       </div>
                     </div>
-                  ) : (
+                  ) : !isAssistant ? (
                     <div className="ml-auto max-w-[860px] border border-white/10 bg-white/[0.05] px-5 py-4 font-sans text-[15px] leading-[1.65] text-white">
                       <div className="whitespace-pre-wrap">{message.content}</div>
                     </div>
-                  )}
+                  ) : null}
 
-                  {isAssistant && msgCitations.length > 0 ? (
+                  {isAssistant && !message.structuredOutput && msgCitations.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {msgCitations.map((citation, index) => (
                         <a
@@ -143,11 +148,40 @@ export function AgentTranscript({
           <div className="flex h-full min-h-[420px] flex-col justify-center gap-5 px-2">
             <div>
               <p className="font-mono text-[12px] uppercase tracking-[1.4px] text-white/35">AGOS chat shell</p>
-              <h2 className="mt-3 max-w-[780px] font-sans text-[40px] leading-[1.05] text-white">Run multiple AGOS agents without losing the trace.</h2>
+              <h2 className="mt-3 max-w-[780px] font-sans text-[32px] leading-[1.1] text-white md:text-[40px]">What should AGOS do?</h2>
             </div>
-            <p className="max-w-[720px] font-sans text-[16px] leading-[1.6] text-white/60">
-              Ask for research, portfolio context, execution risk, or grounded web retrieval. The latest run stays inspectable agent by agent.
-            </p>
+
+            <div className="mt-4 grid max-w-[900px] gap-6 md:grid-cols-2">
+              <div className="space-y-3 border border-white/10 bg-white/[0.02] p-5">
+                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">Suggested Tasks</p>
+                <ul className="ml-2 list-disc space-y-2 pl-4 font-sans text-[14px] leading-[1.5] text-white/80">
+                  <li>Review my current portfolio allocation</li>
+                  <li>Compare my holdings against market conditions</li>
+                  <li>Create a 30-day capital deployment plan</li>
+                  <li>Research ticker-specific downside risks</li>
+                </ul>
+              </div>
+              <div className="space-y-3 border border-white/10 bg-white/[0.02] p-5">
+                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">Available Context</p>
+                <ul className="space-y-2 font-sans text-[14px] leading-[1.5] text-white/80">
+                  <li className="flex items-center gap-3">
+                    <span className="font-mono text-[#6e9973]">OK</span> Portfolio snapshot
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <span className="font-mono text-[#6e9973]">OK</span> Prior agent threads
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <span className="font-mono text-[#6e9973]">OK</span> Market tools
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <span className="font-mono text-[#6e9973]">OK</span> Web search
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <span className="font-mono text-white/30">OFF</span> Trading execution disabled
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
         )}
       </div>
