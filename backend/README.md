@@ -87,9 +87,9 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 pytest tests
 ```
 
-Current backend tests are centered on the agent subsystem. Portfolio, market, and stored-data routes do not yet have similar direct coverage.
+Tests cover the agent graph, portfolio routes, live market access, and data ingestion from Cosmos.
 
-## Current caveats
+## Caveats
 
-- Portfolio routes still accept a caller-supplied `user_id` path value, but the backend now enforces a path-to-token match and returns `403` on mismatches.
-- The root FastAPI description still says `Portfolio Manager API`. The actual service surface is wider than that.
+- Portfolio routes require a path-to-token match for the `user_id` and return `403` on mismatches.
+- The `agent` runtime uses Server-Sent Events (SSE) for real-time interaction logs.

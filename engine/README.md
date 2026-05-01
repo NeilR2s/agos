@@ -1,76 +1,40 @@
 # engine
 
-`engine/` is the FastAPI service for forecast requests and rule-gated trade evaluation.
+The `engine` service handles probabilistic time-series forecasting and trade evaluation.
 
-## Active entrypoint
+## Entrypoint
 
-- Use `app/main.py`.
-- `app.py` still exists, but the current runtime described by routes and tests is under `app/main.py`.
+Use `app/main.py` for the runtime service.
 
-## Runtime behavior
+## Runtime Behavior
 
-- Loads the model from `MODEL_PATH`, default `./chronos_pse_finetuned/`.
-- Forces CPU loading with `BaseChronosPipeline.from_pretrained(..., device_map="cpu")`.
-- Applies `torch.ao.quantization.quantize_dynamic` to linear layers.
-- Initializes `DecisionEngine` after the model loads.
-- Returns `503` from forecast and trading endpoints until initialization is complete.
+- **Model**: Loads the Chronos model from `engine/chronos_pse_finetuned/`.
+- **Inference**: Controlled by the `INFERENCE_DEVICE` environment variable (defaults to `cpu`).
+- **Optimization**: On CPU, 8-bit dynamic quantization is applied to linear layers to reduce memory usage.
+- **Initialization**: Returns `503` for forecast and trading requests until the model and `DecisionEngine` are fully loaded.
 
-## API surface
+## API Summary
 
-### Public routes
+- `POST /api/v1/forecast/`: Quantile-based price forecasting.
+- `POST /api/v1/trading/evaluate`: Rule-gated trade decision making.
+- `POST /api/v1/trading/override`: Manual trade authorization for audit trails.
 
-- `GET /api/v1/health`
-- `GET /api/v1/version`
+## Decision Logic
 
-### Auth-protected routes
+1. Fetches historical prices from Cosmos DB or the backend.
+2. Retrieves portfolio state from the backend.
+3. Runs a Chronos forecast.
+4. Applies confidence, RSI, and allocation gates defined in `app/core/config.py`.
 
-- `POST /api/v1/forecast/`
-- `POST /api/v1/trading/evaluate`
-- `POST /api/v1/trading/override`
+## Configuration
 
-## Request expectations
+- `BACKEND_API_URL`: Points to the backend service (default: `http://localhost:8000/api/v1`).
+- `DEV_BYPASS_ENABLED`: Enables local development auth bypass.
 
-- Forecast requests need `history`, `prediction_length`, and optional `quantiles`. History must contain at least 10 points.
-- Trade evaluation requests need `user_id`, `ticker`, and `lookback_days`. The current schema allows `lookback_days` from 14 to 365.
-- Manual override requests need `user_id`, `ticker`, `action`, `quantity`, and `reason`.
-
-## Decision flow
-
-1. Fetch historical prices from Cosmos.
-2. If Cosmos returns fewer than 14 usable points, call the backend chart endpoint.
-3. Fetch portfolio state from the backend portfolio endpoint.
-4. Run a 5-step Chronos forecast at quantiles `0.1`, `0.5`, and `0.9`.
-5. Convert forecast output into `BUY`, `SELL`, or `HOLD` based on expected return and confidence.
-6. Apply the confidence gate, RSI gate, and max-allocation gate before returning the final decision.
-
-Current thresholds come from `app/core/config.py`.
-
-- Minimum AI confidence: `0.70`
-- Max allocation per ticker: `20%`
-- RSI overbought: `70`
-- RSI oversold: `30`
-
-## Dependencies and env
-
-- `BACKEND_API_URL` should point to `http://localhost:8000/api/v1`.
-- Cosmos credentials are optional but enable direct historical lookups from `pse_stock_data`.
-- Firebase dev bypass uses the same token pattern as the backend.
-- The service expects the model artifact under `engine/chronos_pse_finetuned/`.
-
-## Local run
-
-```bash
-pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 5000
-```
-
-## Tests
+## Verification
 
 ```bash
 pytest tests
 ```
 
-## Current caveats
-
-- Manual override returns an approved decision payload with audit fields. It does not execute orders.
-- Tests cover loading, rules, and data-provider fallback, but not a full successful end-to-end evaluation path.
+Tests cover model loading, safety rules, and data provider fallback.

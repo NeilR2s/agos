@@ -94,11 +94,10 @@ The frontend uses `dev_admin_token` when bypass is enabled, so the backend and e
 - `engine` reads historical prices from Cosmos when possible, falls back to backend chart data when Cosmos history is too sparse, and fetches portfolio state from `backend`.
 - `frontend` exposes `/research`, `/portfolio`, `/trading`, and `/agent` behind auth, with `/` and `/login` as public routes.
 
-## Current caveats
+## Notes
 
-- `cron/pyproject.toml` and `cron/.env.example` lag the current cron runtime. Use `cron/config.py` and `cron/requirements.txt` as the safer reference.
-- `research/requirements.txt` is not a complete description of the research environment. See `research/README.md` for the actual script dependencies.
-- Backend tests currently focus on the agent subsystem more than the portfolio and market paths.
+- `research/requirements.txt` is not a complete description of the research environment. See `research/README.md` for script-specific dependencies.
+- Use `cron/config.py` as the reference for environment variables in the ingestion pipeline.
 
 ## Package docs
 
