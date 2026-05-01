@@ -41,10 +41,10 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
 
   return (
     <div className="space-y-5">
-      <section className="space-y-4 border border-white/10 bg-[#1b1f25] p-5">
+      <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">AGOS Preset</p>
-          <p className="mt-1 font-sans text-[13px] leading-[1.6] text-white/60">Choose the operator-facing behavior tier.</p>
+          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">AGOS Preset</p>
+          <p className="mt-1 font-sans text-[13px] leading-[1.6] text-muted-foreground">Choose the operator-facing behavior tier.</p>
         </div>
         <div className="grid gap-3">
           {AGOS_MODEL_PRESETS.map((preset) => {
@@ -55,22 +55,22 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
                 type="button"
                 onClick={() => update("modelPreset", preset.id)}
                 className={cn(
-                  "border border-white/10 px-4 py-4 text-left transition-colors hover:border-white/20 hover:bg-white/[0.03]",
-                  isSelected && "border-white/20 bg-white/[0.05]"
+                  "rounded-2xl border border-border px-4 py-4 text-left transition-colors hover:border-ring/60 hover:bg-accent/70",
+                  isSelected && "border-ring/60 bg-accent"
                 )}
               >
-                <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-white">{preset.label}</p>
-                <p className="mt-2 font-sans text-[13px] leading-[1.6] text-white/60">{preset.subtitle}</p>
+                <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-foreground">{preset.label}</p>
+                <p className="mt-2 font-sans text-[13px] leading-[1.6] text-muted-foreground">{preset.subtitle}</p>
               </button>
             );
           })}
         </div>
       </section>
 
-      <section className="space-y-4 border border-white/10 bg-[#1b1f25] p-5">
+      <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Data Tools</p>
-          <p className="mt-1 font-sans text-[13px] leading-[1.6] text-white/60">Toggle connections to live context.</p>
+          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Data Tools</p>
+          <p className="mt-1 font-sans text-[13px] leading-[1.6] text-muted-foreground">Toggle connections to live context.</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
           {(
@@ -90,8 +90,8 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
               onClick={() => updateTool(tool, !config.tools[tool])}
               disabled={tool === "engine" && mode !== "trading"}
               className={cn(
-                "border border-white/10 px-3 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/60 transition-colors hover:border-white/20 hover:text-white",
-                config.tools[tool] && "border-white/20 bg-white/[0.05] text-white",
+                "rounded-full border border-border px-3 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground transition-colors hover:border-ring/60 hover:text-foreground",
+                config.tools[tool] && "border-ring/60 bg-accent text-foreground",
                 tool === "engine" && mode !== "trading" && "cursor-not-allowed opacity-50"
               )}
             >
@@ -100,29 +100,29 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
           ))}
         </div>
         {mode !== "trading" ? (
-          <p className="font-sans text-[12px] leading-[1.6] text-white/40">Engine tooling is only available in trading mode.</p>
+          <p className="font-sans text-[12px] leading-[1.6] text-muted-foreground">Engine tooling is only available in trading mode.</p>
         ) : null}
       </section>
 
       <button
         type="button"
         aria-expanded={showAdvanced}
-        className="flex w-full items-center justify-between border border-white/10 bg-[#171a20] px-5 py-4 hover:bg-white/[0.02]"
+        className="flex w-full items-center justify-between rounded-2xl border border-border bg-secondary/40 px-5 py-4 hover:bg-accent/70"
         onClick={() => setShowAdvanced(!showAdvanced)}
       >
-        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/60">Advanced Controls</span>
-        {showAdvanced ? <ChevronDown className="size-4 text-white/40" /> : <ChevronRight className="size-4 text-white/40" />}
+        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Advanced Controls</span>
+        {showAdvanced ? <ChevronDown className="size-4 text-muted-foreground" /> : <ChevronRight className="size-4 text-muted-foreground" />}
       </button>
 
       {showAdvanced && (
         <div className="space-y-5 animate-in fade-in slide-in-from-top-2">
-          <section className="space-y-4 border border-white/10 bg-[#1b1f25] p-5">
+          <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Generation Parameters</p>
+              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Generation Parameters</p>
             </div>
 
             <label className="space-y-2">
-              <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">
+              <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
                 <span>Temperature</span>
                 <span>{config.temperature.toFixed(2)}</span>
               </div>
@@ -135,12 +135,12 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
                 step="0.05"
                 value={config.temperature}
                 onChange={(event) => update("temperature", Number(event.target.value))}
-                className="w-full accent-white"
+                className="w-full [accent-color:var(--primary)]"
               />
             </label>
 
             <label className="space-y-2">
-              <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">
+              <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
                 <span>Top P</span>
                 <span>{config.topP.toFixed(2)}</span>
               </div>
@@ -153,12 +153,12 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
                 step="0.05"
                 value={config.topP}
                 onChange={(event) => update("topP", Number(event.target.value))}
-                className="w-full accent-white"
+                className="w-full [accent-color:var(--primary)]"
               />
             </label>
 
             <label className="space-y-2">
-              <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">
+              <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
                 <span>Max Concurrent Workers</span>
                 <span>{config.maxAgents}</span>
               </div>
@@ -171,12 +171,12 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
                 step="1"
                 value={config.maxAgents}
                 onChange={(event) => update("maxAgents", Number(event.target.value))}
-                className="w-full accent-white"
+                className="w-full [accent-color:var(--primary)]"
               />
             </label>
 
             <label className="space-y-2">
-              <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">
+              <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
                 <span>Output Tokens</span>
                 <span>{config.maxOutputTokens}</span>
               </div>
@@ -189,12 +189,12 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
                 step="256"
                 value={config.maxOutputTokens}
                 onChange={(event) => update("maxOutputTokens", Number(event.target.value))}
-                className="w-full accent-white"
+                className="w-full [accent-color:var(--primary)]"
               />
             </label>
 
             <div className="space-y-2">
-              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">Thinking Level</p>
+              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Thinking Level</p>
               <div className="grid grid-cols-2 gap-2">
                 {(["minimal", "low", "medium", "high"] as const).map((level) => (
                   <button
@@ -202,8 +202,8 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
                     type="button"
                     onClick={() => update("thinkingLevel", level)}
                     className={cn(
-                      "border border-white/10 px-3 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/60 transition-colors hover:border-white/20 hover:text-white",
-                      config.thinkingLevel === level && "border-white/20 bg-white/[0.05] text-white"
+                      "rounded-full border border-border px-3 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground transition-colors hover:border-ring/60 hover:text-foreground",
+                      config.thinkingLevel === level && "border-ring/60 bg-accent text-foreground"
                     )}
                   >
                     {level}
@@ -213,10 +213,10 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
             </div>
           </section>
 
-          <section className="space-y-4 border border-white/10 bg-[#1b1f25] p-5">
+          <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Skills</p>
-              <p className="mt-1 font-sans text-[13px] leading-[1.6] text-white/60">Prompt-level specializations.</p>
+              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Skills</p>
+              <p className="mt-1 font-sans text-[13px] leading-[1.6] text-muted-foreground">Prompt-level specializations.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {AGOS_SKILL_OPTIONS.map((skill) => {
@@ -227,8 +227,8 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
                     type="button"
                     onClick={() => toggleSkill(skill.id)}
                     className={cn(
-                      "border border-white/10 px-3 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/60 transition-colors hover:border-white/20 hover:text-white",
-                      active && "border-white/20 bg-white/[0.05] text-white"
+                      "rounded-full border border-border px-3 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground transition-colors hover:border-ring/60 hover:text-foreground",
+                      active && "border-ring/60 bg-accent text-foreground"
                     )}
                   >
                     {skill.label}
@@ -238,9 +238,9 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
             </div>
           </section>
 
-          <section className="space-y-4 border border-white/10 bg-[#1b1f25] p-5">
+          <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">External Capabilities</p>
+              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">External Capabilities</p>
             </div>
             <div className="space-y-2">
               {config.externalCapabilities.map((capability) => (
@@ -249,15 +249,15 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
                   type="button"
                   onClick={() => toggleCapability(capability.id)}
                   className={cn(
-                    "w-full border border-white/10 px-4 py-4 text-left transition-colors hover:border-white/20 hover:bg-white/[0.03]",
-                    capability.enabled && "border-white/20 bg-white/[0.05]"
+                    "w-full rounded-2xl border border-border px-4 py-4 text-left transition-colors hover:border-ring/60 hover:bg-accent/70",
+                    capability.enabled && "border-ring/60 bg-accent"
                   )}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white">{capability.label}</p>
-                    <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/45">{capability.status}</span>
+                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-foreground">{capability.label}</p>
+                    <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{capability.status}</span>
                   </div>
-                  {capability.description ? <p className="mt-2 font-sans text-[13px] leading-[1.6] text-white/60">{capability.description}</p> : null}
+                  {capability.description ? <p className="mt-2 font-sans text-[13px] leading-[1.6] text-muted-foreground">{capability.description}</p> : null}
                 </button>
               ))}
             </div>

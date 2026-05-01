@@ -72,17 +72,17 @@ export function AgentThreadList({
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search history"
-            className="border-white/10 bg-[#171a20] text-[13px] focus-visible:ring-1 focus-visible:ring-white/20"
+            className="border-input bg-secondary/40 text-[13px] focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
 
         <div className="scrollbar-hidden min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
           {isLoading ? (
-            <p className="px-2 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Loading...</p>
+            <p className="px-2 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Loading...</p>
           ) : groups.length ? (
             groups.map((group) => (
               <section key={group.label} className="space-y-2">
-                <p className="px-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/25">{group.label}</p>
+                <p className="px-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/70">{group.label}</p>
                 <div className="space-y-1">
                   {group.items.map((thread) => {
                     const isActive = thread.id === activeThreadId;
@@ -92,26 +92,26 @@ export function AgentThreadList({
                           type="button"
                           onClick={() => onSelect(thread.id)}
                           className={cn(
-                            "w-full border px-3 py-3 text-left transition-colors",
+                            "w-full rounded-2xl border px-3 py-3 text-left transition-colors",
                             isActive
-                              ? "border-white/20 bg-white/[0.06]"
-                              : "border-transparent hover:border-white/10 hover:bg-white/[0.03]"
+                              ? "border-ring/60 bg-sidebar-accent text-sidebar-accent-foreground"
+                              : "border-transparent text-muted-foreground hover:border-border hover:bg-sidebar-accent/70 hover:text-foreground"
                           )}
                         >
                           <div className="flex items-center justify-between gap-3">
-                            <span className="min-w-0 truncate font-sans text-[14px] leading-[1.45] text-white">
+                            <span className="min-w-0 truncate font-sans text-[14px] leading-[1.45] text-foreground">
                               {thread.title}
                             </span>
-                            <span className="shrink-0 font-mono text-[10px] uppercase tracking-[1.2px] text-white/25">
+                            <span className="shrink-0 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/70">
                               {formatShortDate(thread.updatedAt)}
                             </span>
                           </div>
-                          <div className="mt-2 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.2px] text-white/25">
+                          <div className="mt-2 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/70">
                             <span>{thread.selectedTicker || thread.mode}</span>
                             {thread.lastRunStatus ? <span>{thread.lastRunStatus}</span> : null}
                           </div>
                           {thread.lastAssistantPreview ? (
-                            <p className="mt-2 line-clamp-2 font-sans text-[12px] leading-[1.5] text-white/42">
+                            <p className="mt-2 line-clamp-2 font-sans text-[12px] leading-[1.5] text-muted-foreground">
                               {thread.lastAssistantPreview}
                             </p>
                           ) : null}
@@ -123,7 +123,7 @@ export function AgentThreadList({
                             onDelete(thread.id);
                           }}
                           className={cn(
-                            "absolute right-2 top-2 p-2 text-white/25 transition-colors hover:bg-white/[0.06] hover:text-red-300 opacity-0 group-hover:opacity-100",
+                            "absolute right-2 top-2 rounded-full p-2 text-muted-foreground/70 opacity-0 transition-colors hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100",
                             isActive && "opacity-100"
                           )}
                           aria-label={`Delete ${thread.title}`}
@@ -137,7 +137,7 @@ export function AgentThreadList({
               </section>
             ))
           ) : (
-            <p className="px-2 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/20">No results</p>
+            <p className="px-2 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/70">No results</p>
           )}
         </div>
       </div>
@@ -145,11 +145,11 @@ export function AgentThreadList({
   }
 
   return (
-    <Card className="h-full min-h-0 border-white/10 bg-[#1b1f25]">
-      <CardHeader className="border-b border-white/10 px-4 pb-4">
+    <Card className="h-full min-h-0 border-border bg-card">
+      <CardHeader className="border-b border-border px-4 pb-4">
         <div className="flex items-center justify-between gap-3">
           <CardTitle className="font-mono text-[11px] uppercase tracking-[1.4px]">Threads</CardTitle>
-          <Button variant="outline" size="sm" onClick={onNewThread} className="border-white/20 hover:bg-white/10">
+          <Button variant="outline" size="sm" onClick={onNewThread}>
             + New
           </Button>
         </div>
@@ -162,11 +162,11 @@ export function AgentThreadList({
           value={query} 
           onChange={(event) => onQueryChange(event.target.value)} 
           placeholder="Search threads..." 
-          className="border-white/10 bg-[#20242b] focus-visible:ring-1 focus-visible:ring-white/20"
+          className="border-input bg-secondary/40 focus-visible:ring-1 focus-visible:ring-ring"
         />
         <div className="agent-scrollbar space-y-2 overflow-y-auto pr-1 xl:flex-1">
           {isLoading ? (
-            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30 p-2">Loading...</p>
+            <p className="p-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Loading...</p>
           ) : threads.length ? (
             threads.map((thread) => {
               const isActive = thread.id === activeThreadId;
@@ -176,8 +176,8 @@ export function AgentThreadList({
                     type="button"
                     onClick={() => onSelect(thread.id)}
                     className={cn(
-                      "flex w-full flex-col items-start gap-2 border px-4 py-4 text-left transition-colors",
-                      isActive ? "border-white/20 bg-white/[0.06]" : "border-transparent hover:border-white/10 hover:bg-white/[0.03]"
+                      "flex w-full flex-col items-start gap-2 rounded-2xl border px-4 py-4 text-left transition-colors",
+                      isActive ? "border-ring/60 bg-accent" : "border-transparent hover:border-border hover:bg-accent/70"
                     )}
                   >
                     <div className="flex w-full items-center justify-between gap-3 pr-6">
@@ -189,8 +189,8 @@ export function AgentThreadList({
                       </span>
                     </div>
                     <p className={cn(
-                      "line-clamp-2 font-sans text-[13px] leading-[1.5]",
-                      isActive ? "text-white" : "text-white/70"
+                        "line-clamp-2 font-sans text-[13px] leading-[1.5]",
+                        isActive ? "text-foreground" : "text-muted-foreground"
                     )}>
                       {thread.title}
                     </p>
@@ -201,7 +201,7 @@ export function AgentThreadList({
                       onDelete(thread.id);
                     }}
                     className={cn(
-                      "absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-white/10 text-white/30 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100",
+                      "absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-2 text-muted-foreground/70 opacity-0 transition-colors hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100",
                       isActive && "opacity-100"
                     )}
                   >
@@ -211,7 +211,7 @@ export function AgentThreadList({
               );
             })
           ) : (
-            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/20 p-2">No results</p>
+            <p className="p-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/70">No results</p>
           )}
         </div>
       </CardContent>

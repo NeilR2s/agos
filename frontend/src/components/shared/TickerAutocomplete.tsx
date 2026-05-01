@@ -177,7 +177,7 @@ export function TickerAutocompleteInput({
       ) : null}
 
       {open && suggestions.length ? (
-        <div className="absolute z-30 mt-2 w-full border border-border bg-[#20242b]">
+        <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border border-border bg-popover/95 shadow-none backdrop-blur-xl">
           {suggestions.map((item, index) => {
             const isActive = index === highlightedIndex;
 
@@ -187,7 +187,7 @@ export function TickerAutocompleteInput({
                 type="button"
                 className={cn(
                   "grid w-full grid-cols-[4.5rem_minmax(0,1fr)_5.5rem] items-center gap-4 px-4 py-3 text-left transition-colors",
-                  isActive ? "bg-white/5 text-white" : "text-white/70 hover:bg-white/5 hover:text-white"
+                  isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
                 )}
                 onMouseEnter={() => setHighlightedIndex(index)}
                 onMouseDown={(event) => {
@@ -195,9 +195,9 @@ export function TickerAutocompleteInput({
                   commit(item);
                 }}
               >
-                <span className="font-mono text-[12px] uppercase tracking-[1.4px] tabular-nums text-white">{item.ticker}</span>
-                <span className="min-w-0 truncate font-sans text-[14px] leading-[1.35] text-white/70">{item.companyName}</span>
-                <span className="flex flex-col items-end gap-0.5 text-right font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">
+                <span className="font-mono text-[12px] uppercase tracking-[1.4px] tabular-nums text-foreground">{item.ticker}</span>
+                <span className="min-w-0 truncate font-sans text-[14px] leading-[1.35] text-muted-foreground">{item.companyName}</span>
+                <span className="flex flex-col items-end gap-0.5 text-right font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/75">
                   <span>{formatCurrency(item.price)}</span>
                   <span>{formatPercent(item.changePct)}</span>
                 </span>

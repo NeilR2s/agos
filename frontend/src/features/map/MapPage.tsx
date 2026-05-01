@@ -332,42 +332,42 @@ export function MapPage() {
   };
 
   return (
-    <div className="min-h-dvh bg-background px-3 py-3 text-white lg:px-4 lg:py-4">
+    <div className="min-h-dvh bg-background px-3 py-3 text-foreground lg:px-4 lg:py-4">
       <div className="mx-auto flex max-w-[1920px] flex-col gap-2.5">
-        <section className="border border-white/10 bg-white/[0.03] px-4 py-3 lg:px-5">
+        <section className="rounded-3xl border border-border bg-card/50 px-4 py-3 lg:px-5">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="min-w-0 flex-1">
-              <Badge variant="outline" className="rounded-none border-white/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[1px] text-white/50">
+              <Badge variant="outline" className="border-border px-3 py-1 font-mono text-[10px] uppercase tracking-[1px] text-muted-foreground">
                 AGOS MAP APPLICATION / TEMPORAL GEOSPATIAL ANALYSIS
               </Badge>
-              <h1 className="mt-3 font-mono text-[32px] uppercase leading-[0.98] tracking-[-0.04em] text-white md:text-[44px] xl:text-[48px]">
+              <h1 className="mt-3 font-sans text-[32px] font-light leading-[0.98] tracking-[-0.04em] text-foreground md:text-[44px] xl:text-[56px]">
                 MAP / NETWORK / MOVEMENT / ACTION
               </h1>
-              <div className="mt-3 flex min-w-0 flex-col gap-2 border-t border-white/10 pt-3 xl:flex-row xl:flex-wrap xl:items-center xl:gap-5">
+              <div className="mt-3 flex min-w-0 flex-col gap-2 border-t border-border pt-3 xl:flex-row xl:flex-wrap xl:items-center xl:gap-5">
                 <div className="min-w-0">
-                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Query</p>
-                  <p className="mt-1 font-sans text-[14px] text-white">{queryMode === "bbox" ? "Viewport" : "Polygon"}</p>
+                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Query</p>
+                  <p className="mt-1 font-sans text-[14px] text-foreground">{queryMode === "bbox" ? "Viewport" : "Polygon"}</p>
                 </div>
                 <div className="min-w-0">
-                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Time</p>
-                  <p className="mt-1 truncate font-sans text-[14px] text-white">{summary.activeTimestamp.replace("T", " ").replace("Z", " UTC")}</p>
+                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Time</p>
+                  <p className="mt-1 truncate font-sans text-[14px] text-foreground">{summary.activeTimestamp.replace("T", " ").replace("Z", " UTC")}</p>
                 </div>
                 <div className="min-w-0 xl:max-w-[360px]">
-                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Selection</p>
-                  <p className="mt-1 truncate font-sans text-[14px] text-white">{selectionSummaryLabel}</p>
+                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Selection</p>
+                  <p className="mt-1 truncate font-sans text-[14px] text-foreground">{selectionSummaryLabel}</p>
                 </div>
                 <div className="min-w-0">
-                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Mode</p>
-                  <p className="mt-1 font-sans text-[14px] text-white">{playing ? "Playback" : "Static review"}</p>
+                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Mode</p>
+                  <p className="mt-1 font-sans text-[14px] text-foreground">{playing ? "Playback" : "Static review"}</p>
                 </div>
                 <div className="min-w-0">
-                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Window</p>
-                  <p className="mt-1 truncate font-sans text-[14px] text-white/70">{summary.queryLabel}</p>
+                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Window</p>
+                  <p className="mt-1 truncate font-sans text-[14px] text-muted-foreground">{summary.queryLabel}</p>
                 </div>
                 {focusedPlaceLabel ? (
                   <div className="min-w-0 xl:max-w-[260px]">
-                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Focused Place</p>
-                    <p className="mt-1 truncate font-sans text-[14px] text-white/70">{focusedPlaceLabel}</p>
+                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Focused Place</p>
+                    <p className="mt-1 truncate font-sans text-[14px] text-muted-foreground">{focusedPlaceLabel}</p>
                   </div>
                 ) : null}
               </div>
@@ -380,9 +380,9 @@ export function MapPage() {
                 ["Events", activeEvents.length],
                 ["Tracks", tracks.filter((track) => track.visibleCoordinates.length >= 2).length],
               ].map(([label, value]) => (
-                <div key={label} className="border border-white/10 px-3 py-2.5">
-                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">{label}</p>
-                  <p className="mt-1 font-sans text-[22px] text-white">{value}</p>
+                <div key={label} className="rounded-2xl border border-border bg-secondary/30 px-3 py-2.5">
+                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{label}</p>
+                  <p className="mt-1 font-sans text-[22px] text-foreground">{value}</p>
                 </div>
               ))}
             </div>
@@ -418,20 +418,20 @@ export function MapPage() {
 
           <div className="relative flex min-w-0 flex-col gap-2.5">
             {featureQuery.isError ? (
-              <section className="border border-white/10 bg-white/[0.03] px-4 py-3">
-                <p className="font-sans text-[14px] leading-[1.6] text-white/55">
+              <section className="rounded-2xl border border-border bg-card px-4 py-3">
+                <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">
                   {featureQuery.error instanceof Error ? featureQuery.error.message : "Map data request failed."}
                 </p>
               </section>
             ) : null}
 
             {featureQuery.isFetching && featureQuery.data ? (
-              <section className="border border-white/10 bg-white/[0.03] px-4 py-3">
-                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Updating map view...</p>
+              <section className="rounded-2xl border border-border bg-card px-4 py-3">
+                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Updating map view...</p>
               </section>
             ) : null}
 
-            <div className="relative flex min-w-0 flex-col gap-0 overflow-hidden border border-white/10 bg-white/[0.03]">
+            <div className="relative flex min-w-0 flex-col gap-0 overflow-hidden rounded-3xl border border-border bg-card/40">
               <MapCanvas
                 assets={featureData.assets}
                 zones={featureData.zones}

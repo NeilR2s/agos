@@ -32,7 +32,7 @@ type PaletteAction = {
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-0 bg-[#20242b] p-0 shadow-none sm:max-w-[760px]">
+      <DialogContent className="overflow-hidden border-border bg-popover/95 p-0 shadow-none sm:max-w-[760px]">
         <CommandPaletteContent onOpenChange={onOpenChange} />
       </DialogContent>
     </Dialog>
@@ -156,14 +156,14 @@ function CommandPaletteContent({ onOpenChange }: { onOpenChange: (open: boolean)
 
   return (
     <>
-      <div className="border-b border-white/10 px-4 py-4">
+      <div className="border-b border-border px-4 py-4">
         <DialogHeader className="space-y-0 text-left">
           <DialogTitle className="sr-only">Command Palette</DialogTitle>
           <DialogDescription className="sr-only">Keyboard-first navigation and ticker search.</DialogDescription>
         </DialogHeader>
 
         <div className="flex items-center gap-3">
-          <label htmlFor="command-palette-query" className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">CMD</label>
+          <label htmlFor="command-palette-query" className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">CMD</label>
           <Input
             id="command-palette-query"
             name="command-palette-query"
@@ -197,9 +197,9 @@ function CommandPaletteContent({ onOpenChange }: { onOpenChange: (open: boolean)
             placeholder="Type a ticker or command"
             autoComplete="off"
             spellCheck={false}
-            className="border-0 bg-transparent p-0 font-mono text-[14px] uppercase tracking-[1.4px] text-white placeholder:text-white/20 focus-visible:ring-0"
+            className="border-0 bg-transparent p-0 font-mono text-[14px] uppercase tracking-[1.4px] text-foreground placeholder:text-muted-foreground/55 focus-visible:ring-0"
           />
-          <span className="cursor-block font-mono text-white/40">█</span>
+          <span className="cursor-block font-mono text-muted-foreground">█</span>
         </div>
       </div>
 
@@ -213,12 +213,12 @@ function CommandPaletteContent({ onOpenChange }: { onOpenChange: (open: boolean)
 
             return (
               <div key={action.id} className="space-y-1">
-                {showGroup ? <p className="px-2 pt-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">{action.group}</p> : null}
+                {showGroup ? <p className="px-2 pt-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{action.group}</p> : null}
                 <button
                   type="button"
                   className={cn(
-                    "flex w-full items-center gap-3 px-2 py-3 text-left transition-colors",
-                    isActive ? "bg-white/5 text-white" : "text-white/70 hover:bg-white/5 hover:text-white"
+                    "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors",
+                    isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
                   )}
                   onMouseEnter={() => setActiveIndex(index)}
                   onMouseDown={(event) => {
@@ -230,18 +230,18 @@ function CommandPaletteContent({ onOpenChange }: { onOpenChange: (open: boolean)
                   <Icon className="size-4 shrink-0" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-sans text-[14px] leading-[1.4]">{action.label}</p>
-                    <p className="truncate font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">{action.description}</p>
+                    <p className="truncate font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{action.description}</p>
                   </div>
                 </button>
               </div>
             );
           })
         ) : (
-          <div className="px-2 py-8 font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">NO MATCHES</div>
+          <div className="px-2 py-8 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">NO MATCHES</div>
         )}
       </div>
 
-      <div className="flex items-center justify-between border-t border-white/10 px-4 py-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">
+      <div className="flex items-center justify-between border-t border-border px-4 py-3 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
         <span className="flex items-center gap-2">
           <Kbd>Enter</Kbd>
           <span>to run</span>

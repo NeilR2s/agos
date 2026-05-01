@@ -36,11 +36,11 @@ export function AgentWorkingTrace({ events, isStreaming, selectedAgentId, onSele
   const title = isStreaming ? "Running" : errorCount ? "Completed With Errors" : "Completed";
 
   return (
-    <div className="overflow-hidden border border-white/10 bg-[#14181e]">
+    <div className="overflow-hidden rounded-2xl border border-border bg-card/90">
       <button
         type="button"
         onClick={() => setExpanded((current) => !current)}
-        className="w-full px-5 py-4 text-left transition-colors hover:bg-white/[0.03]"
+        className="w-full px-5 py-4 text-left transition-colors hover:bg-accent/70"
       >
         <div className="flex items-center justify-between gap-4">
           <div className="space-y-1.5">
@@ -48,16 +48,16 @@ export function AgentWorkingTrace({ events, isStreaming, selectedAgentId, onSele
               <span
                 className={cn(
                   "size-2.5 rounded-full",
-                  isStreaming ? "bg-[#6d9ac0]" : errorCount ? "bg-[#a16f77]" : "bg-[#6e9973]"
+                  isStreaming ? "bg-chart-3" : errorCount ? "bg-destructive" : "bg-chart-2"
                 )}
               />
-              <p className="font-sans text-[15px] font-medium text-white">{title}</p>
-              <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">
+              <p className="font-sans text-[15px] font-medium text-foreground">{title}</p>
+              <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
                 <span>{countBuckets.length} total workers</span>
                 {duration ? <span>{duration}</span> : null}
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/28">
+            <div className="flex flex-wrap items-center gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/75">
               <span>{isStreaming ? `${activeCount || countBuckets.length} live` : `${completedCount} complete`}</span>
               <span>{errorCount} errors</span>
               <span>{toolTotal} tools</span>
@@ -65,35 +65,35 @@ export function AgentWorkingTrace({ events, isStreaming, selectedAgentId, onSele
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">
+            <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
               {resolvedCount}/{countBuckets.length}
             </span>
-            {expanded ? <ChevronDown className="size-4 text-white/40" /> : <ChevronRight className="size-4 text-white/40" />}
+            {expanded ? <ChevronDown className="size-4 text-muted-foreground" /> : <ChevronRight className="size-4 text-muted-foreground" />}
           </div>
         </div>
 
         <div className="mt-4 space-y-2">
-          <div className="relative h-[8px] overflow-hidden border border-white/10 bg-[#0f1318]">
+          <div className="relative h-[8px] overflow-hidden rounded-full border border-border bg-background">
             <div
               className={cn(
                 "absolute inset-y-0 left-0",
-                isStreaming ? "bg-[#486c8b]" : errorCount ? "bg-[#7a535b]" : "bg-[#5c7c61]"
+                 isStreaming ? "bg-chart-3" : errorCount ? "bg-destructive" : "bg-chart-2"
               )}
               style={{ width: `${progress}%` }}
             />
             <div
               className="absolute inset-0 opacity-30"
-              style={{ backgroundImage: "repeating-linear-gradient(90deg, transparent 0 5px, rgba(255,255,255,0.18) 5px 6px)" }}
+              style={{ backgroundImage: "repeating-linear-gradient(90deg, transparent 0 5px, color-mix(in oklch, var(--foreground) 18%, transparent) 5px 6px)" }}
             />
           </div>
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
+          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/75">
             {isStreaming ? "Live trace" : "Completed trace"} / click a worker for its breakdown
           </p>
         </div>
       </button>
 
       {expanded ? (
-        <div className="grid gap-3 border-t border-white/10 p-4 md:grid-cols-2 2xl:grid-cols-3">
+        <div className="grid gap-3 border-t border-border p-4 md:grid-cols-2 2xl:grid-cols-3">
           {buckets.map((bucket) => {
             const latest = bucket.events[bucket.events.length - 1];
             const isSelected = bucket.agentId === selectedAgentId;
@@ -108,39 +108,39 @@ export function AgentWorkingTrace({ events, isStreaming, selectedAgentId, onSele
                 type="button"
                 onClick={() => onSelectAgent(bucket.agentId)}
                 className={cn(
-                  "space-y-3 border px-4 py-4 text-left transition-colors",
+                  "space-y-3 rounded-2xl border px-4 py-4 text-left transition-colors",
                   getBucketTone(bucket.status, isSelected)
                 )}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-white">{bucket.label}</p>
-                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">{bucket.role.replace(/-/g, " ")}</p>
+                    <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-foreground">{bucket.label}</p>
+                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{bucket.role.replace(/-/g, " ")}</p>
                   </div>
                   <span
                     className={cn(
                       "font-mono text-[10px] uppercase tracking-[1.4px]",
-                      bucket.status === "error" && "text-[#d7a5ad]",
-                      bucket.status === "completed" && "text-white/50",
-                      bucket.status === "running" && "text-[#a9c4df]"
+                      bucket.status === "error" && "text-destructive",
+                      bucket.status === "completed" && "text-chart-2",
+                      bucket.status === "running" && "text-chart-3"
                     )}
                   >
                     {bucket.status}
                   </span>
                 </div>
-                <p className="line-clamp-3 font-sans text-[14px] leading-[1.6] text-white/80">
+                <p className="line-clamp-3 font-sans text-[14px] leading-[1.6] text-foreground/80">
                   {bucket.summary ?? (latest ? describeEvent(latest) : "Awaiting trace output.")}
                 </p>
                 {highlights.length ? (
                   <div className="space-y-1.5">
                     {highlights.map((highlight, index) => (
-                      <p key={`${bucket.agentId}-${index}`} className="line-clamp-1 font-sans text-[12px] leading-[1.5] text-white/45">
+                      <p key={`${bucket.agentId}-${index}`} className="line-clamp-1 font-sans text-[12px] leading-[1.5] text-muted-foreground">
                         {highlight}
                       </p>
                     ))}
                   </div>
                 ) : null}
-                <div className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">
+                <div className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
                   <span>{bucket.toolCount} tools</span>
                   <span>{bucket.citationCount} sources</span>
                   <span>{bucket.events.length} events</span>
@@ -157,19 +157,19 @@ export function AgentWorkingTrace({ events, isStreaming, selectedAgentId, onSele
 function getBucketTone(status: "idle" | "running" | "completed" | "error", isSelected: boolean) {
   if (status === "error") {
     return isSelected
-      ? "border-[#8b5862] bg-[#322229]"
-      : "border-[#5f3941] bg-[#281c21] hover:bg-[#2d1f25]";
+      ? "border-destructive/60 bg-destructive/15"
+      : "border-destructive/40 bg-destructive/10 hover:bg-destructive/15";
   }
 
   if (status === "running") {
     return isSelected
-      ? "border-[#5a7f9f] bg-[#24313d]"
-      : "border-[#36536c] bg-[#1d2630] hover:bg-[#212c37]";
+      ? "border-chart-3/60 bg-chart-3/15"
+      : "border-chart-3/40 bg-chart-3/10 hover:bg-chart-3/15";
   }
 
   return isSelected
-    ? "border-white/20 bg-white/[0.06]"
-    : "border-white/10 bg-[#171b21] hover:bg-white/[0.03]";
+    ? "border-ring/60 bg-accent"
+    : "border-border bg-secondary/20 hover:bg-accent/70";
 }
 
 function formatTraceDuration(events: AgentSSEEvent[], isStreaming: boolean) {

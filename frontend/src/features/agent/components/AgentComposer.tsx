@@ -48,9 +48,9 @@ export function AgentComposer({
   }, [value]);
 
   return (
-    <div className="border-t border-white/10 bg-[#1b1f25] px-4 py-3 backdrop-blur-sm md:px-5">
-      <div className="mb-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">
+    <div className="mx-auto w-full max-w-[900px] rounded-[28px] border border-input bg-secondary/70 p-3 shadow-none backdrop-blur-xl">
+      <div className="mb-2 flex flex-col gap-2 px-2 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
           <span>{selectedModel?.label ?? "AGOS"}</span>
           <span>/</span>
           <span>{config.maxAgents} concurrent workers</span>
@@ -69,7 +69,7 @@ export function AgentComposer({
             size="sm"
             onClick={onToggleRunPanel}
             aria-expanded={activePanel === "run"}
-            className="border-white/15 text-white/75 hover:bg-white/[0.05]"
+            className="border-border text-muted-foreground hover:text-foreground"
           >
             <Bars3BottomLeftIcon className="size-4" /> Trace Details
           </Button>
@@ -79,14 +79,14 @@ export function AgentComposer({
             size="sm"
             onClick={onToggleControlsPanel}
             aria-expanded={activePanel === "controls"}
-            className="border-white/15 text-white/75 hover:bg-white/[0.05]"
+            className="border-border text-muted-foreground hover:text-foreground"
           >
             <AdjustmentsHorizontalIcon className="size-4" /> Controls
           </Button>
         </div>
       </div>
 
-      <div className="border border-white/10 bg-[#20242b]">
+      <div className="overflow-hidden rounded-[22px] border border-border/70 bg-background/45">
         <textarea
           ref={textareaRef}
           id="agent-composer"
@@ -101,22 +101,22 @@ export function AgentComposer({
             }
           }}
           placeholder="Direct AGOS across research, portfolio context, execution risk, and grounded web retrieval."
-          className="max-h-[180px] min-h-[72px] w-full resize-none border-0 bg-transparent px-4 py-4 font-sans text-[15px] leading-[1.6] text-white outline-none placeholder:text-white/40 md:px-5"
+          className="max-h-[180px] min-h-[72px] w-full resize-none border-0 bg-transparent px-4 py-4 font-sans text-[15px] leading-[1.6] text-foreground outline-none placeholder:text-muted-foreground md:px-5"
         />
-        <div className="flex flex-col gap-3 border-t border-white/10 px-4 py-3 md:flex-row md:items-center md:justify-between md:px-5">
+        <div className="flex flex-col gap-3 border-t border-border/70 px-4 py-3 md:flex-row md:items-center md:justify-between md:px-5">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Ctrl + Enter to send</p>
+            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/75">Ctrl + Enter to send</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {isStreaming ? (
-              <Button type="button" variant="outline" size="sm" onClick={onCancel} className="border-white/20 bg-transparent hover:bg-white/[0.06]">
+              <Button type="button" variant="outline" size="sm" onClick={onCancel}>
                 Cancel Run
               </Button>
             ) : null}
             <Button
               onClick={onSubmit}
               disabled={isBusy || !value.trim()}
-              className="min-w-[176px] border border-white bg-white text-[#1f2228] hover:bg-white/90 disabled:border-white/10 disabled:bg-white/[0.14] disabled:text-white/35"
+              className="min-w-[176px]"
             >
               {actionLabel}
             </Button>

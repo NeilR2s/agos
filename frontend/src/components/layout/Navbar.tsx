@@ -39,19 +39,19 @@ export function Navbar() {
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="w-full border-b border-white/10 p-[24px] flex justify-between items-center bg-[#1f2228] sticky top-0 z-50"
+            className="sticky top-0 z-50 flex w-full items-center justify-between border-b border-border bg-background/80 p-[24px] backdrop-blur-md"
         >
             <div className="font-mono text-xl tracking-[1.4px]">AGOS</div>
 
             <div className="flex gap-[24px] items-center">
-                <Link to="/research" className="font-sans text-[14px] text-white/70 hover:text-white/50 transition-colors">RESEARCH</Link>
-                <Link to="/trading" className="font-sans text-[14px] text-white/70 hover:text-white/50 transition-colors">TRADING</Link>
-                <Link to="/dashboard" className="font-sans text-[14px] text-white/70 hover:text-white/50 transition-colors">PORTFOLIO</Link>
+                <Link to="/research" className="font-sans text-[14px] text-muted-foreground transition-colors hover:text-foreground">RESEARCH</Link>
+                <Link to="/trading" className="font-sans text-[14px] text-muted-foreground transition-colors hover:text-foreground">TRADING</Link>
+                <Link to="/portfolio" className="font-sans text-[14px] text-muted-foreground transition-colors hover:text-foreground">PORTFOLIO</Link>
             </div>
 
-            <div className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">
+            <div className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
                 <span>ENGINE:</span>
-                <span className="text-white/70">{status}</span>
+                <span className="text-foreground/70">{status}</span>
                 <span>v{version}</span>
             </div>
         </motion.nav>

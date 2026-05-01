@@ -36,17 +36,17 @@ const evaluationStages = [
 ];
 
 const actionTone = (action: string | null | undefined) => {
-  if (action === "BUY") return "text-[#7f9d83]";
-  if (action === "SELL") return "text-[#a67b7b]";
-  if (action === "HOLD") return "text-[#d1b970]";
-  return "text-white";
+  if (action === "BUY") return "text-chart-2";
+  if (action === "SELL") return "text-destructive";
+  if (action === "HOLD") return "text-chart-1";
+  return "text-foreground";
 };
 
 const traceTone = (status: string | null | undefined) => {
-  if (status === "done") return "text-[#7f9d83]";
-  if (status === "warn") return "text-[#d1b970]";
-  if (status === "blocked") return "text-[#a67b7b]";
-  return "text-white/70";
+  if (status === "done") return "text-chart-2";
+  if (status === "warn") return "text-chart-1";
+  if (status === "blocked") return "text-destructive";
+  return "text-muted-foreground";
 };
 
 const formatTraceMetricLabel = (label: string) => label.replace(/_/g, " ");
@@ -223,9 +223,9 @@ export function TradeWorkbench({
     if (!text) return text;
     
     const keywords = [
-      { regex: /(bullish)/gi, className: "text-[#7f9d83] font-bold" },
-      { regex: /(bearish)/gi, className: "text-[#a67b7b] font-bold" },
-      { regex: /(volatility|momentum|oversold|overbought)/gi, className: "text-[#d1b970] font-bold" },
+      { regex: /(bullish)/gi, className: "text-chart-2 font-bold" },
+      { regex: /(bearish)/gi, className: "text-destructive font-bold" },
+      { regex: /(volatility|momentum|oversold|overbought)/gi, className: "text-chart-1 font-bold" },
     ];
 
     let segments: (string | React.ReactNode)[] = [text];
@@ -274,23 +274,23 @@ export function TradeWorkbench({
       {showHeader ? (
         <header className="flex flex-col gap-4 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
-            <Badge variant="outline" className="border-border text-white/70">
-              Trading Terminal
+            <Badge variant="outline" className="border-border text-muted-foreground">
+              [ Trading Terminal ]
             </Badge>
             <h1 className="font-sans text-[30px] leading-[1.2]">Decision Engine</h1>
-            <p className="max-w-[760px] font-sans text-[16px] leading-[1.5] text-white/70">
+            <p className="max-w-[760px] font-sans text-[16px] leading-[1.5] text-muted-foreground">
               Evaluate a ticker, inspect the rule gate, and submit manual overrides when required.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">
-            <Badge variant="outline" className="border-border text-white/70">
+          <div className="flex flex-wrap items-center gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
+            <Badge variant="outline" className="border-border text-muted-foreground">
               {engineStatus.status}
             </Badge>
             <span>v{engineStatus.version}</span>
             <span>{engineStatus.model}</span>
             {decision?.latency_ms ? (
-              <span className="text-[#7f9d83]">{decision.latency_ms.toFixed(0)}ms</span>
+              <span className="text-chart-2">{decision.latency_ms.toFixed(0)}ms</span>
             ) : null}
             <Link to={`/agent?ticker=${ticker}&mode=trading`} className={buttonVariants({ variant: "outline", size: "sm" })}>
               Open in Copilot
@@ -466,7 +466,7 @@ export function TradeWorkbench({
                   <PipelineArrow />
                   <PipelineStep label="AI Signal" active={true} />
                   <PipelineArrow />
-                  <PipelineStep label="Rule Gate" active={decision.is_approved} color={decision.is_approved ? "text-[#7f9d83]" : "text-[#a67b7b]"} />
+                  <PipelineStep label="Rule Gate" active={decision.is_approved} color={decision.is_approved ? "text-chart-2" : "text-destructive"} />
                   <PipelineArrow />
                   <PipelineStep label="Portfolio" active={true} />
                   <PipelineArrow />

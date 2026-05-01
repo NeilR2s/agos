@@ -18,9 +18,9 @@ type MapDetailRailProps = {
 };
 
 const statusTone = {
-  nominal: "text-white/60",
-  watch: "text-white/80",
-  critical: "text-white",
+  nominal: "text-muted-foreground",
+  watch: "text-chart-1",
+  critical: "text-destructive",
 } as const;
 
 const formatTimestamp = (timestamp: string) =>
@@ -89,21 +89,21 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
   ];
 
   const overviewContent = isLoading ? (
-    <p className="font-sans text-[14px] leading-[1.6] text-white/60">Loading object history...</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Loading object history...</p>
   ) : error ? (
-    <p className="font-sans text-[14px] leading-[1.6] text-[#d7a5ad]">{error}</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-destructive">{error}</p>
   ) : !selection ? (
-    <p className="font-sans text-[14px] leading-[1.6] text-white/60">Select an asset, zone, connection, event, or track on the map to inspect its operational context.</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Select an asset, zone, connection, event, or track on the map to inspect its operational context.</p>
   ) : !detail || !primary ? (
-    <p className="font-sans text-[14px] leading-[1.6] text-white/60">This object is no longer available in the current map dataset.</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">This object is no longer available in the current map dataset.</p>
   ) : (
     <div className="space-y-4">
       {detail.asset ? (
         <div className="space-y-3">
-          <h2 className="font-sans text-[22px] text-white">{detail.asset.name}</h2>
+          <h2 className="font-sans text-[22px] text-foreground">{detail.asset.name}</h2>
           <p className={cn("font-mono text-[10px] uppercase tracking-[1.2px]", statusTone[detail.asset.status])}>{detail.asset.status}</p>
-          <p className="font-sans text-[14px] leading-[1.6] text-white/70">{detail.asset.description}</p>
-          <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/40">
+          <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">{detail.asset.description}</p>
+          <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
             {detail.asset.location[1].toFixed(4)} / {detail.asset.location[0].toFixed(4)}
           </p>
         </div>
@@ -111,33 +111,33 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
 
       {detail.zone ? (
         <div className="space-y-3">
-          <h2 className="font-sans text-[22px] text-white">{detail.zone.name}</h2>
+          <h2 className="font-sans text-[22px] text-foreground">{detail.zone.name}</h2>
           <p className={cn("font-mono text-[10px] uppercase tracking-[1.2px]", statusTone[detail.zone.status])}>{detail.zone.kind}</p>
-          <p className="font-sans text-[14px] leading-[1.6] text-white/70">{detail.zone.description}</p>
+          <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">{detail.zone.description}</p>
         </div>
       ) : null}
 
       {detail.connection ? (
         <div className="space-y-3">
-          <h2 className="font-sans text-[22px] text-white">{detail.connection.kind.toUpperCase()} LINK</h2>
+          <h2 className="font-sans text-[22px] text-foreground">{detail.connection.kind.toUpperCase()} LINK</h2>
           <p className={cn("font-mono text-[10px] uppercase tracking-[1.2px]", statusTone[detail.connection.status])}>{detail.connection.status}</p>
-          <p className="font-sans text-[14px] leading-[1.6] text-white/70">{detail.connection.description}</p>
+          <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">{detail.connection.description}</p>
         </div>
       ) : null}
 
       {detail.event ? (
         <div className="space-y-3">
-          <h2 className="font-sans text-[22px] text-white">{detail.event.title}</h2>
-          <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/60">{detail.event.kind}</p>
-          <p className="font-sans text-[14px] leading-[1.6] text-white/70">{detail.event.detail}</p>
-          <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/40">{formatTimestamp(detail.event.timestamp)}</p>
+          <h2 className="font-sans text-[22px] text-foreground">{detail.event.title}</h2>
+          <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{detail.event.kind}</p>
+          <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">{detail.event.detail}</p>
+          <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{formatTimestamp(detail.event.timestamp)}</p>
         </div>
       ) : null}
 
       {detail.track ? (
         <div className="space-y-3">
-          <h2 className="font-sans text-[22px] text-white">{detail.track.label}</h2>
-          <p className="font-sans text-[14px] leading-[1.6] text-white/70">Movement path with {detail.track.points.length} checkpoints across the full track history.</p>
+          <h2 className="font-sans text-[22px] text-foreground">{detail.track.label}</h2>
+          <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Movement path with {detail.track.points.length} checkpoints across the full track history.</p>
         </div>
       ) : null}
 
@@ -149,7 +149,7 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
   const historyContent = isLoading ? (
     <p className="font-sans text-[14px] leading-[1.6] text-white/60">Loading event history...</p>
   ) : error ? (
-    <p className="font-sans text-[14px] leading-[1.6] text-[#d7a5ad]">{error}</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-destructive">{error}</p>
   ) : detail?.relatedEvents.length ? (
     <div className="space-y-3">
       {detail.relatedEvents.map((event) => (
@@ -170,7 +170,7 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
   const connectionsContent = isLoading ? (
     <p className="font-sans text-[14px] leading-[1.6] text-white/60">Loading related network context...</p>
   ) : error ? (
-    <p className="font-sans text-[14px] leading-[1.6] text-[#d7a5ad]">{error}</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-destructive">{error}</p>
   ) : detail ? (
     <div className="space-y-4">
       {detail.relatedConnections.length ? (
@@ -199,7 +199,7 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
   const trackContent = isLoading ? (
     <p className="font-sans text-[14px] leading-[1.6] text-white/60">Loading track history...</p>
   ) : error ? (
-    <p className="font-sans text-[14px] leading-[1.6] text-[#d7a5ad]">{error}</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-destructive">{error}</p>
   ) : detail?.relatedTracks.length ? (
     <div className="space-y-3">
       {detail.relatedTracks.map((track) => (
@@ -241,10 +241,10 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
         className
       )}
     >
-      <div className="flex h-full min-h-0 flex-col gap-3 bg-background/96 p-3 backdrop-blur-sm xl:border-white/10">
-        <section className="border border-white/10 bg-white/[0.03] p-3.5">
+      <div className="flex h-full min-h-0 flex-col gap-3 bg-background/90 p-3 backdrop-blur-xl xl:border-border">
+        <section className="rounded-2xl border border-border bg-card/80 p-3.5">
           <div className="flex items-center justify-between gap-3">
-            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">Selected Object</p>
+            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Selected Object</p>
             <div className="flex items-center gap-2">
               {selection ? <Button type="button" size="sm" variant="outline" onClick={onFitSelection}>Fit</Button> : null}
               <Button type="button" size="icon-sm" variant="outline" onClick={onClose} aria-label="Close inspector">
@@ -252,14 +252,14 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
               </Button>
             </div>
           </div>
-          {selectionTitle ? <p className="mt-3 truncate font-sans text-[16px] text-white" title={selectionTitle}>{selectionTitle}</p> : null}
-          <p className="mt-1 truncate font-sans text-[12px] leading-[1.5] text-white/50" title={selection ? selection.id : undefined}>
+          {selectionTitle ? <p className="mt-3 truncate font-sans text-[16px] text-foreground" title={selectionTitle}>{selectionTitle}</p> : null}
+          <p className="mt-1 truncate font-sans text-[12px] leading-[1.5] text-muted-foreground" title={selection ? selection.id : undefined}>
             {selectionMeta}
           </p>
         </section>
 
-        <section className="flex min-h-0 flex-1 flex-col border border-white/10 bg-white/[0.03]">
-          <div className="grid grid-cols-4 border-b border-white/10">
+        <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card/80">
+          <div className="grid grid-cols-4 border-b border-border">
             {tabLabels.map((tab) => (
               <button
                 key={tab.key}
@@ -267,9 +267,9 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
                 onClick={() => setActiveTab(tab.key)}
                 disabled={tab.disabled}
                 className={cn(
-                  "border-r border-white/10 px-2 py-2.5 font-mono text-[10px] uppercase tracking-[1.1px] transition-colors last:border-r-0",
-                  activeTab === tab.key ? "bg-white/[0.06] text-white" : "text-white/45 hover:bg-white/[0.03] hover:text-white",
-                  tab.disabled && "cursor-not-allowed text-white/20 hover:bg-transparent hover:text-white/20"
+                  "border-r border-border px-2 py-2.5 font-mono text-[10px] uppercase tracking-[1.1px] transition-colors last:border-r-0",
+                  activeTab === tab.key ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
+                  tab.disabled && "cursor-not-allowed text-muted-foreground/40 hover:bg-transparent hover:text-muted-foreground/40"
                 )}
               >
                 {tab.label}
@@ -288,10 +288,10 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
 function NamedCollection({ label, items }: { label: string; items: string[] }) {
   return (
     <div className="space-y-3">
-      <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/35">{label}</p>
+      <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{label}</p>
       <div className="flex flex-wrap gap-2">
         {items.map((item) => (
-          <span key={item} className="border border-white/10 px-3 py-2 font-mono text-[10px] uppercase tracking-[1.2px] text-white/45">
+          <span key={item} className="rounded-full border border-border px-3 py-2 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
             {item}
           </span>
         ))}

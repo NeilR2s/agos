@@ -33,11 +33,11 @@ export function MapTimeline({ timestamps, activeIndex, playing, windowSize, onIn
   ])).sort((left, right) => left - right);
 
   return (
-    <section className="border-t border-white/10 bg-white/[0.03]">
+    <section className="border-t border-border bg-card/70">
       <div className="flex flex-col gap-3 px-4 py-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="min-w-0">
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">Temporal Playback</p>
-          <p className="mt-2 truncate font-sans text-[17px] text-white">{formatTimestampLabel(activeTimestamp)} UTC</p>
+          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Temporal Playback</p>
+          <p className="mt-2 truncate font-sans text-[17px] text-foreground">{formatTimestampLabel(activeTimestamp)} UTC</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 xl:justify-end">
@@ -45,11 +45,11 @@ export function MapTimeline({ timestamps, activeIndex, playing, windowSize, onIn
             {playing ? <PauseIcon className="size-4" /> : <PlayIcon className="size-4" />}
             {playing ? "Pause" : "Play"}
           </Button>
-          <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">
+          <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
             T+{activeIndex.toString().padStart(2, "0")}
           </span>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Window</span>
+            <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Window</span>
             {windowOptions.map((size) => (
               <Button key={size} type="button" variant={windowSize === size ? "default" : "outline"} size="sm" onClick={() => onWindowSizeChange(size)}>
                 {size === timestamps.length ? "All" : `${size}x`}
@@ -59,7 +59,7 @@ export function MapTimeline({ timestamps, activeIndex, playing, windowSize, onIn
         </div>
       </div>
 
-      <div className="border-t border-white/10 px-4 py-3">
+      <div className="border-t border-border px-4 py-3">
         <input
           id="map-timeline-index"
           name="map-timeline-index"
@@ -69,7 +69,7 @@ export function MapTimeline({ timestamps, activeIndex, playing, windowSize, onIn
           max={Math.max(timestamps.length - 1, 0)}
           value={activeIndex}
           onChange={(event) => onIndexChange(Number(event.target.value))}
-          className="h-2 w-full cursor-pointer appearance-none bg-white/10 accent-white"
+          className="h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary [accent-color:var(--primary)]"
         />
         <div className="mt-3 flex flex-wrap gap-2">
           {visibleTimestampIndices.map((index) => (
@@ -78,8 +78,8 @@ export function MapTimeline({ timestamps, activeIndex, playing, windowSize, onIn
               type="button"
               onClick={() => onIndexChange(index)}
               className={[
-                "min-w-[96px] border px-2 py-2 text-left transition-colors",
-                index === activeIndex ? "border-white/20 bg-white/[0.06] text-white" : "border-white/10 text-white/50 hover:text-white",
+                "min-w-[96px] rounded-xl border px-2 py-2 text-left transition-colors",
+                index === activeIndex ? "border-ring/60 bg-accent text-foreground" : "border-border text-muted-foreground hover:text-foreground",
               ].join(" ")}
             >
               <span className="block font-mono text-[10px] uppercase tracking-[1.2px]">T+{index.toString().padStart(2, "0")}</span>
@@ -87,7 +87,7 @@ export function MapTimeline({ timestamps, activeIndex, playing, windowSize, onIn
             </button>
           ))}
           {timestamps.length > visibleTimestampIndices.length ? (
-            <div className="flex items-center border border-dashed border-white/10 px-3 py-2 font-mono text-[10px] uppercase tracking-[1.2px] text-white/35">
+            <div className="flex items-center rounded-xl border border-dashed border-border px-3 py-2 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
               {timestamps.length - visibleTimestampIndices.length} steps
             </div>
           ) : null}

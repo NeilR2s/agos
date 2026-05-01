@@ -108,8 +108,8 @@ export function AgentOutputTabs({ output, markdown, traceNode }: AgentOutputTabs
   const panelId = `${tabBaseId}-${activeTab}-panel`;
 
   return (
-    <div className="max-w-[1120px] overflow-hidden border border-border bg-card">
-      <div className="flex flex-col gap-3 border-b border-rounded-full border px-4 py-4 xl:flex-row xl:items-center xl:justify-between">
+    <div className="max-w-[1120px] overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="flex flex-col gap-3 border-b border-border px-4 py-4 xl:flex-row xl:items-center xl:justify-between">
         <div role="tablist" aria-label="Agent output sections" className="flex flex-wrap gap-1.5">
           {tabItems.map((tab) => {
             return (
@@ -314,7 +314,7 @@ function EvidenceTab({
                     <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Contributing Agents</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {(activeEvidence.agentIds ?? []).map((agentId) => (
-                        <span key={agentId} className="border border-rounded-full border px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
+                        <span key={agentId} className="rounded-full border border-border px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
                           {agentId.replace(/-/g, " ")}
                         </span>
                       ))}
@@ -393,7 +393,7 @@ function DecisionTable({
 }) {
   return (
     <section className="overflow-hidden border border-border bg-secondary/30">
-      <div className="border-b border-rounded-full border px-4 py-3">
+      <div className="border-b border-border px-4 py-3">
         <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Decision Table</p>
       </div>
       <div className="overflow-x-auto">
@@ -401,7 +401,7 @@ function DecisionTable({
           <thead className="bg-white/[0.04]">
             <tr>
               {["Holding", "Status", "Finding", "Suggested Action", "Confidence", "Sources"].map((header) => (
-                <th key={header} className="border-b border-rounded-full border px-4 py-3 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
+                <th key={header} className="border-b border-border px-4 py-3 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
                   {header}
                 </th>
               ))}
@@ -410,12 +410,12 @@ function DecisionTable({
           <tbody>
             {rows.map((row, index) => (
               <tr key={`${row.holding}-${index}`}>
-                <td className="border-b border-rounded-full border px-4 py-3 font-sans text-[13px] text-foreground">{plainText(row.holding)}</td>
-                <td className="border-b border-rounded-full border px-4 py-3 font-sans text-[13px] text-foreground/70">{plainText(row.status)}</td>
-                <td className="border-b border-rounded-full border px-4 py-3 font-sans text-[13px] text-foreground/70">{plainText(row.finding)}</td>
-                <td className="border-b border-rounded-full border px-4 py-3 font-sans text-[13px] text-foreground/70">{plainText(row.suggestedAction)}</td>
-                <td className="border-b border-rounded-full border px-4 py-3"><ConfidenceBadge value={row.confidence} /></td>
-                <td className="border-b border-rounded-full border px-4 py-3">
+                <td className="border-b border-border px-4 py-3 font-sans text-[13px] text-foreground">{plainText(row.holding)}</td>
+                <td className="border-b border-border px-4 py-3 font-sans text-[13px] text-foreground/70">{plainText(row.status)}</td>
+                <td className="border-b border-border px-4 py-3 font-sans text-[13px] text-foreground/70">{plainText(row.finding)}</td>
+                <td className="border-b border-border px-4 py-3 font-sans text-[13px] text-foreground/70">{plainText(row.suggestedAction)}</td>
+                <td className="border-b border-border px-4 py-3"><ConfidenceBadge value={row.confidence} /></td>
+                <td className="border-b border-border px-4 py-3">
                   <SourceChipList sourceIds={row.sourceIds} sourceById={sourceById} onSourceClick={onSourceClick} compact />
                 </td>
               </tr>

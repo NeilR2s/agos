@@ -63,8 +63,8 @@ export function MapControlRail({
 
   return (
     <aside className="flex min-h-0 flex-col gap-2 xl:h-full xl:overflow-y-auto">
-      <section className="border border-white/10 bg-white/[0.03] p-3">
-        <label htmlFor="map-object-filter" className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/60">
+      <section className="rounded-2xl border border-border bg-card/70 p-3">
+        <label htmlFor="map-object-filter" className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
           Object Filter
         </label>
         <Input
@@ -75,11 +75,11 @@ export function MapControlRail({
           placeholder="FILTER ASSETS / ZONES / EVENTS"
           className="mt-2 h-9 font-mono text-[11px] uppercase tracking-[1.1px]"
         />
-        <p className="mt-2 font-sans text-[12px] leading-[1.5] text-white/50">Filters the queried dataset without changing the current map focus.</p>
+        <p className="mt-2 font-sans text-[12px] leading-[1.5] text-muted-foreground">Filters the queried dataset without changing the current map focus.</p>
       </section>
 
-      <section className="border border-white/10 bg-white/[0.03] p-3">
-        <label htmlFor="map-place-search" className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/60">
+      <section className="rounded-2xl border border-border bg-card/70 p-3">
+        <label htmlFor="map-place-search" className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
           Place Search
         </label>
         <Input
@@ -91,14 +91,14 @@ export function MapControlRail({
           className="mt-2 h-9 font-mono text-[11px] uppercase tracking-[1.1px]"
         />
         {focusedPlaceLabel ? (
-          <p className="mt-2 font-mono text-[10px] uppercase tracking-[1.2px] text-white/35">Focused place: {focusedPlaceLabel}</p>
+          <p className="mt-2 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">Focused place: {focusedPlaceLabel}</p>
         ) : null}
-        <div className="mt-2 space-y-2 border-t border-white/10 pt-2">
+        <div className="mt-2 space-y-2 border-t border-border pt-2">
           <div className="flex items-center justify-between gap-3">
-            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Place Matches</p>
-            {searchResultsLoading ? <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/30">Resolving</span> : null}
+            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Place Matches</p>
+            {searchResultsLoading ? <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">Resolving</span> : null}
           </div>
-          {searchResultsError ? <p className="font-sans text-[13px] leading-[1.5] text-white/50">{searchResultsError}</p> : null}
+          {searchResultsError ? <p className="font-sans text-[13px] leading-[1.5] text-muted-foreground">{searchResultsError}</p> : null}
           <div className="max-h-[140px] space-y-2 overflow-y-auto xl:max-h-[180px]">
             {searchResults.length ? (
               searchResults.map((result) => (
@@ -106,24 +106,24 @@ export function MapControlRail({
                   key={result.id}
                   type="button"
                   onClick={() => onSelectSearchResult(result)}
-                  className="w-full border border-white/10 px-3 py-3 text-left transition-colors hover:border-white/20 hover:bg-white/[0.05]"
+                  className="w-full rounded-2xl border border-border px-3 py-3 text-left transition-colors hover:border-ring/60 hover:bg-accent/70"
                 >
-                  <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/40">{result.region ?? result.country ?? "PH"}</p>
-                  <p className="mt-1 font-sans text-[13px] text-white">{result.label}</p>
+                  <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{result.region ?? result.country ?? "PH"}</p>
+                  <p className="mt-1 font-sans text-[13px] text-foreground">{result.label}</p>
                 </button>
               ))
             ) : placeSearchQuery.trim().length >= 2 && !searchResultsLoading && !searchResultsError ? (
-              <p className="font-sans text-[13px] leading-[1.5] text-white/50">No place matches returned by the live Geoapify search.</p>
+              <p className="font-sans text-[13px] leading-[1.5] text-muted-foreground">No place matches returned by the live Geoapify search.</p>
             ) : (
-              <p className="font-sans text-[12px] leading-[1.5] text-white/50">Type two characters to resolve places without mutating the active query geometry.</p>
+              <p className="font-sans text-[12px] leading-[1.5] text-muted-foreground">Type two characters to resolve places without mutating the active query geometry.</p>
             )}
           </div>
         </div>
       </section>
 
-      <section className="border border-white/10 bg-white/[0.03] p-3">
+      <section className="rounded-2xl border border-border bg-card/70 p-3">
         <div className="flex items-center justify-between gap-3">
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">Layers</p>
+          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Layers</p>
           <Button type="button" variant="outline" size="xs" onClick={onResetView}>
             Home
           </Button>
@@ -135,8 +135,8 @@ export function MapControlRail({
               type="button"
               onClick={() => onLayerToggle(layer.key)}
               className={[
-                "flex items-center justify-between border px-3 py-2.5 text-left transition-colors",
-                layerState[layer.key] ? "border-white/20 bg-white/[0.05] text-white" : "border-white/10 text-white/50 hover:text-white",
+                "flex items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-colors",
+                layerState[layer.key] ? "border-ring/60 bg-accent text-foreground" : "border-border text-muted-foreground hover:text-foreground",
               ].join(" ")}
             >
               <span className="font-mono text-[11px] uppercase tracking-[1.2px]">{layer.label}</span>
@@ -146,10 +146,10 @@ export function MapControlRail({
         </div>
       </section>
 
-      <section className="border border-white/10 bg-white/[0.03] p-3">
+      <section className="rounded-2xl border border-border bg-card/70 p-3">
         <div className="flex items-center justify-between gap-3">
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">Query Mode</p>
-          <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">{queryLabel}</span>
+          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Query Mode</p>
+          <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/75">{queryLabel}</span>
         </div>
         <div className="mt-2 grid grid-cols-2 gap-1.5">
           {(["bbox", "polygon"] as const).map((mode) => (
@@ -165,14 +165,14 @@ export function MapControlRail({
           ))}
         </div>
 
-        <div className="mt-3 space-y-2 border-t border-white/10 pt-3 text-white/70">
+        <div className="mt-3 space-y-2 border-t border-border pt-3 text-muted-foreground">
           <p className="font-sans text-[12px] leading-[1.5]">{queryMode === "bbox" ? "Viewport drives query." : "Draft geometry on-map, then apply it to refresh results."}</p>
 
           {queryMode === "polygon" ? (
             <div className="grid gap-2 pt-2">
-              <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/30">Draft vertices: {polygonDraftCount}</span>
+              <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">Draft vertices: {polygonDraftCount}</span>
               {isPolygonCommitted ? (
-                <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/30">Committed query: {isPolygonDirty ? "Draft changed" : "In sync"}</span>
+                <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">Committed query: {isPolygonDirty ? "Draft changed" : "In sync"}</span>
               ) : null}
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={onUndoPolygonVertex} disabled={polygonDraftCount === 0}>
@@ -196,9 +196,9 @@ export function MapControlRail({
         </div>
       </section>
 
-      <section className="border border-white/10 bg-white/[0.03] p-3">
+      <section className="rounded-2xl border border-border bg-card/70 p-3">
         <div className="flex items-center justify-between gap-3">
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">Legend</p>
+          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Legend</p>
           <Button type="button" variant="outline" size="xs" onClick={() => setLegendExpanded((current) => !current)}>
             {legendExpanded ? "Hide" : "Show"}
           </Button>
@@ -213,14 +213,14 @@ export function MapControlRail({
               ["Polygon overlay", "Committed spatial query geometry"],
               ["Handle vertices", "Editable polygon draft points before apply"],
             ].map(([label, detail]) => (
-              <div key={label} className="border border-white/10 px-3 py-3">
-                <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/40">{label}</p>
-                <p className="mt-1 font-sans text-[13px] leading-[1.5] text-white/70">{detail}</p>
+            <div key={label} className="rounded-xl border border-border px-3 py-3">
+                <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{label}</p>
+                <p className="mt-1 font-sans text-[13px] leading-[1.5] text-muted-foreground">{detail}</p>
               </div>
             ))}
           </div>
         ) : (
-          <p className="mt-2 font-sans text-[12px] leading-[1.5] text-white/50">Reveal semantics on demand.</p>
+          <p className="mt-2 font-sans text-[12px] leading-[1.5] text-muted-foreground">Reveal semantics on demand.</p>
         )}
       </section>
     </aside>
