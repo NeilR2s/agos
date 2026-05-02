@@ -6,6 +6,16 @@ import { backendClient, getUserId } from "@/api/backend/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
     Dialog,
     DialogContent,
     DialogDescription,
@@ -83,6 +93,7 @@ export const Dashboard = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const [holdingDialog, setHoldingDialog] = useState<HoldingDialogState>(null);
     const [cashOpen, setCashOpen] = useState(false);
+    const [tickerToDelete, setTickerToDelete] = useState<string | null>(null);
     const addTickerParam = searchParams.get("add")?.toUpperCase() ?? null;
     const activeHoldingDialog: HoldingDialogState = holdingDialog ?? (addTickerParam ? { mode: "add", draftTicker: addTickerParam } : null);
 
@@ -474,9 +485,7 @@ export const Dashboard = () => {
                                                                 size="icon-sm"
                                                                 className="text-white/30 hover:bg-white/5 hover:text-white"
                                                                 onClick={() => {
-                                                                    if (window.confirm(`Delete ${holding.ticker} from the portfolio?`)) {
-                                                                        deleteHoldingMutation.mutate(holding.ticker);
-                                                                    }
+                                                                    setTickerToDelete(holding.ticker);
                                                                 }}
                                                                 disabled={deleteHoldingMutation.isPending}
                                                             >
@@ -540,6 +549,31 @@ export const Dashboard = () => {
                 onSubmit={(amount) => updateCashMutation.mutate(amount)}
                 pending={updateCashMutation.isPending}
             />
+
+            <AlertDialog open={Boolean(tickerToDelete)} onOpenChange={(open) => !open && setTickerToDelete(null)}>
+                <AlertDialogContent className="border-border bg-background text-foreground shadow-none sm:max-w-[420px]">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Holding</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Confirm deletion of <span className="font-mono text-white">{tickerToDelete}</span> from the active portfolio. This operation is API-bound and cannot be reversed.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-3">
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => {
+                                if (tickerToDelete) {
+                                    deleteHoldingMutation.mutate(tickerToDelete);
+                                    setTickerToDelete(null);
+                                }
+                            }}
+                            className="bg-destructive text-white hover:bg-destructive/90"
+                        >
+                            Delete Position
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };
