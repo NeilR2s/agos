@@ -339,16 +339,14 @@ export function MapPage() {
         <section className="rounded-2xl border border-border bg-card/55 px-3 py-2.5 lg:px-4">
           <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
             <div className="min-w-0 flex flex-wrap items-center gap-x-3 gap-y-2">
-              <Badge variant="outline" className="max-w-full min-w-0 shrink justify-start truncate border-border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1px] text-muted-foreground">
-                AGOS MAP / TEMPORAL GEOSPATIAL LAB
+              <Badge variant="outline" className="border-border text-muted-foreground">
+                [ Geospatial Lab ]
               </Badge>
-              <h1 className="font-sans text-[22px] font-light leading-none tracking-[-0.035em] text-foreground md:text-[28px]">
-                Network / Movement / Action
-              </h1>
+              <h1 className="font-sans text-[30px] leading-[1.2]">Infrastructure / Vector / Event</h1>
               <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
-                <span>{queryMode === "bbox" ? "Viewport" : "Polygon"}</span>
+                <span>{queryMode === "bbox" ? "Viewport Mode" : "Polygon Mode"}</span>
                 <span>/</span>
-                <span>{playing ? "Playback" : "Static"}</span>
+                <span>{playing ? "Temporal Playback" : "Static View"}</span>
                 <span>/</span>
                 <span className="max-w-[220px] truncate text-foreground/80">{selectionSummaryLabel}</span>
                 <span>/</span>
@@ -412,7 +410,7 @@ export function MapPage() {
 
             {isInitialMapLoad ? (
               <section className="rounded-2xl border border-border bg-card px-4 py-3">
-                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Loading map view...</p>
+                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Resolving map state...</p>
               </section>
             ) : null}
 

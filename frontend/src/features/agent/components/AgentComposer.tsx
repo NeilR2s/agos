@@ -38,7 +38,7 @@ export function AgentComposer({
 }: AgentComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const selectedModel = AGOS_MODEL_PRESETS.find((preset) => preset.id === config.modelPreset);
-  const actionLabel = isStreaming ? "Running..." : isBusy && streamStatus === "cancelled" ? "Cancelling..." : isBusy ? "Starting..." : "Run Agent";
+  const actionLabel = isStreaming ? "Executing..." : isBusy && streamStatus === "cancelled" ? "Terminating..." : isBusy ? "Initializing..." : "Execute";
 
   useEffect(() => {
     const node = textareaRef.current;
@@ -71,7 +71,7 @@ export function AgentComposer({
             aria-expanded={activePanel === "run"}
             className="h-7 border-border px-2.5 text-[10px] text-muted-foreground hover:text-foreground"
           >
-            <Bars3BottomLeftIcon className="size-4" /> Trace Details
+            <Bars3BottomLeftIcon className="size-4" /> Trace
           </Button>
           <Button
             type="button"
@@ -81,7 +81,7 @@ export function AgentComposer({
             aria-expanded={activePanel === "controls"}
             className="h-7 border-border px-2.5 text-[10px] text-muted-foreground hover:text-foreground"
           >
-            <AdjustmentsHorizontalIcon className="size-4" /> Controls
+            <AdjustmentsHorizontalIcon className="size-4" /> Parameters
           </Button>
         </div>
       </div>
@@ -100,17 +100,17 @@ export function AgentComposer({
               onSubmit();
             }
           }}
-          placeholder="Direct AGOS across research, portfolio context, execution risk, and grounded web retrieval."
+          placeholder="Command Agos: Research floor, portfolio memory, and signal traces."
           className="max-h-[150px] min-h-[52px] w-full resize-none border-0 bg-transparent px-4 py-3.5 font-sans text-[15px] leading-[1.55] text-foreground outline-none placeholder:text-muted-foreground md:min-h-[56px] md:px-5"
         />
         <div className="flex flex-col gap-2 border-t border-border/70 px-4 py-2.5 md:flex-row md:items-center md:justify-between md:px-5">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/75">Ctrl + Enter to send</p>
+            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/75">Ctrl + Enter to Execute</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {isStreaming ? (
               <Button type="button" variant="outline" size="sm" onClick={onCancel}>
-                Cancel Run
+                Terminate Run
               </Button>
             ) : null}
             <Button

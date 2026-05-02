@@ -27,11 +27,11 @@ import { getSignedInUserIdentity } from "@/lib/authIdentity";
 import { useAuthStore } from "@/store/authStore";
 
 const evaluationStages = [
-  "Ingesting price history",
-  "Pulling portfolio state",
-  "Running forecast model",
-  "Scoring AI signal",
-  "Applying rule gate",
+  "Ingesting price series",
+  "Resolving portfolio state",
+  "Executing forecast model",
+  "Scoring signal vectors",
+  "Validating rule gate",
   "Finalizing decision",
 ];
 
@@ -277,7 +277,7 @@ export function TradeWorkbench({
             <Badge variant="outline" className="border-border text-muted-foreground">
               [ Trading Terminal ]
             </Badge>
-            <h1 className="font-sans text-[30px] leading-[1.2]">Decision Engine</h1>
+            <h1 className="font-sans text-[30px] leading-[1.2]">Decision Matrix</h1>
             <p className="max-w-[760px] font-sans text-[16px] leading-[1.5] text-muted-foreground">
               Evaluate a ticker, inspect the rule gate, and submit manual overrides when required.
             </p>
@@ -301,8 +301,8 @@ export function TradeWorkbench({
 
       <Card className="overflow-visible">
         <CardHeader>
-          <CardTitle>Execution Controls</CardTitle>
-          <CardDescription>Choose a ticker, run the analysis, and optionally submit a manual override.</CardDescription>
+          <CardTitle>Action Controller</CardTitle>
+          <CardDescription>Select ticker, run evaluation, or submit manual override.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 overflow-visible">
           <div className="space-y-2">
@@ -433,8 +433,8 @@ export function TradeWorkbench({
       <section className={cn("grid gap-4", compact ? "xl:grid-cols-1" : "xl:grid-cols-[minmax(0,1.5fr)_minmax(0,0.9fr)]")}>
         <Card>
           <CardHeader>
-            <CardTitle>AI Signal Analysis</CardTitle>
-            <CardDescription>Streaming reasoning from the engine output.</CardDescription>
+            <CardTitle>Signal Decomposition</CardTitle>
+            <CardDescription>Streaming reasoning from engine output.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-wrap items-center gap-4 border-b border-border pb-4">
@@ -477,7 +477,7 @@ export function TradeWorkbench({
 
             <div className="min-h-[144px] border border-border bg-white/[0.02] p-6">
               {!evaluateMutation.isPending && !decision ? (
-                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Waiting for analysis...</p>
+                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Awaiting evaluation trigger.</p>
               ) : null}
 
               {evaluateMutation.isPending ? (
@@ -532,7 +532,7 @@ export function TradeWorkbench({
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Guardrail Result</CardTitle>
+              <CardTitle>Safety Gate</CardTitle>
               <CardDescription>Rule-based safety gate result and summary.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -544,14 +544,14 @@ export function TradeWorkbench({
               </div>
 
               <p className="border border-border px-4 py-3 font-sans text-[14px] leading-[1.5] text-white/70">
-                {decision?.rule_gate_reasoning ?? "Run an analysis to see the guardrail reasoning."}
+                {decision?.rule_gate_reasoning ?? "Execute evaluation to populate safety traces."}
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Decision Summary</CardTitle>
+              <CardTitle>Decision Vector</CardTitle>
               <CardDescription>Structured response from the engine.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">

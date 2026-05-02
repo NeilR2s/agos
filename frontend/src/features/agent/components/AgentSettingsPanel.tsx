@@ -43,8 +43,8 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
     <div className="space-y-4">
       <section className="space-y-4 rounded-[22px] border border-border bg-card p-5">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">AGOS Preset</p>
-          <p className="mt-1 font-sans text-[13px] leading-[1.6] text-muted-foreground">Choose the operator-facing behavior tier.</p>
+          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Behavior Tier</p>
+          <p className="mt-1 font-sans text-[13px] leading-[1.6] text-muted-foreground">Operational profile preset.</p>
         </div>
         <div className="grid gap-3 lg:grid-cols-3">
           {AGOS_MODEL_PRESETS.map((preset) => {
@@ -69,8 +69,8 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
 
       <section className="space-y-4 rounded-[22px] border border-border bg-card p-5">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Data Tools</p>
-          <p className="mt-1 font-sans text-[13px] leading-[1.6] text-muted-foreground">Toggle connections to live context.</p>
+          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Toolsets</p>
+          <p className="mt-1 font-sans text-[13px] leading-[1.6] text-muted-foreground">Toggle context access.</p>
         </div>
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
           {(
@@ -118,7 +118,7 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
         <div className="space-y-5 animate-in fade-in slide-in-from-top-2">
           <section className="space-y-4 rounded-[22px] border border-border bg-card p-5">
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Generation Parameters</p>
+              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Vector Parameters</p>
             </div>
 
             <label className="space-y-2">
@@ -240,7 +240,7 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
 
           <section className="space-y-4 rounded-[22px] border border-border bg-card p-5">
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">External Capabilities</p>
+              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Extensions</p>
             </div>
             <div className="space-y-2">
               {config.externalCapabilities.map((capability) => (

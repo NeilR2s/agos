@@ -72,7 +72,7 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
     ?? detail?.event?.title
     ?? detail?.track?.label
     ?? null;
-  const selectionMeta = selection ? `${selection.type.toUpperCase()} / ${truncateMiddle(selection.id)}` : "No object selected.";
+  const selectionMeta = selection ? `${selection.type.toUpperCase()} / ${truncateMiddle(selection.id)}` : "Awaiting selection.";
 
   const tabAvailability = {
     overview: true,
@@ -84,18 +84,18 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
   const tabLabels: Array<{ key: InspectorTab; label: string; disabled: boolean }> = [
     { key: "overview", label: "Overview", disabled: !tabAvailability.overview },
     { key: "history", label: "History", disabled: !tabAvailability.history },
-    { key: "connections", label: "Links", disabled: !tabAvailability.connections },
+    { key: "connections", label: "Topology", disabled: !tabAvailability.connections },
     { key: "track", label: "Track", disabled: !tabAvailability.track },
   ];
 
   const overviewContent = isLoading ? (
-    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Loading object history...</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Resolving object state...</p>
   ) : error ? (
     <p className="font-sans text-[14px] leading-[1.6] text-destructive">{error}</p>
   ) : !selection ? (
-    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Select an asset, zone, connection, event, or track on the map to inspect its operational context.</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Select an object to inspect its operational context.</p>
   ) : !detail || !primary ? (
-    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">This object is no longer available in the current map dataset.</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Object expired or out of bounds.</p>
   ) : (
     <div className="space-y-4">
       {detail.asset ? (
@@ -147,7 +147,7 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
   );
 
   const historyContent = isLoading ? (
-    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Loading event history...</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Resolving history...</p>
   ) : error ? (
     <p className="font-sans text-[14px] leading-[1.6] text-destructive">{error}</p>
   ) : detail?.relatedEvents.length ? (
@@ -164,18 +164,18 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
       ))}
     </div>
   ) : (
-    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">No related event history is available for the current object.</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Zero event traces returned.</p>
   );
 
   const connectionsContent = isLoading ? (
-    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Loading related network context...</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Resolving topology...</p>
   ) : error ? (
     <p className="font-sans text-[14px] leading-[1.6] text-destructive">{error}</p>
   ) : detail ? (
     <div className="space-y-4">
       {detail.relatedConnections.length ? (
         <div className="space-y-3">
-          <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/70">Connections</p>
+          <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/70">Topology</p>
           {detail.relatedConnections.map((connection) => (
             <div key={connection.id} className="rounded-xl border border-border px-3 py-3">
               <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{connection.kind}</p>
@@ -189,15 +189,15 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
       {detail.relatedZones.length ? <NamedCollection label="Zones" items={detail.relatedZones.map((zone) => zone.name)} /> : null}
 
       {!detail.relatedConnections.length && !detail.relatedAssets.length && !detail.relatedZones.length ? (
-        <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">No related infrastructure is available for the current selection.</p>
+        <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Zero infrastructure traces returned.</p>
       ) : null}
     </div>
   ) : (
-    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">No related infrastructure is available for the current selection.</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Zero infrastructure traces returned.</p>
   );
 
   const trackContent = isLoading ? (
-    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Loading track history...</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Resolving tracks...</p>
   ) : error ? (
     <p className="font-sans text-[14px] leading-[1.6] text-destructive">{error}</p>
   ) : detail?.relatedTracks.length ? (
@@ -223,7 +223,7 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
       ))}
     </div>
   ) : (
-    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">No track history is attached to the current object.</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Zero movement traces returned.</p>
   );
 
   const tabContent = {

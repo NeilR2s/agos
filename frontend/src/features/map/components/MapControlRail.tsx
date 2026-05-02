@@ -72,7 +72,7 @@ export function MapControlRail({
           name="map-object-filter"
           value={objectSearchQuery}
           onChange={(event) => onObjectSearchQueryChange(event.target.value)}
-          placeholder="FILTER ASSETS / ZONES / EVENTS"
+          placeholder="FILTER OBJECTS"
           className="mt-2 h-8 font-mono text-[10px] uppercase tracking-[1.1px]"
         />
         <Input
@@ -80,7 +80,7 @@ export function MapControlRail({
           name="map-place-search"
           value={placeSearchQuery}
           onChange={(event) => onPlaceSearchQueryChange(event.target.value)}
-          placeholder="FIND PLACE / RECENTER"
+          placeholder="RESOLVE GEOMETRY"
           className="mt-2 h-8 font-mono text-[10px] uppercase tracking-[1.1px]"
         />
         {focusedPlaceLabel ? (
@@ -106,9 +106,9 @@ export function MapControlRail({
                 </button>
               ))
             ) : placeSearchQuery.trim().length >= 2 && !searchResultsLoading && !searchResultsError ? (
-              <p className="font-sans text-[13px] leading-[1.5] text-muted-foreground">No place matches returned by the live Geoapify search.</p>
+              <p className="font-sans text-[13px] leading-[1.5] text-muted-foreground">Zero place matches returned.</p>
             ) : (
-              <p className="font-sans text-[12px] leading-[1.5] text-muted-foreground">Type two characters to resolve places without mutating the active query geometry.</p>
+              <p className="font-sans text-[12px] leading-[1.5] text-muted-foreground">Buffer: 2 chars to resolve.</p>
             )}
           </div>
         </div>
@@ -199,12 +199,12 @@ export function MapControlRail({
         {legendExpanded ? (
           <div className="mt-2 grid gap-1.5 text-muted-foreground">
             {[
-              ["Solid nodes", "Assets and operational sensors"],
-              ["Hollow nodes", "Events emphasized by the active time window"],
-              ["Solid lines", "Infrastructure and network links"],
-              ["Dashed lines", "Movement tracks inside the active time window"],
-              ["Polygon overlay", "Committed spatial query geometry"],
-              ["Handle vertices", "Editable polygon draft points before apply"],
+              ["Solid nodes", "Operational assets"],
+              ["Hollow nodes", "Contextual events"],
+              ["Solid lines", "Topology and network links"],
+              ["Dashed lines", "Temporal movement tracks"],
+              ["Polygon overlay", "Active spatial query geometry"],
+              ["Handle vertices", "Editable draft vertices"],
             ].map(([label, detail]) => (
             <div key={label} className="rounded-xl border border-border px-2.5 py-2">
                 <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{label}</p>
@@ -213,7 +213,7 @@ export function MapControlRail({
             ))}
           </div>
         ) : (
-          <p className="mt-2 font-sans text-[12px] leading-[1.5] text-muted-foreground">Reveal semantics on demand.</p>
+          <p className="mt-2 font-sans text-[12px] leading-[1.5] text-muted-foreground">Toggle semantics.</p>
         )}
       </section>
     </aside>

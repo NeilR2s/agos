@@ -52,12 +52,12 @@ export function AgentOutputTabs({ output, markdown, traceNode }: AgentOutputTabs
   const [copyStatus, setCopyStatus] = useState<{ kind: "memo" | "evidence"; ok: boolean } | null>(null);
   const sourceById = useMemo(() => new Map(output.sources.map((source) => [source.id, source])), [output.sources]);
   const tabItems = useMemo<TabItem[]>(() => [
-    { id: "summary", label: "Summary", count: output.reliabilityWarnings?.length || undefined },
-    { id: "evidence", label: "Evidence", count: output.evidence.length },
-    { id: "recommendations", label: "Recommendations", count: output.recommendations.length },
-    { id: "memo", label: "Memo" },
-    { id: "trace", label: "Agent Trace", disabled: !traceNode },
-    { id: "sources", label: "Sources", count: output.sources.length },
+    { id: "summary", label: "Synthesis", count: output.reliabilityWarnings?.length || undefined },
+    { id: "evidence", label: "Audit", count: output.evidence.length },
+    { id: "recommendations", label: "Actions", count: output.recommendations.length },
+    { id: "memo", label: "Transcript" },
+    { id: "trace", label: "Trace", disabled: !traceNode },
+    { id: "sources", label: "Citations", count: output.sources.length },
   ], [output.evidence.length, output.recommendations.length, output.reliabilityWarnings?.length, output.sources.length, traceNode]);
 
   useEffect(() => {
@@ -140,10 +140,10 @@ export function AgentOutputTabs({ output, markdown, traceNode }: AgentOutputTabs
         </div>
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" size="sm" onClick={() => void copyText("memo", markdown)} className="border-border text-foreground/70">
-            <ClipboardDocumentIcon className="size-4" /> {copyStatus?.kind === "memo" ? (copyStatus.ok ? "Memo Copied" : "Copy Failed") : "Copy Memo"}
+            <ClipboardDocumentIcon className="size-4" /> {copyStatus?.kind === "memo" ? (copyStatus.ok ? "Transcript Copied" : "Copy Failed") : "Copy Transcript"}
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={() => void copyText("evidence", JSON.stringify(output, null, 2))} className="border-border text-foreground/70">
-            <ClipboardDocumentIcon className="size-4" /> {copyStatus?.kind === "evidence" ? (copyStatus.ok ? "Evidence Copied" : "Copy Failed") : "Copy Evidence JSON"}
+            <ClipboardDocumentIcon className="size-4" /> {copyStatus?.kind === "evidence" ? (copyStatus.ok ? "Audit Copied" : "Copy Failed") : "Copy Audit JSON"}
           </Button>
         </div>
       </div>
@@ -153,7 +153,7 @@ export function AgentOutputTabs({ output, markdown, traceNode }: AgentOutputTabs
         {activeTab === "evidence" ? <EvidenceTab output={output} sourceById={sourceById} onSourceClick={showSource} /> : null}
         {activeTab === "recommendations" ? <RecommendationsTab output={output} sourceById={sourceById} onSourceClick={showSource} /> : null}
         {activeTab === "memo" ? <MemoTab markdown={markdown} /> : null}
-        {activeTab === "trace" ? traceNode ?? <EmptyPanel label="No trace is attached to this message." /> : null}
+        {activeTab === "trace" ? traceNode ?? <EmptyPanel label="Zero session traces returned." /> : null}
         {activeTab === "sources" ? <SourcesTab sources={output.sources} highlightedSourceId={highlightedSourceId} /> : null}
       </div>
     </div>
@@ -219,15 +219,15 @@ function EvidenceTab({
   const activeEvidence = visibleEvidence.find((item) => item.id === resolvedEvidenceId) ?? null;
 
   if (!output.evidence.length) {
-    return <EmptyPanel label="No structured evidence was captured for this run." />;
+    return <EmptyPanel label="Zero structured audit traces returned." />;
   }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 rounded-[18px] border border-border/70 bg-background/20 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Evidence Inspector</p>
-          <p className="mt-1 font-sans text-[12px] leading-[1.5] text-muted-foreground">Filter claims, inspect support, then jump to source records.</p>
+          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Audit Logs</p>
+          <p className="mt-1 font-sans text-[12px] leading-[1.5] text-muted-foreground">Filter claims, inspect support, and resolve citations.</p>
         </div>
         <div className="flex flex-wrap gap-1.5">
           {evidenceFilters.map((item) => (
@@ -429,7 +429,7 @@ function DecisionTable({
 
 function SourcesTab({ sources, highlightedSourceId }: { sources: AgentSourceReference[]; highlightedSourceId: string | null }) {
   if (!sources.length) {
-    return <EmptyPanel label="No structured sources were captured for this run." />;
+    return <EmptyPanel label="Zero citation traces returned." />;
   }
 
   return (
@@ -455,13 +455,13 @@ function SourcesTab({ sources, highlightedSourceId }: { sources: AgentSourceRefe
           {source.excerpt ? <p className="mt-3 font-sans text-[12px] leading-[1.55] text-foreground/55">{plainText(source.excerpt)}</p> : null}
           {sourceFreshnessNeedsReview(source) ? (
             <p className="mt-3 border-l border-destructive/50 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-destructive">
-              Freshness requires verification before action
+              Freshness requires verification
             </p>
           ) : null}
           <div className="mt-4 grid gap-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
             <span>Published: {formatDate(source.publishedAt)}</span>
             <span>Retrieved: {formatDate(source.retrievedAt)}</span>
-            <span>Used by: {source.agentLabel ?? source.agentId ?? "AGOS"}</span>
+            <span>Origin: {source.agentLabel ?? source.agentId ?? "AGOS"}</span>
           </div>
         </a>
       ))}

@@ -243,7 +243,7 @@ export const Dashboard = () => {
                     </Badge>
                     <h1 className="font-sans text-[30px] leading-[1.2]">Portfolio Control Surface</h1>
                     <p className="max-w-[700px] font-sans text-[16px] leading-[1.5] text-muted-foreground">
-                        Manage holdings and cash directly from the dashboard. The live portfolio value, cash balance, and position-level metrics refresh automatically from the backend.
+                        Direct management of holdings and capital. Live telemetry and position metrics synchronized with backend services.
                     </p>
                 </div>
                 <div className="flex flex-col items-start gap-3 md:items-end">
@@ -354,7 +354,7 @@ export const Dashboard = () => {
                     <CardHeader>
                         <CardTitle>Capital Allocation</CardTitle>
                         <CardDescription>
-                            Current capital split across active holdings and cash.
+                            Capital distribution across positions and liquidity.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -421,7 +421,7 @@ export const Dashboard = () => {
                     <CardHeader>
                         <CardTitle>Holdings</CardTitle>
                         <CardDescription>
-                            Position-level details with edit and delete actions bound to the portfolio API.
+                            Position telemetry and API-bound operations.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -666,8 +666,8 @@ function HoldingDialog({
                     <DialogTitle>{mode === "add" ? "Add Holding" : `Edit ${holding?.ticker ?? "Holding"}`}</DialogTitle>
                     <DialogDescription>
                         {mode === "add"
-                            ? "Create a new holding using the portfolio API."
-                            : "Update the selected position and refresh the live table."}
+                            ? "Register new holding via portfolio API."
+                            : "Update position parameters and refresh telemetry."}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -789,7 +789,7 @@ function CashDialog({
             <DialogContent className="border-border bg-background text-foreground shadow-none sm:max-w-[420px]">
                 <DialogHeader>
                     <DialogTitle>Update Cash</DialogTitle>
-                    <DialogDescription>Adjust the available cash balance through the portfolio cash endpoint.</DialogDescription>
+                    <DialogDescription>Synchronize cash balance via portfolio endpoint.</DialogDescription>
                 </DialogHeader>
 
                 <form

@@ -21,7 +21,7 @@ export function AgentRunStatus({ run, isStreaming, error, citationCount, selecte
   return (
     <Card size="sm" className="bg-card">
       <CardHeader className="border-b border-border">
-        <CardTitle className="font-mono text-[11px] uppercase tracking-[1.4px]">Run Status</CardTitle>
+        <CardTitle className="font-mono text-[11px] uppercase tracking-[1.4px]">Session Telemetry</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-2.5 py-4 sm:grid-cols-2 xl:grid-cols-1">
         <div className="flex items-center justify-between gap-3 rounded-[18px] border border-border px-3 py-3">
