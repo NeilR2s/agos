@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from app.db.cosmos import CosmosDB
@@ -142,11 +143,19 @@ def _strip_system_fields(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 async def load_map_state(db: CosmosDB) -> dict[str, list[dict[str, Any]]]:
-    assets = sorted(_strip_system_fields(await db.list_map_assets()), key=lambda item: item.get("name", item.get("id", "")))
-    zones = sorted(_strip_system_fields(await db.list_map_zones()), key=lambda item: item.get("name", item.get("id", "")))
-    connections = sorted(_strip_system_fields(await db.list_map_connections()), key=lambda item: item.get("id", ""))
-    tracks = sorted(_strip_system_fields(await db.list_map_tracks()), key=lambda item: item.get("id", ""))
-    events = sorted(_strip_system_fields(await db.list_map_events()), key=lambda item: item.get("timestamp", ""), reverse=True)
+    assets_raw, zones_raw, connections_raw, tracks_raw, events_raw = await asyncio.gather(
+        db.list_map_assets(),
+        db.list_map_zones(),
+        db.list_map_connections(),
+        db.list_map_tracks(),
+        db.list_map_events(),
+    )
+
+    assets = sorted(_strip_system_fields(assets_raw), key=lambda item: item.get("name", item.get("id", "")))
+    zones = sorted(_strip_system_fields(zones_raw), key=lambda item: item.get("name", item.get("id", "")))
+    connections = sorted(_strip_system_fields(connections_raw), key=lambda item: item.get("id", ""))
+    tracks = sorted(_strip_system_fields(tracks_raw), key=lambda item: item.get("id", ""))
+    events = sorted(_strip_system_fields(events_raw), key=lambda item: item.get("timestamp", ""), reverse=True)
 
     return {
         "assets": assets or MAP_ASSETS,
@@ -189,6 +198,7 @@ async def filter_map_features(*, db: CosmosDB, search: str, bounds: BBox | None 
     connections = expand_connections(assets, state["connections"])
     tracks = state["tracks"]
     events = state["events"]
+    track_locations = {track["id"]: [point["location"] for point in track["points"]] for track in tracks}
 
     filtered_assets = [
         asset
@@ -234,9 +244,9 @@ async def filter_map_features(*, db: CosmosDB, search: str, bounds: BBox | None 
         for track in tracks
         if matches_search(f"{track['label']} {track['assetId']}", normalized_search)
         and (
-            line_intersects_polygon([point["location"] for point in track["points"]], polygon)
+            line_intersects_polygon(track_locations[track["id"]], polygon)
             if polygon
-            else line_intersects_bounds([point["location"] for point in track["points"]], bounds)
+            else line_intersects_bounds(track_locations[track["id"]], bounds)
             if bounds
             else True
         )

@@ -1,3 +1,5 @@
+from typing import Any
+
 from azure.cosmos.aio import CosmosClient
 from azure.cosmos import PartitionKey, exceptions
 from app.core.config import settings
@@ -75,33 +77,29 @@ class CosmosDB:
         return instance
 
     @staticmethod
-    async def _query_items(container, query: str, parameters: list[dict], *, default: list | None = None):
+    async def _query_items(
+        container,
+        query: str,
+        parameters: list[dict],
+        *,
+        default: list | None = None,
+        partition_key: Any | None = None,
+    ):
         try:
+            kwargs = {"query": query, "parameters": parameters}
+            if partition_key is not None:
+                kwargs["partition_key"] = partition_key
             return [
-                item async for item in container.query_items(
-                    query=query,
-                    parameters=parameters,
-
-                )
+                item async for item in container.query_items(**kwargs)
             ]
         except exceptions.CosmosHttpResponseError as e:
             logger.error(f"Cosmos query failed: {e}")
             return [] if default is None else default
 
     async def get_portfolio(self, user_id: str):
-        try:
-            query = "SELECT * FROM c WHERE c.userId = @userId"
-            parameters = [{"name": "@userId", "value": user_id}]
-            items = [
-                item async for item in self.container.query_items(
-                    query=query,
-                    parameters=parameters,
-                )
-            ]
-            return items
-        except exceptions.CosmosHttpResponseError as e:
-            logger.error(f"Error fetching portfolio: {e}")
-            return []
+        query = "SELECT * FROM c WHERE c.userId = @userId"
+        parameters = [{"name": "@userId", "value": user_id}]
+        return await self._query_items(self.container, query, parameters, partition_key=user_id)
 
     async def get_holding(self, user_id: str, ticker: str):
         item_id = f"{user_id}_{ticker}"
@@ -186,13 +184,12 @@ class CosmosDB:
         parameters.append({"name": "@limit", "value": limit})
         
         try:
-            items = [
-                item async for item in self.macro_container.query_items(
-                    query=query,
-                    parameters=parameters,
-                )
-            ]
-            return items
+            return await self._query_items(
+                self.macro_container,
+                query,
+                parameters,
+                partition_key=indicator if indicator else None,
+            )
         except exceptions.CosmosHttpResponseError as e:
             logger.error(f"Error fetching macro data: {e}")
             return []
@@ -200,20 +197,22 @@ class CosmosDB:
     async def get_latest_news_data(self, ticker: str = None, limit: int = 50):
         query = "SELECT * FROM c"
         parameters = []
+        partition_key = None
         if ticker:
+            ticker = ticker.upper()
+            partition_key = ticker
             query += " WHERE c.ticker = @ticker"
-            parameters.append({"name": "@ticker", "value": ticker.upper()})
+            parameters.append({"name": "@ticker", "value": ticker})
         query += " ORDER BY c.date DESC OFFSET 0 LIMIT @limit"
         parameters.append({"name": "@limit", "value": limit})
         
         try:
-            items = [
-                item async for item in self.news_container.query_items(
-                    query=query,
-                    parameters=parameters,
-                )
-            ]
-            return items
+            return await self._query_items(
+                self.news_container,
+                query,
+                parameters,
+                partition_key=partition_key,
+            )
         except exceptions.CosmosHttpResponseError as e:
             logger.error(f"Error fetching news data: {e}")
             return []
@@ -221,20 +220,22 @@ class CosmosDB:
     async def get_latest_pse_data(self, ticker: str = None, limit: int = 50):
         query = "SELECT * FROM c"
         parameters = []
+        partition_key = None
         if ticker:
+            ticker = ticker.upper()
+            partition_key = ticker
             query += " WHERE c.ticker = @ticker"
-            parameters.append({"name": "@ticker", "value": ticker.upper()})
+            parameters.append({"name": "@ticker", "value": ticker})
         query += " ORDER BY c.date DESC OFFSET 0 LIMIT @limit"
         parameters.append({"name": "@limit", "value": limit})
         
         try:
-            items = [
-                item async for item in self.pse_container.query_items(
-                    query=query,
-                    parameters=parameters,
-                )
-            ]
-            return items
+            return await self._query_items(
+                self.pse_container,
+                query,
+                parameters,
+                partition_key=partition_key,
+            )
         except exceptions.CosmosHttpResponseError as e:
             logger.error(f"Error fetching pse data: {e}")
             return []
@@ -270,8 +271,8 @@ class CosmosDB:
     async def list_map_events(self, limit: int = 250):
         return await self._query_items(
             self.map_events_container,
-            "SELECT * FROM c",
-            [],
+            "SELECT * FROM c ORDER BY c.timestamp DESC OFFSET 0 LIMIT @limit",
+            [{"name": "@limit", "value": limit}],
         )
 
 _instance: CosmosDB | None = None

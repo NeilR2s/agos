@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -80,7 +81,7 @@ class AgentCosmosRepository:
                 {"name": "@userId", "value": user_id},
                 {"name": "@limit", "value": limit},
             ],
-
+            partition_key=user_id,
         )
         return [AgentThread.model_validate(item) async for item in items]
 
@@ -129,7 +130,7 @@ class AgentCosmosRepository:
                 {"name": "@threadId", "value": thread_id},
                 {"name": "@limit", "value": limit},
             ],
-
+            partition_key=thread_id,
         )
         return [AgentMessage.model_validate(item) async for item in items]
 
@@ -148,7 +149,7 @@ class AgentCosmosRepository:
                 {"name": "@threadId", "value": thread_id},
                 {"name": "@limit", "value": limit},
             ],
-
+            partition_key=thread_id,
         )
         return [AgentRun.model_validate(item) async for item in items]
 
@@ -172,8 +173,11 @@ class AgentCosmosRepository:
         return updated
 
     async def create_events(self, events: list[AgentEvent]) -> list[AgentEvent]:
-        for event in events:
-            await self.events_container.upsert_item(event.model_dump(mode="json"))
+        if not events:
+            return events
+        await asyncio.gather(
+            *(self.events_container.upsert_item(event.model_dump(mode="json")) for event in events)
+        )
         return events
 
     async def list_events(self, thread_id: str, run_id: Optional[str] = None, limit: int = 2000) -> list[AgentEvent]:
@@ -188,7 +192,7 @@ class AgentCosmosRepository:
         items = self.events_container.query_items(
             query=query,
             parameters=parameters,
-
+            partition_key=thread_id,
         )
         return [AgentEvent.model_validate(item) async for item in items]
 

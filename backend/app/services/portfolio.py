@@ -1,9 +1,12 @@
+import asyncio
+
 from app.db.cosmos import get_db
 from app.services.scraper import PSEService
 from app.models.domain import Holding, Portfolio
-import asyncio
 
 class PortfolioService:
+    PRICE_LOOKUP_CONCURRENCY = 8
+
     def __init__(self):
         self.db = get_db()
         self.scraper = PSEService()
@@ -20,9 +23,24 @@ class PortfolioService:
         total_cost = 0.0
         has_unknown_cost_basis = False
 
-        # Fetch prices in parallel
-        tasks = [self.enrich_holding(h) for h in holdings_data]
-        holdings = await asyncio.gather(*tasks)
+        # Fetch unique ticker prices in parallel while avoiding unbounded external PSE fan-out.
+        semaphore = asyncio.Semaphore(self.PRICE_LOOKUP_CONCURRENCY)
+
+        async def fetch_details(ticker: str):
+            async with semaphore:
+                return await self.scraper.get_ticker_details(ticker)
+
+        detail_tasks = {}
+        for item in holdings_data:
+            ticker = item["ticker"].upper()
+            if ticker not in detail_tasks:
+                detail_tasks[ticker] = asyncio.create_task(fetch_details(ticker))
+        detail_results = await asyncio.gather(*detail_tasks.values())
+        details_by_ticker = dict(zip(detail_tasks, detail_results))
+        holdings = [
+            await self.enrich_holding(h, details=details_by_ticker.get(h["ticker"].upper()))
+            for h in holdings_data
+        ]
         
         for h in holdings:
             total_market_value += h.marketValue or 0
@@ -52,9 +70,10 @@ class PortfolioService:
             return None
         return await self.enrich_holding(h_data)
 
-    async def enrich_holding(self, h_data) -> Holding:
+    async def enrich_holding(self, h_data, details=None) -> Holding:
         ticker = h_data['ticker']
-        details = await self.scraper.get_ticker_details(ticker)
+        if details is None:
+            details = await self.scraper.get_ticker_details(ticker)
         current_price = details['price'] if details else None
         
         market_value = 0
