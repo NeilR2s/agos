@@ -1,7 +1,8 @@
 import asyncio
-import re
 import logging
+import re
 from datetime import datetime, timezone, timedelta
+from time import monotonic
 from typing import Any, Dict, List, Optional
 from bs4 import BeautifulSoup
 from curl_cffi import requests
@@ -26,6 +27,19 @@ class PSEService:
     STOCK_DATA_ENDPOINT = "https://edge.pse.com.ph/companyPage/stockData.do?cmpy_id={cmpy_id}&security_id={sec_id}"
     DIVIDEND_ENDPOINT = "https://edge.pse.com.ph/companyPage/dividends_and_rights_list.ax?DividendsOrRights=Dividends"
     BSP_USD_URL = "https://www.bsp.gov.ph/_api/web/lists/getByTitle('Exchange%20Rate')/items"
+    CACHE_MAX_ITEMS = 512
+    COMPANY_INFO_TTL_SECONDS = 24 * 60 * 60
+    TICKER_DETAILS_TTL_SECONDS = 30
+    CHART_DATA_TTL_SECONDS = 5 * 60
+    FINANCIAL_DATA_TTL_SECONDS = 10 * 60
+    FINANCIAL_REPORTS_TTL_SECONDS = 10 * 60
+    FINANCIAL_FILE_LINK_CONCURRENCY = 8
+
+    _company_info_cache: dict[str, tuple[float, Dict[str, Any]]] = {}
+    _ticker_details_cache: dict[str, tuple[float, Dict[str, Any]]] = {}
+    _chart_data_cache: dict[tuple[str, str, str], tuple[float, List[Dict[str, Any]]]] = {}
+    _financial_data_cache: dict[str, tuple[float, List[Dict[str, Any]]]] = {}
+    _financial_reports_cache: dict[str, tuple[float, Dict[str, Any]]] = {}
 
     def __init__(self):
         self._form_headers = {
@@ -41,6 +55,32 @@ class PSEService:
     @staticmethod
     def _soup(html: str, parser: str = "lxml") -> BeautifulSoup:
         return BeautifulSoup(html, parser)
+
+    @classmethod
+    def _get_cached(cls, cache: dict, key):
+        cached = cache.get(key)
+        if cached is None:
+            return None
+        expires_at, value = cached
+        if expires_at <= monotonic():
+            cache.pop(key, None)
+            return None
+        if isinstance(value, dict):
+            return dict(value)
+        if isinstance(value, list):
+            return list(value)
+        return value
+
+    @classmethod
+    def _set_cached(cls, cache: dict, key, value, ttl_seconds: int) -> None:
+        if len(cache) >= cls.CACHE_MAX_ITEMS:
+            now = monotonic()
+            expired_keys = [cache_key for cache_key, (expires_at, _) in cache.items() if expires_at <= now]
+            for cache_key in expired_keys:
+                cache.pop(cache_key, None)
+            if len(cache) >= cls.CACHE_MAX_ITEMS:
+                cache.pop(next(iter(cache)), None)
+        cache[key] = (monotonic() + ttl_seconds, value)
 
     async def _get_usd_rate_cached(self, session: requests.AsyncSession) -> Optional[float]:
         if self._usd_rate_cache is not None:
@@ -62,10 +102,15 @@ class PSEService:
 
     async def get_company_info(self, session: requests.AsyncSession, ticker: str) -> Optional[Dict[str, Any]]:
         """Resolves ticker to companyId and securityId."""
+        ticker = ticker.upper()
+        cached = self._get_cached(self._company_info_cache, ticker)
+        if cached is not None:
+            return cached
+
         payload = {
             "pageNo": "1",
             "companyId": "",
-            "keyword": ticker.upper(),
+            "keyword": ticker,
             "sortType": "",
             "dateSortType": "DESC",
             "cmpySortType": "ASC",
@@ -91,22 +136,29 @@ class PSEService:
                 if not ticker_a:
                     continue
                 found_ticker = ticker_a.get_text(strip=True)
-                if found_ticker.upper() == ticker.upper():
+                if found_ticker.upper() == ticker:
                     tm = re.search(r"cmDetail\('(\d+)','(\d+)'\)", ticker_a["onclick"])
                     if tm:
                         company_id, security_id = tm.groups()
-                        return {
+                        company_info = {
                             "companyName": cols[0].get_text(strip=True),
                             "companyId": int(company_id),
                             "securityId": int(security_id),
                             "stockTicker": found_ticker,
                         }
+                        self._set_cached(self._company_info_cache, ticker, company_info, self.COMPANY_INFO_TTL_SECONDS)
+                        return dict(company_info)
             return None
         except Exception as e:
             logger.error(f"Error resolving ticker {ticker}: {e}")
             return None
 
     async def get_ticker_details(self, ticker: str) -> Optional[Dict[str, Any]]:
+        ticker = ticker.upper()
+        cached = self._get_cached(self._ticker_details_cache, ticker)
+        if cached is not None:
+            return cached
+
         async with requests.AsyncSession(impersonate="chrome") as session:
             # Set cookies
             await session.get(self.FORM_URL)
@@ -135,10 +187,22 @@ class PSEService:
             
             # Basic Price
             company_info["price"] = stock_data.get("Last Traded Price")
-            
-            return company_info
+
+            self._set_cached(self._ticker_details_cache, ticker, company_info, self.TICKER_DETAILS_TTL_SECONDS)
+            return dict(company_info)
 
     async def get_ticker_chart_data(self, ticker: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> List[Dict[str, Any]]:
+        ticker = ticker.upper()
+        now = datetime.now(timezone(timedelta(hours=8)))
+        if not end_date:
+            end_date = now.strftime("%m-%d-%Y")
+        if not start_date:
+            start_date = (now - timedelta(days=365)).strftime("%m-%d-%Y")
+        cache_key = (ticker, start_date, end_date)
+        cached = self._get_cached(self._chart_data_cache, cache_key)
+        if cached is not None:
+            return cached
+
         async with requests.AsyncSession(impersonate="chrome") as session:
             await session.get(self.FORM_URL)
             company_info = await self.get_company_info(session, ticker)
@@ -147,16 +211,17 @@ class PSEService:
             
             cmpy_id = company_info["companyId"]
             sec_id = company_info["securityId"]
-            
-            now = datetime.now(timezone(timedelta(hours=8)))
-            if not end_date:
-                end_date = now.strftime("%m-%d-%Y")
-            if not start_date:
-                start_date = (now - timedelta(days=365)).strftime("%m-%d-%Y")
-            
-            return await self._fetch_chart_data(session, cmpy_id, sec_id, start_date, end_date)
+
+            data = await self._fetch_chart_data(session, cmpy_id, sec_id, start_date, end_date)
+            self._set_cached(self._chart_data_cache, cache_key, data, self.CHART_DATA_TTL_SECONDS)
+            return list(data)
 
     async def get_financial_data(self, ticker: str) -> List[Dict[str, Any]]:
+        ticker = ticker.upper()
+        cached = self._get_cached(self._financial_data_cache, ticker)
+        if cached is not None:
+            return cached
+
         async with requests.AsyncSession(impersonate="chrome") as session:
             await session.get(self.FORM_URL)
             company_info = await self.get_company_info(session, ticker)
@@ -177,9 +242,16 @@ class PSEService:
             }
             
             resp = await session.post(self.FINANCIAL_ENDPOINT, data=payload, headers=self._form_headers)
-            return await self._parse_financial_data(session, resp.text)
+            data = await self._parse_financial_data(session, resp.text)
+            self._set_cached(self._financial_data_cache, ticker, data, self.FINANCIAL_DATA_TTL_SECONDS)
+            return list(data)
 
     async def get_financial_reports(self, ticker: str) -> Dict[str, Any]:
+        ticker = ticker.upper()
+        cached = self._get_cached(self._financial_reports_cache, ticker)
+        if cached is not None:
+            return cached
+
         async with requests.AsyncSession(impersonate="chrome") as session:
             await session.get(self.FORM_URL)
             company_info = await self.get_company_info(session, ticker)
@@ -191,7 +263,9 @@ class PSEService:
             resp = await session.get(report_url)
             
             usd_rate = await self._get_usd_rate_cached(session)
-            return self._parse_financial_reports(resp.text, usd_rate=usd_rate)
+            reports = self._parse_financial_reports(resp.text, usd_rate=usd_rate)
+            self._set_cached(self._financial_reports_cache, ticker, reports, self.FINANCIAL_REPORTS_TTL_SECONDS)
+            return dict(reports)
 
     async def _fetch_stock_data(self, session, cmpy_id, sec_id):
         url = self.STOCK_DATA_ENDPOINT.format(cmpy_id=cmpy_id, sec_id=sec_id)
@@ -211,6 +285,27 @@ class PSEService:
         }
         resp = await session.post(self.CHART_ENDPOINT, json=payload, headers=self._json_headers)
         return resp.json().get("chartData", [])
+
+    async def _fetch_financial_file_link(self, session: requests.AsyncSession, edge_no: str) -> Optional[str]:
+        link_url = f"https://edge.pse.com.ph/openDiscViewer.do?edge_no={edge_no}"
+        try:
+            response = await session.get(link_url)
+            link_soup = self._soup(response.text)
+
+            view_option_div = link_soup.find("div", id="viewOption")
+            if view_option_div:
+                p_tags = view_option_div.find_all("p")
+                if len(p_tags) >= 2:
+                    second_p = p_tags[1]
+                    select_tag = second_p.find("select")
+                    if select_tag:
+                        option_tags = select_tag.find_all("option")
+                        if len(option_tags) >= 2:
+                            file_id = option_tags[1].get("value")
+                            return f"https://edge.pse.com.ph/downloadHtml.do?file_id={file_id}"
+        except Exception as e:
+            logger.warning("Error fetching FileLink for edge_no %s: %s", edge_no, e)
+        return None
 
     def _parse_stock_data(self, html):
         soup = BeautifulSoup(html, "lxml")
@@ -275,27 +370,6 @@ class PSEService:
             tds = tr.find_all("td")
             if len(tds) >= 5:
                 link_url = f"https://edge.pse.com.ph/openDiscViewer.do?edge_no={edge_no}" if edge_no else None
-                file_link = None
-                
-                if link_url:
-                    try:
-                        response = await session.get(link_url)
-                        link_soup = self._soup(response.text)
-                        
-                        view_option_div = link_soup.find("div", id="viewOption")
-                        if view_option_div:
-                            p_tags = view_option_div.find_all("p")
-                            if len(p_tags) >= 2:
-                                second_p = p_tags[1]
-                                select_tag = second_p.find("select")
-                                if select_tag:
-                                    option_tags = select_tag.find_all("option")
-                                    if len(option_tags) >= 2:
-                                        fileID = option_tags[1].get("value")
-                                        file_link = f"https://edge.pse.com.ph/downloadHtml.do?file_id={fileID}"
-                    except Exception as e:
-                        logger.warning("Error fetching FileLink for edge_no %s: %s", edge_no, e)
-                
                 financials.append({
                     "Company Name": tds[0].get_text(strip=True),
                     "Report Type": tds[1].get_text(strip=True),
@@ -304,10 +378,23 @@ class PSEService:
                     "Report Number": tds[4].get_text(strip=True),
                     "edge_no": edge_no,
                     "Link": link_url,
-                    "FileLink": file_link
+                    "FileLink": None
                 })
             if len(financials) >= limit:
                 break
+
+        semaphore = asyncio.Semaphore(self.FINANCIAL_FILE_LINK_CONCURRENCY)
+
+        async def resolve_file_link(item: Dict[str, Any]) -> Optional[str]:
+            edge_no = item.get("edge_no")
+            if not edge_no:
+                return None
+            async with semaphore:
+                return await self._fetch_financial_file_link(session, str(edge_no))
+
+        file_links = await asyncio.gather(*(resolve_file_link(item) for item in financials))
+        for item, file_link in zip(financials, file_links):
+            item["FileLink"] = file_link
         return financials
 
     def _parse_financial_reports(self, html_content: str, usd_rate: Optional[float] = None) -> Dict[str, Any]:

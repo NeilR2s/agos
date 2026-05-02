@@ -57,7 +57,10 @@ async def lifespan(app: FastAPI):
         cosmos_client = AsyncCosmosClient(settings.COSMOS_URI, credential=settings.COSMOS_PRIMARY_KEY)
         app_logger.info("Async CosmosDB client created")
 
-    http_client = httpx.AsyncClient()
+    http_client = httpx.AsyncClient(
+        limits=httpx.Limits(max_keepalive_connections=50, max_connections=100),
+        timeout=10.0
+    )
     app_logger.info("httpx AsyncClient created")
 
     data_provider = DataProvider(cosmos_client=cosmos_client, http_client=http_client)
