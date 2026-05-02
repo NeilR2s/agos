@@ -5,6 +5,14 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import './index.css'
 import App from './App.tsx'
 
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(error => {
+      console.error('Service Worker registration failed:', error);
+    });
+  });
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
