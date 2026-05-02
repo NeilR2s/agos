@@ -74,6 +74,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         isDevBypass: true,
         token: DEV_ADMIN_TOKEN,
         user: DEV_ADMIN_USER,
+        isLoading: false,
       });
     } else {
       window.localStorage.removeItem(DEV_BYPASS_STORAGE_KEY);
@@ -81,6 +82,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         isDevBypass: false,
         token: null,
         user: null,
+        isLoading: false,
       });
       // Optionally sign back into firebase silently if needed, or just let them be logged out.
     }
