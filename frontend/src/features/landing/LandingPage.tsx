@@ -6,6 +6,7 @@ import {
   ServerIcon,
   ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
+import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 
 import homeHeroImage from "@/assets/home_hero.jpeg";
@@ -106,14 +107,19 @@ const footerGroups = [
   },
 ];
 
-const beamStyle = {
-  background:
-    "radial-gradient(circle, color-mix(in oklch, var(--foreground) 20%, transparent) 0%, color-mix(in oklch, var(--chart-3) 26%, transparent) 24%, transparent 66%)",
+const warmMaskStyle = {
+  maskImage: "linear-gradient(to top, white 0%, white 30%, transparent 86%)",
+  WebkitMaskImage: "linear-gradient(to top, white 0%, white 30%, transparent 86%)",
 };
 
-const horizonStyle = {
+const warmLightUpperStyle = {
   background:
-    "radial-gradient(ellipse at bottom, color-mix(in oklch, var(--chart-1) 30%, transparent) 0%, color-mix(in oklch, var(--chart-1) 8%, transparent) 38%, transparent 74%)",
+    "conic-gradient(from 180deg at 50% 94% in lab, color-mix(in oklch, var(--foreground) 20%, transparent) 18deg, color-mix(in oklch, var(--chart-1) 42%, transparent) 38deg, color-mix(in oklch, var(--chart-1) 18%, transparent) 72deg, transparent 98deg, transparent 328deg, color-mix(in oklch, var(--foreground) 16%, transparent) 360deg)",
+};
+
+const warmLightLowerStyle = {
+  background:
+    "conic-gradient(at 50% 6% in lab, color-mix(in oklch, var(--foreground) 18%, transparent) 0deg, transparent 18deg, transparent 262deg, color-mix(in oklch, var(--chart-1) 16%, transparent) 286deg, color-mix(in oklch, var(--chart-1) 40%, transparent) 324deg, color-mix(in oklch, var(--foreground) 16%, transparent) 342deg)",
 };
 
 export const LandingPage = () => {
@@ -165,7 +171,6 @@ export const LandingPage = () => {
           </div>
           <div className="absolute inset-0 -z-20 bg-gradient-to-b from-background via-background/50 to-background" aria-hidden="true" />
           <div className="absolute inset-0 -z-20 bg-gradient-to-r from-background via-background/45 to-background/80" aria-hidden="true" />
-          <div className="absolute right-[-20%] top-[-26%] -z-10 h-[760px] w-[760px] rounded-full blur-3xl" style={beamStyle} aria-hidden="true" />
           <div className="absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-foreground/30 to-transparent" aria-hidden="true" />
           <div className="absolute left-[18%] top-0 -z-10 hidden h-full w-px bg-border/45 lg:block" aria-hidden="true" />
           <div className="absolute right-[24%] top-0 -z-10 hidden h-full w-px bg-border/35 lg:block" aria-hidden="true" />
@@ -311,7 +316,7 @@ export const LandingPage = () => {
         </section>
 
         <section className="relative isolate overflow-hidden border-b border-border/70 py-32 sm:py-40 lg:py-52">
-          <div className="absolute inset-x-0 bottom-[-30%] -z-10 h-[460px] blur-3xl" style={horizonStyle} aria-hidden="true" />
+          <WarmLightMask />
           <div className="absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent" aria-hidden="true" />
 
           <div className="mx-auto max-w-[1280px] px-5 text-center sm:px-8">
@@ -366,6 +371,27 @@ export const LandingPage = () => {
         </div>
       </footer>
     </div>
+  );
+};
+
+const WarmLightMask = () => {
+  return (
+    <motion.div
+      aria-hidden="true"
+      className="absolute inset-0 -z-10 overflow-hidden"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 2.5, ease: "easeInOut" }}
+    >
+      <div
+        className="absolute -bottom-[42%] left-1/2 flex h-[680px] w-[120vw] max-w-[1320px] -translate-x-1/2 flex-col blur-3xl opacity-100 md:-bottom-[48%] md:h-[760px]"
+        style={warmMaskStyle}
+      >
+        <div className="grow" style={warmLightUpperStyle} />
+        <div className="grow" style={warmLightLowerStyle} />
+        <canvas className="absolute inset-0 h-full w-full" width="1200" height="760" />
+      </div>
+    </motion.div>
   );
 };
 
