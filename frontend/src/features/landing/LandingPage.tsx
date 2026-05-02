@@ -188,13 +188,13 @@ export const LandingPage = () => {
               <div>
                 <p className="font-mono text-[12px] uppercase tracking-[0.2em] text-muted-foreground">[ Frontier Market Lab ]</p>
                 <h1 className="mt-7 max-w-[920px] font-sans text-[clamp(4rem,9vw,8.35rem)] font-light leading-[0.92] tracking-[-0.065em] text-foreground">
-                  Market agents, made observable.
+                  Observable market agents.
                 </h1>
               </div>
 
               <div className="border-l border-border/70 pl-6 lg:mb-3">
                 <p className="max-w-[520px] font-sans text-[17px] font-medium leading-[1.65] text-foreground/82 sm:text-[19px]">
-                  AGOS stages research, forecasting, and execution review as inspectable decision surfaces, so every signal carries evidence before it reaches a trade desk.
+                  AGOS stages research and forecasting as inspectable surfaces. Every signal carries evidence before it reaches the trade desk.
                 </p>
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row">
                   <Link
@@ -234,11 +234,11 @@ export const LandingPage = () => {
               <div>
                 <p className="font-mono text-[12px] uppercase tracking-[0.2em] text-muted-foreground">[ Decision Surface ]</p>
                 <h2 className="mt-6 max-w-[590px] font-sans text-[42px] font-light leading-[1.04] tracking-[-0.04em] text-foreground sm:text-[64px]">
-                  A lab instrument for reasoning under market uncertainty.
+                  Research instrument for market uncertainty.
                 </h2>
               </div>
               <p className="max-w-[720px] font-sans text-[18px] leading-[1.7] text-foreground/76 lg:pt-12">
-                The system separates data collection, model evaluation, agent reasoning, and execution policy without flattening operational context into a single opaque score.
+                Discrete separation of data, evaluation, and policy. AGOS avoids flattening operational context into opaque scores.
               </p>
             </div>
 
@@ -247,7 +247,7 @@ export const LandingPage = () => {
                 <div>
                   <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Architecture / Separation</p>
                   <h3 className="mt-7 max-w-[450px] font-sans text-[34px] font-light leading-[1.08] tracking-[-0.035em] text-foreground sm:text-[46px]">
-                    Each layer can fail, recover, and be audited independently.
+                    Isolated failure and audit domains.
                   </h3>
                 </div>
 
@@ -272,12 +272,12 @@ export const LandingPage = () => {
               <div>
                 <p className="font-mono text-[12px] uppercase tracking-[0.2em] text-muted-foreground">[ System Loop ]</p>
                 <h2 className="mt-6 max-w-[560px] font-sans text-[42px] font-light leading-[1.04] tracking-[-0.04em] text-foreground sm:text-[62px]">
-                  Research, model context, and execution policy on one rail.
+                  Integrated research, context, and policy.
                 </h2>
               </div>
               <div className="space-y-8 lg:pt-12">
                 <p className="max-w-[720px] font-sans text-[18px] leading-[1.7] text-foreground/76">
-                  AGOS is structured for operators who need live context without surrendering control to an invisible automation loop.
+                  Built for operators requiring live context without relinquishing control to automation.
                 </p>
                 <div className="grid gap-px border border-border/70 bg-border/70 sm:grid-cols-2 lg:grid-cols-3">
                   {systemLoop.map((item, index) => (
@@ -322,10 +322,10 @@ export const LandingPage = () => {
           <div className="mx-auto max-w-[1280px] px-5 text-center sm:px-8">
             <p className="font-mono text-[12px] uppercase tracking-[0.2em] text-muted-foreground">[ Deployment Surfaces ]</p>
             <h2 className="mx-auto mt-6 max-w-[920px] font-sans text-[42px] font-light leading-[1.02] tracking-[-0.045em] text-foreground sm:text-[66px]">
-              Move from black-box automation into live review.
+              Transition from automation to live review.
             </h2>
             <p className="mx-auto mt-7 max-w-[620px] font-sans text-[17px] leading-[1.65] text-foreground/70">
-              Open the lab surfaces when you need evidence, forecasts, policy gates, and execution context in the same field of view.
+              Access evidence, forecasts, and policy in a unified field of view.
             </p>
             <div className="mt-12 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
@@ -350,7 +350,7 @@ export const LandingPage = () => {
           <div>
             <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">AGOS Infrastructure</p>
             <p className="mt-3 max-w-[460px] font-sans text-[14px] leading-[1.7] text-muted-foreground">
-              Agentic graph observation for inspectable market reasoning, forecast review, and sandboxed execution policy.
+              Agentic graph observation for market reasoning and execution policy.
             </p>
           </div>
 

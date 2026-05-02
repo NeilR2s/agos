@@ -96,7 +96,7 @@ export const LoginPage = () => {
               Verified access for frontier market operations.
             </h2>
             <p className="mt-7 max-w-[560px] font-sans text-[17px] leading-[1.65] text-foreground/72 sm:text-[18px]">
-              Public artifacts stay visible. Research state, portfolio context, and trading review open only after the operator identity is resolved.
+              Public artifacts are visible. Session-locked research and trading require identity resolution.
             </p>
 
             <div className="mt-10 grid gap-px border border-border/70 bg-border/70 sm:max-w-[620px] sm:grid-cols-3">

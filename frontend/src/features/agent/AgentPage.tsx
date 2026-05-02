@@ -479,10 +479,10 @@ export function AgentPage() {
     return ids.size;
   }, [activeRun?.usage, mergedEvents]);
 
-  const threadErrorMessage = threadId ? resolveQueryError(activeThreadQuery.error, "Thread unavailable") : null;
-  const messageErrorMessage = threadId ? resolveQueryError(messagesQuery.error, "Messages unavailable") : null;
-  const runErrorMessage = threadId ? resolveQueryError(runsQuery.error, "Run history unavailable") : null;
-  const runEventsErrorMessage = activeRunId ? resolveQueryError(runEventsQuery.error, "Trace unavailable") : null;
+  const threadErrorMessage = threadId ? resolveQueryError(activeThreadQuery.error, "Thread resolution failed") : null;
+  const messageErrorMessage = threadId ? resolveQueryError(messagesQuery.error, "Message retrieval failed") : null;
+  const runErrorMessage = threadId ? resolveQueryError(runsQuery.error, "Run history retrieval failed") : null;
+  const runEventsErrorMessage = activeRunId ? resolveQueryError(runEventsQuery.error, "Trace retrieval failed") : null;
   const stopStreamNotice =
     stream.status === "cancelled" && stream.run?.id === activeRunId
       ? "Cancellation was requested. Refreshes will continue briefly so final run status, titles, and any persisted output can still appear."
@@ -530,7 +530,7 @@ export function AgentPage() {
         <div className="flex min-h-0 flex-1 items-center justify-center px-5 py-5 md:px-6">
           <div className="w-full max-w-[640px] rounded-3xl border border-destructive/40 bg-destructive/10 px-6 py-6">
             <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-destructive">Thread Unavailable</p>
-            <h2 className="mt-3 font-sans text-[24px] leading-[1.1] text-foreground">The selected AGOS session could not be loaded.</h2>
+            <h2 className="mt-3 font-sans text-[24px] leading-[1.1] text-foreground">AGOS session unavailable.</h2>
             <p className="mt-3 font-sans text-[14px] leading-[1.7] text-foreground/75">{threadErrorMessage}</p>
             <div className="mt-5 flex flex-wrap gap-2">
               <Button type="button" variant="outline" size="sm" onClick={handleStartFreshThread}>
@@ -608,8 +608,8 @@ export function AgentPage() {
               </DialogTitle>
               <DialogDescription className="mt-1 max-w-[720px] font-sans text-[13px] normal-case leading-[1.5] text-muted-foreground">
                 {activePanel === "run"
-                  ? "Inspect persisted run telemetry, worker summaries, and the agent-by-agent event trail."
-                  : "Adjust model, generation, and tool settings without losing transcript space."}
+                  ? "Audit run telemetry, worker summaries, and the event trail."
+                  : "Configure model parameters and tool capabilities."}
               </DialogDescription>
             </div>
           </DialogHeader>

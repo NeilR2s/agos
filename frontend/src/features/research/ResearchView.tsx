@@ -618,7 +618,7 @@ export const ResearchView = () => {
                     </Badge>
                     <h1 className="font-sans text-[30px] leading-[1.2]">Research Terminal</h1>
                     <p className="max-w-[760px] font-sans text-[16px] leading-[1.5] text-muted-foreground">
-                        Live market context, chart history, engine forecasts, disclosures, and sentiment feeds pulled directly from the backend.
+                        Live market context, engine forecasts, and sentiment feeds synchronized with backend research services.
                     </p>
                 </div>
 
@@ -654,7 +654,7 @@ export const ResearchView = () => {
 
             {marketQuery.error || chartQuery.error ? (
                 <div className="rounded-2xl border border-border bg-card px-6 py-4 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
-                    Market data error: {extractErrorMessage(marketQuery.error ?? chartQuery.error)}
+                    Telemetry error: {extractErrorMessage(marketQuery.error ?? chartQuery.error)}
                 </div>
             ) : null}
 
@@ -696,7 +696,7 @@ export const ResearchView = () => {
                 <Card className="min-h-[380px]">
                     <CardHeader>
                         <CardTitle>Research Signals</CardTitle>
-                        <CardDescription>Signal synthesis from forecast, news, macro, and valuation data.</CardDescription>
+                        <CardDescription>Synthesized telemetry from forecast, sentiment, macro, and valuation models.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
                         {overview ? (
@@ -719,7 +719,7 @@ export const ResearchView = () => {
                                         <MiniMetric label="High" value={formatCurrency(latestForecastHigh)} />
                                     </div>
                                     <p className="font-sans text-[14px] leading-[1.5] text-white/70">
-                                        {closes.length >= 10 ? `${closes.length} history points available` : "Need at least 10 points to forecast"}
+                                        {closes.length >= 10 ? `${closes.length} history points available` : "Insufficient history for forecast"}
                                     </p>
                                 </div>
                             </>
@@ -734,7 +734,7 @@ export const ResearchView = () => {
                 <CardHeader>
                     <CardTitle>Price Action</CardTitle>
                     <CardDescription>
-                        Historical closes, engine forecast bands, and activity-by-value context for {selectedTicker}.
+                        Historical closes, forecast bands, and activity metrics for {selectedTicker}.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -885,7 +885,7 @@ export const ResearchView = () => {
                                     </ResponsiveContainer>
                                 ) : (
                                     <div className="flex h-full items-center justify-center">
-                                        <TerminalSkeleton lines={5} label="WAITING FOR PRICE DATA" />
+                                        <TerminalSkeleton lines={5} label="WAITING FOR TELEMETRY" />
                                     </div>
                                 )}
                             </div>
@@ -912,7 +912,7 @@ export const ResearchView = () => {
                                 </div>
                             ) : (
                                 <div className="border border-dashed border-white/10 px-4 py-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">
-                                    Activity / value histogram unavailable for this series.
+                                    Activity metrics unavailable for this series.
                                 </div>
                             )}
 
@@ -1013,7 +1013,7 @@ export const ResearchView = () => {
                                     <div className="space-y-1">
                                         <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">Market Snapshot</p>
                                         <p className="font-sans text-[14px] leading-[1.5] text-white/70">
-                                            Compact market tape with price, movement, and relative activity.
+                                            Technical market tape. Price, movement, and activity metrics.
                                         </p>
                                     </div>
                                     <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">
