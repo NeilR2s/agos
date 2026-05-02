@@ -147,39 +147,39 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
   );
 
   const historyContent = isLoading ? (
-    <p className="font-sans text-[14px] leading-[1.6] text-white/60">Loading event history...</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Loading event history...</p>
   ) : error ? (
     <p className="font-sans text-[14px] leading-[1.6] text-destructive">{error}</p>
   ) : detail?.relatedEvents.length ? (
     <div className="space-y-3">
       {detail.relatedEvents.map((event) => (
-        <div key={event.id} className="border border-white/10 px-3 py-3">
+        <div key={event.id} className="rounded-xl border border-border px-3 py-3">
           <div className="flex items-center justify-between gap-3">
-            <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/50">{formatTimestamp(event.timestamp)}</p>
-            <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/35">{event.severity}</p>
+            <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{formatTimestamp(event.timestamp)}</p>
+            <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/70">{event.severity}</p>
           </div>
-          <p className="mt-1 font-sans text-[14px] text-white">{event.title}</p>
-          <p className="mt-1 font-sans text-[13px] leading-[1.5] text-white/60">{event.detail}</p>
+          <p className="mt-1 font-sans text-[14px] text-foreground">{event.title}</p>
+          <p className="mt-1 font-sans text-[13px] leading-[1.5] text-muted-foreground">{event.detail}</p>
         </div>
       ))}
     </div>
   ) : (
-    <p className="font-sans text-[14px] leading-[1.6] text-white/60">No related event history is available for the current object.</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">No related event history is available for the current object.</p>
   );
 
   const connectionsContent = isLoading ? (
-    <p className="font-sans text-[14px] leading-[1.6] text-white/60">Loading related network context...</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Loading related network context...</p>
   ) : error ? (
     <p className="font-sans text-[14px] leading-[1.6] text-destructive">{error}</p>
   ) : detail ? (
     <div className="space-y-4">
       {detail.relatedConnections.length ? (
         <div className="space-y-3">
-          <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/35">Connections</p>
+          <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/70">Connections</p>
           {detail.relatedConnections.map((connection) => (
-            <div key={connection.id} className="border border-white/10 px-3 py-3">
-              <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/50">{connection.kind}</p>
-              <p className="mt-1 font-sans text-[14px] text-white">{connection.description}</p>
+            <div key={connection.id} className="rounded-xl border border-border px-3 py-3">
+              <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{connection.kind}</p>
+              <p className="mt-1 font-sans text-[14px] text-foreground">{connection.description}</p>
             </div>
           ))}
         </div>
@@ -189,31 +189,31 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
       {detail.relatedZones.length ? <NamedCollection label="Zones" items={detail.relatedZones.map((zone) => zone.name)} /> : null}
 
       {!detail.relatedConnections.length && !detail.relatedAssets.length && !detail.relatedZones.length ? (
-        <p className="font-sans text-[14px] leading-[1.6] text-white/60">No related infrastructure is available for the current selection.</p>
+        <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">No related infrastructure is available for the current selection.</p>
       ) : null}
     </div>
   ) : (
-    <p className="font-sans text-[14px] leading-[1.6] text-white/60">No related infrastructure is available for the current selection.</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">No related infrastructure is available for the current selection.</p>
   );
 
   const trackContent = isLoading ? (
-    <p className="font-sans text-[14px] leading-[1.6] text-white/60">Loading track history...</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">Loading track history...</p>
   ) : error ? (
     <p className="font-sans text-[14px] leading-[1.6] text-destructive">{error}</p>
   ) : detail?.relatedTracks.length ? (
     <div className="space-y-3">
       {detail.relatedTracks.map((track) => (
-        <div key={track.id} className="border border-white/10 px-3 py-3">
-          <p className="font-sans text-[14px] text-white">{track.label}</p>
-          <p className="mt-1 font-mono text-[10px] uppercase tracking-[1.2px] text-white/35">{track.points.length} checkpoints</p>
+        <div key={track.id} className="rounded-xl border border-border px-3 py-3">
+          <p className="font-sans text-[14px] text-foreground">{track.label}</p>
+          <p className="mt-1 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/70">{track.points.length} checkpoints</p>
           <div className="mt-3 space-y-2">
             {track.points.map((point, index) => (
-              <div key={`${track.id}-${point.timestamp}-${index}`} className="border border-white/10 px-3 py-2">
+              <div key={`${track.id}-${point.timestamp}-${index}`} className="rounded-xl border border-border px-3 py-2">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/45">{formatTimestamp(point.timestamp)}</span>
-                  <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/30">{index + 1}/{track.points.length}</span>
+                  <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{formatTimestamp(point.timestamp)}</span>
+                  <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/60">{index + 1}/{track.points.length}</span>
                 </div>
-                <p className="mt-1 font-mono text-[10px] uppercase tracking-[1.2px] text-white/35">
+                <p className="mt-1 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/70">
                   {point.location[1].toFixed(4)} / {point.location[0].toFixed(4)}
                 </p>
               </div>
@@ -223,7 +223,7 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
       ))}
     </div>
   ) : (
-    <p className="font-sans text-[14px] leading-[1.6] text-white/60">No track history is attached to the current object.</p>
+    <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">No track history is attached to the current object.</p>
   );
 
   const tabContent = {
@@ -241,8 +241,8 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
         className
       )}
     >
-      <div className="flex h-full min-h-0 flex-col gap-3 bg-background/90 p-3 backdrop-blur-xl xl:border-border">
-        <section className="rounded-2xl border border-border bg-card/80 p-3.5">
+      <div className="flex h-full min-h-0 flex-col gap-2 bg-background/90 p-2.5 backdrop-blur-xl xl:border-border">
+        <section className="rounded-2xl border border-border bg-card/80 p-3">
           <div className="flex items-center justify-between gap-3">
             <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Selected Object</p>
             <div className="flex items-center gap-2">
@@ -276,7 +276,7 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
               </button>
             ))}
           </div>
-          <div className="min-h-[240px] flex-1 overflow-y-auto p-3.5 xl:min-h-0">
+          <div className="agent-scrollbar min-h-[240px] flex-1 overflow-y-auto p-3 xl:min-h-0">
             {tabContent[activeTab]}
           </div>
         </section>

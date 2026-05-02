@@ -44,7 +44,7 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
   const progress = buckets.length ? Math.max(8, ((completedWorkers + erroredWorkers) / buckets.length) * 100) : 0;
 
   return (
-    <Card size="sm" className="h-full min-h-0 bg-card">
+    <Card size="sm" className="h-full min-h-0 bg-card/80">
       <CardHeader className="border-b border-border">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle className="font-mono text-[11px] uppercase tracking-[1.4px]">Agent Trace</CardTitle>
@@ -55,7 +55,7 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
                 type="button"
                 onClick={() => setFilter(item.value)}
                 className={cn(
-                  "border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.2px] transition-colors",
+                  "rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.2px] transition-colors",
                   filter === item.value
                     ? "border-ring/60 bg-accent text-foreground"
                     : "border-border text-muted-foreground hover:border-ring/60 hover:text-foreground"
@@ -67,15 +67,15 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex min-h-0 flex-1 flex-col gap-5 py-5">
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-4 py-4">
         {streamNotice ? (
-          <div className="rounded-2xl border border-chart-3/40 bg-chart-3/10 px-4 py-3">
+          <div className="rounded-[18px] border border-chart-3/30 bg-chart-3/5 px-4 py-3">
             <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-chart-3">Stream Notice</p>
             <p className="mt-2 font-sans text-[13px] leading-[1.6] text-foreground/80">{streamNotice}</p>
           </div>
         ) : null}
 
-        <section className="rounded-2xl border border-border bg-secondary/30 px-4 py-4">
+        <section className="rounded-[18px] border border-border bg-background/25 px-4 py-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Selected Worker</p>
@@ -88,8 +88,8 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
               <span>{sourceTotal} sources</span>
             </div>
           </div>
-          <div className="mt-4 h-[7px] overflow-hidden rounded-full border border-border bg-background">
-            <div className="h-full bg-chart-2/70" style={{ width: `${progress}%` }} />
+          <div className="mt-4 h-[4px] overflow-hidden rounded-full bg-secondary">
+            <div className="h-full bg-foreground/70" style={{ width: `${progress}%` }} />
           </div>
         </section>
 
@@ -106,13 +106,13 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
                 const isActive = agentId === activeBucket?.agentId;
 
                 return (
-                  <button
-                    key={agentId}
-                    type="button"
-                    onClick={() => onSelectAgent(agentId)}
-                    className={cn(
-                      "rounded-2xl border px-4 py-4 text-left transition-colors",
-                      isActive ? "border-ring/60 bg-accent" : "border-border hover:border-ring/60 hover:bg-accent/70"
+                    <button
+                      key={agentId}
+                      type="button"
+                      onClick={() => onSelectAgent(agentId)}
+                      className={cn(
+                       "rounded-[18px] border px-4 py-3 text-left transition-colors",
+                       isActive ? "border-ring/60 bg-accent" : "border-border hover:border-ring/60 hover:bg-accent/70"
                     )}
                   >
                     <div className="flex items-center justify-between gap-3">
@@ -130,8 +130,8 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
           </section>
         ) : null}
 
-        <div className="grid gap-4 xl:min-h-0 xl:grid-cols-[280px_minmax(0,1fr)] 2xl:grid-cols-[280px_minmax(0,1fr)_300px]">
-          <section className="space-y-3 xl:min-h-0 xl:overflow-y-auto xl:pr-1">
+        <div className="grid gap-4 xl:min-h-0 xl:grid-cols-[260px_minmax(0,1fr)] 2xl:grid-cols-[260px_minmax(0,1fr)_300px]">
+          <section className="scrollbar-hidden space-y-2 xl:min-h-0 xl:overflow-y-auto">
             <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Workers & Runtime</p>
             {buckets.length ? (
               buckets.map((bucket) => (
@@ -140,7 +140,7 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
                   type="button"
                   onClick={() => onSelectAgent(bucket.agentId)}
                   className={cn(
-                    "w-full rounded-2xl border px-4 py-4 text-left transition-colors",
+                    "w-full rounded-[18px] border px-3 py-3 text-left transition-colors",
                     bucket.agentId === activeBucket?.agentId ? getActiveBucketTone(bucket.status) : getBucketTone(bucket.status)
                   )}
                 >
@@ -164,7 +164,7 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
             )}
           </section>
 
-          <section className="space-y-3 xl:min-h-0 xl:overflow-y-auto xl:pr-1">
+          <section className="scrollbar-hidden space-y-2 xl:min-h-0 xl:overflow-y-auto">
             <div className="flex items-center justify-between gap-3">
               <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Timeline</p>
               <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/70">{activeBucket?.label ?? "No agent selected"}</p>
@@ -172,7 +172,7 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
             {activeBucket ? (
               activeEvents.length ? (
                 activeEvents.map((event) => (
-                  <div key={`${event.sequence}-${event.type}`} className={cn("rounded-2xl border px-4 py-4", getEventTone(event))}>
+                  <div key={`${event.sequence}-${event.type}`} className={cn("rounded-[18px] border px-4 py-3", getEventTone(event))}>
                     <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
                       <span>{String(event.sequence).padStart(2, "0")}</span>
                       <span>{humanizeEventType(event.type)}</span>
@@ -189,7 +189,7 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
             )}
           </section>
 
-          <section className="space-y-3 xl:col-span-2 xl:min-h-0 xl:max-h-[300px] xl:overflow-y-auto xl:pr-1 2xl:col-span-1 2xl:max-h-none 2xl:border-l 2xl:border-border 2xl:pl-4">
+          <section className="scrollbar-hidden space-y-2 xl:col-span-2 xl:min-h-0 xl:max-h-[300px] xl:overflow-y-auto 2xl:col-span-1 2xl:max-h-none 2xl:border-l 2xl:border-border 2xl:pl-4">
             <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Sources</p>
             {activeBucket?.citations.length ? (
               activeBucket.citations.map((citation, index) => (
@@ -198,7 +198,7 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
                   href={citation.href ?? undefined}
                   target={citation.href ? "_blank" : undefined}
                   rel={citation.href ? "noreferrer" : undefined}
-                  className="block rounded-2xl border border-border px-4 py-4 transition-colors hover:border-ring/60 hover:bg-accent/70"
+                  className="block rounded-[18px] border border-border px-4 py-3 transition-colors hover:border-ring/60 hover:bg-accent/70"
                 >
                   <p className="font-sans text-[13px] leading-[1.5] text-foreground">{citation.label}</p>
                   <p className="mt-1 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{citation.source}</p>

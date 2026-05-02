@@ -40,13 +40,13 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
   };
 
   return (
-    <div className="space-y-5">
-      <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
+    <div className="space-y-4">
+      <section className="space-y-4 rounded-[22px] border border-border bg-card p-5">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">AGOS Preset</p>
           <p className="mt-1 font-sans text-[13px] leading-[1.6] text-muted-foreground">Choose the operator-facing behavior tier.</p>
         </div>
-        <div className="grid gap-3">
+        <div className="grid gap-3 lg:grid-cols-3">
           {AGOS_MODEL_PRESETS.map((preset) => {
             const isSelected = config.modelPreset === preset.id;
             return (
@@ -55,7 +55,7 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
                 type="button"
                 onClick={() => update("modelPreset", preset.id)}
                 className={cn(
-                  "rounded-2xl border border-border px-4 py-4 text-left transition-colors hover:border-ring/60 hover:bg-accent/70",
+                  "rounded-[20px] border border-border px-4 py-4 text-left transition-colors hover:border-ring/60 hover:bg-accent/70",
                   isSelected && "border-ring/60 bg-accent"
                 )}
               >
@@ -67,12 +67,12 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
         </div>
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
+      <section className="space-y-4 rounded-[22px] border border-border bg-card p-5">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Data Tools</p>
           <p className="mt-1 font-sans text-[13px] leading-[1.6] text-muted-foreground">Toggle connections to live context.</p>
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
           {(
             [
               ["portfolio", "Portfolio"],
@@ -107,7 +107,7 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
       <button
         type="button"
         aria-expanded={showAdvanced}
-        className="flex w-full items-center justify-between rounded-2xl border border-border bg-secondary/40 px-5 py-4 hover:bg-accent/70"
+        className="flex w-full items-center justify-between rounded-full border border-border bg-secondary/40 px-5 py-3.5 hover:bg-accent/70"
         onClick={() => setShowAdvanced(!showAdvanced)}
       >
         <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Advanced Controls</span>
@@ -116,7 +116,7 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
 
       {showAdvanced && (
         <div className="space-y-5 animate-in fade-in slide-in-from-top-2">
-          <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
+          <section className="space-y-4 rounded-[22px] border border-border bg-card p-5">
             <div>
               <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Generation Parameters</p>
             </div>
@@ -213,7 +213,7 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
             </div>
           </section>
 
-          <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
+          <section className="space-y-4 rounded-[22px] border border-border bg-card p-5">
             <div>
               <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Skills</p>
               <p className="mt-1 font-sans text-[13px] leading-[1.6] text-muted-foreground">Prompt-level specializations.</p>
@@ -238,7 +238,7 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
             </div>
           </section>
 
-          <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
+          <section className="space-y-4 rounded-[22px] border border-border bg-card p-5">
             <div>
               <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">External Capabilities</p>
             </div>
@@ -249,7 +249,7 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
                   type="button"
                   onClick={() => toggleCapability(capability.id)}
                   className={cn(
-                    "w-full rounded-2xl border border-border px-4 py-4 text-left transition-colors hover:border-ring/60 hover:bg-accent/70",
+                      "w-full rounded-[20px] border border-border px-4 py-4 text-left transition-colors hover:border-ring/60 hover:bg-accent/70",
                     capability.enabled && "border-ring/60 bg-accent"
                   )}
                 >

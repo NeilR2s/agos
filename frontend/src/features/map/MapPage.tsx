@@ -228,6 +228,8 @@ export function MapPage() {
       activeTimestamp: timeline[activeTimelineIndex] ?? timeline[0],
     };
   }, [activeTimelineIndex, polygonQuery, roundedBounds, timeline]);
+  const isInitialMapLoad = featureQuery.isLoading && !featureQuery.data;
+  const isBackgroundMapRefresh = featureQuery.isFetching && !isInitialMapLoad;
 
   const handleLayerToggle = (key: keyof MapLayerState) => {
     setLayerState((current) => ({ ...current, [key]: !current[key] }));
@@ -332,65 +334,48 @@ export function MapPage() {
   };
 
   return (
-    <div className="min-h-dvh bg-background px-3 py-3 text-foreground lg:px-4 lg:py-4">
-      <div className="mx-auto flex max-w-[1920px] flex-col gap-2.5">
-        <section className="rounded-3xl border border-border bg-card/50 px-4 py-3 lg:px-5">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="min-w-0 flex-1">
-              <Badge variant="outline" className="border-border px-3 py-1 font-mono text-[10px] uppercase tracking-[1px] text-muted-foreground">
-                AGOS MAP APPLICATION / TEMPORAL GEOSPATIAL ANALYSIS
+    <div className="min-h-dvh bg-background px-2 py-2 text-foreground lg:h-dvh lg:overflow-hidden lg:px-3 lg:py-3">
+      <div className="mx-auto flex h-full max-w-[1920px] flex-col gap-2">
+        <section className="rounded-2xl border border-border bg-card/55 px-3 py-2.5 lg:px-4">
+          <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0 flex flex-wrap items-center gap-x-3 gap-y-2">
+              <Badge variant="outline" className="max-w-full min-w-0 shrink justify-start truncate border-border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1px] text-muted-foreground">
+                AGOS MAP / TEMPORAL GEOSPATIAL LAB
               </Badge>
-              <h1 className="mt-3 font-sans text-[32px] font-light leading-[0.98] tracking-[-0.04em] text-foreground md:text-[44px] xl:text-[56px]">
-                MAP / NETWORK / MOVEMENT / ACTION
+              <h1 className="font-sans text-[22px] font-light leading-none tracking-[-0.035em] text-foreground md:text-[28px]">
+                Network / Movement / Action
               </h1>
-              <div className="mt-3 flex min-w-0 flex-col gap-2 border-t border-border pt-3 xl:flex-row xl:flex-wrap xl:items-center xl:gap-5">
-                <div className="min-w-0">
-                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Query</p>
-                  <p className="mt-1 font-sans text-[14px] text-foreground">{queryMode === "bbox" ? "Viewport" : "Polygon"}</p>
-                </div>
-                <div className="min-w-0">
-                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Time</p>
-                  <p className="mt-1 truncate font-sans text-[14px] text-foreground">{summary.activeTimestamp.replace("T", " ").replace("Z", " UTC")}</p>
-                </div>
-                <div className="min-w-0 xl:max-w-[360px]">
-                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Selection</p>
-                  <p className="mt-1 truncate font-sans text-[14px] text-foreground">{selectionSummaryLabel}</p>
-                </div>
-                <div className="min-w-0">
-                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Mode</p>
-                  <p className="mt-1 font-sans text-[14px] text-foreground">{playing ? "Playback" : "Static review"}</p>
-                </div>
-                <div className="min-w-0">
-                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Window</p>
-                  <p className="mt-1 truncate font-sans text-[14px] text-muted-foreground">{summary.queryLabel}</p>
-                </div>
-                {focusedPlaceLabel ? (
-                  <div className="min-w-0 xl:max-w-[260px]">
-                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Focused Place</p>
-                    <p className="mt-1 truncate font-sans text-[14px] text-muted-foreground">{focusedPlaceLabel}</p>
-                  </div>
-                ) : null}
+              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
+                <span>{queryMode === "bbox" ? "Viewport" : "Polygon"}</span>
+                <span>/</span>
+                <span>{playing ? "Playback" : "Static"}</span>
+                <span>/</span>
+                <span className="max-w-[220px] truncate text-foreground/80">{selectionSummaryLabel}</span>
+                <span>/</span>
+                <span className="max-w-[220px] truncate">{summary.activeTimestamp.replace("T", " ").replace("Z", " UTC")}</span>
+                {focusedPlaceLabel ? <span className="max-w-[180px] truncate">/ {focusedPlaceLabel}</span> : null}
+                {isBackgroundMapRefresh ? <span className="text-chart-3">/ syncing</span> : null}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:min-w-[340px]">
+            <div className="grid grid-cols-4 gap-1.5 xl:min-w-[300px]">
               {[
                 ["Assets", featureData.assets.length],
                 ["Zones", featureData.zones.length],
                 ["Events", activeEvents.length],
                 ["Tracks", tracks.filter((track) => track.visibleCoordinates.length >= 2).length],
               ].map(([label, value]) => (
-                <div key={label} className="rounded-2xl border border-border bg-secondary/30 px-3 py-2.5">
+                <div key={label} className="rounded-xl border border-border bg-secondary/30 px-2.5 py-2">
                   <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{label}</p>
-                  <p className="mt-1 font-sans text-[22px] text-foreground">{value}</p>
+                  <p className="mt-0.5 font-sans text-[18px] text-foreground">{value}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="grid gap-2.5 xl:grid-cols-[188px_minmax(0,1fr)] xl:items-start">
-          <div className="xl:sticky xl:top-4 xl:max-h-[calc(100dvh-2rem)] xl:overflow-hidden">
+        <section className="grid min-h-0 flex-1 gap-2 xl:grid-cols-[220px_minmax(0,1fr)] xl:items-stretch">
+          <div className="order-2 min-h-0 xl:order-1 xl:overflow-hidden">
             <MapControlRail
               layerState={layerState}
               queryMode={queryMode}
@@ -416,7 +401,7 @@ export function MapPage() {
             />
           </div>
 
-          <div className="relative flex min-w-0 flex-col gap-2.5">
+          <div className="relative order-1 flex min-w-0 flex-col gap-2 xl:order-2 xl:min-h-0">
             {featureQuery.isError ? (
               <section className="rounded-2xl border border-border bg-card px-4 py-3">
                 <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">
@@ -425,13 +410,13 @@ export function MapPage() {
               </section>
             ) : null}
 
-            {featureQuery.isFetching && featureQuery.data ? (
+            {isInitialMapLoad ? (
               <section className="rounded-2xl border border-border bg-card px-4 py-3">
-                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Updating map view...</p>
+                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Loading map view...</p>
               </section>
             ) : null}
 
-            <div className="relative flex min-w-0 flex-col gap-0 overflow-hidden rounded-3xl border border-border bg-card/40">
+            <div className="relative flex min-w-0 flex-1 flex-col gap-0 overflow-hidden rounded-3xl border border-border bg-card/40 xl:min-h-0">
               <MapCanvas
                 assets={featureData.assets}
                 zones={featureData.zones}
@@ -467,7 +452,7 @@ export function MapPage() {
 
               <MapDetailRail
                 key={selection ? `${selection.type}:${selection.id}` : "none"}
-                className="xl:absolute xl:inset-y-0 xl:right-0 xl:w-[340px] xl:border-l"
+                className="xl:absolute xl:inset-y-0 xl:right-0 xl:w-[320px] xl:border-l"
                 open={inspectorOpen}
                 selection={selection}
                 detail={detailQuery.data ?? null}

@@ -108,8 +108,8 @@ export function AgentOutputTabs({ output, markdown, traceNode }: AgentOutputTabs
   const panelId = `${tabBaseId}-${activeTab}-panel`;
 
   return (
-    <div className="max-w-[1120px] overflow-hidden rounded-2xl border border-border bg-card">
-      <div className="flex flex-col gap-3 border-b border-border px-4 py-4 xl:flex-row xl:items-center xl:justify-between">
+    <div className="w-full max-w-[1180px] overflow-hidden border-y border-border/70 bg-transparent md:rounded-[24px] md:border md:bg-card/35">
+      <div className="flex flex-col gap-3 border-b border-border/70 px-4 py-3 xl:flex-row xl:items-center xl:justify-between">
         <div role="tablist" aria-label="Agent output sections" className="flex flex-wrap gap-1.5">
           {tabItems.map((tab) => {
             return (
@@ -139,16 +139,16 @@ export function AgentOutputTabs({ output, markdown, traceNode }: AgentOutputTabs
           })}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => void copyText("memo", markdown)} className="border-white/15 text-foreground/70">
+          <Button type="button" variant="outline" size="sm" onClick={() => void copyText("memo", markdown)} className="border-border text-foreground/70">
             <ClipboardDocumentIcon className="size-4" /> {copyStatus?.kind === "memo" ? (copyStatus.ok ? "Memo Copied" : "Copy Failed") : "Copy Memo"}
           </Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => void copyText("evidence", JSON.stringify(output, null, 2))} className="border-white/15 text-foreground/70">
+          <Button type="button" variant="outline" size="sm" onClick={() => void copyText("evidence", JSON.stringify(output, null, 2))} className="border-border text-foreground/70">
             <ClipboardDocumentIcon className="size-4" /> {copyStatus?.kind === "evidence" ? (copyStatus.ok ? "Evidence Copied" : "Copy Failed") : "Copy Evidence JSON"}
           </Button>
         </div>
       </div>
 
-      <div id={panelId} role="tabpanel" aria-labelledby={`${tabBaseId}-${activeTab}`} className="p-5">
+      <div id={panelId} role="tabpanel" aria-labelledby={`${tabBaseId}-${activeTab}`} className="px-3 py-4 md:p-5">
         {activeTab === "summary" ? <SummaryTab output={output} onSourceClick={showSource} /> : null}
         {activeTab === "evidence" ? <EvidenceTab output={output} sourceById={sourceById} onSourceClick={showSource} /> : null}
         {activeTab === "recommendations" ? <RecommendationsTab output={output} sourceById={sourceById} onSourceClick={showSource} /> : null}
@@ -165,7 +165,7 @@ function SummaryTab({ output, onSourceClick }: { output: AgentStructuredOutput; 
   const reliabilityWarnings = output.reliabilityWarnings ?? [];
   return (
     <div className="space-y-5">
-      <section className="border rounded-2xl border-border bg-secondary/30 px-5 py-5">
+      <section className="rounded-[20px] border border-border/70 bg-background/20 px-5 py-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Main Finding</p>
           <span
@@ -177,7 +177,7 @@ function SummaryTab({ output, onSourceClick }: { output: AgentStructuredOutput; 
             {output.executionReady ? "execution-ready" : "advisory only"}
           </span>
         </div>
-        <p className="mt-3 max-w-[920px] font-sans text-[22px] leading-[1.35] text-foreground">{plainText(output.summary)}</p>
+        <p className="mt-3 max-w-[960px] font-sans text-[20px] leading-[1.4] text-foreground md:text-[22px]">{plainText(output.summary)}</p>
         {firstSources.length ? (
           <div className="mt-4 flex flex-wrap gap-2">
             {firstSources.map((source) => (
@@ -224,7 +224,7 @@ function EvidenceTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 border rounded-2xl border-border bg-secondary/30 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-3 rounded-[18px] border border-border/70 bg-background/20 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Evidence Inspector</p>
           <p className="mt-1 font-sans text-[12px] leading-[1.5] text-muted-foreground">Filter claims, inspect support, then jump to source records.</p>
@@ -247,7 +247,7 @@ function EvidenceTab({
       </div>
 
       {visibleEvidence.length ? (
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
           <div className="space-y-2">
             {visibleEvidence.map((item) => {
               const hasSources = item.sourceIds.length > 0;
@@ -259,14 +259,14 @@ function EvidenceTab({
                   aria-expanded={isActive}
                   onClick={() => setActiveEvidenceId(item.id)}
                   className={cn(
-                    "w-full rounded-full border px-4 py-4 text-left transition-colors",
+                    "w-full rounded-[18px] border px-4 py-3.5 text-left transition-colors",
                     !hasSources
                       ? isActive
-                        ? "border-destructive/60 bg-destructive/15"
-                        : "border-destructive/40 bg-destructive/10 hover:bg-destructive/15"
+                        ? "border-destructive/45 bg-destructive/5"
+                        : "border-destructive/30 bg-transparent hover:bg-destructive/5"
                       : isActive
                         ? "border-ring/60 bg-accent"
-                        : "rounded-2xl border-border bg-secondary/30 hover:border-ring/60 hover:bg-accent/70"
+                        : "border-border/80 bg-background/20 hover:border-ring/60 hover:bg-accent/60"
                   )}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -283,7 +283,7 @@ function EvidenceTab({
             })}
           </div>
 
-          <section className="min-h-[320px] border border-border bg-secondary/30 px-5 py-5">
+          <section className="min-h-[320px] rounded-[18px] border border-border/70 bg-background/20 px-5 py-5">
             {activeEvidence ? (
               <div className="space-y-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -346,13 +346,13 @@ function RecommendationsTab({
   return (
     <div className="space-y-5">
       {output.recommendations.length ? (
-        <div className="grid gap-3 xl:grid-cols-2">
+        <div className={cn("grid gap-3", output.recommendations.length > 1 ? "xl:grid-cols-2" : "max-w-[980px]")}>
           {output.recommendations.map((item) => {
             const supportStatus = item.supportStatus ?? (item.sourceIds.length ? "supported" : "unsupported");
             return (
               <article
                 key={item.id}
-                className={cn("border bg-white/[0.02] px-4 py-4", supportStatus === "unsupported" ? "border-destructive/40" : "border-border")}
+                className={cn("rounded-[18px] border bg-background/20 px-4 py-4", supportStatus === "unsupported" ? "border-destructive/35" : "border-border/80")}
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2">
@@ -392,13 +392,13 @@ function DecisionTable({
   onSourceClick: (sourceId: string) => void;
 }) {
   return (
-    <section className="overflow-hidden border border-border bg-secondary/30">
+    <section className="overflow-hidden rounded-[18px] border border-border/70 bg-background/20">
       <div className="border-b border-border px-4 py-3">
         <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Decision Table</p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] border-collapse text-left">
-          <thead className="bg-white/[0.04]">
+          <thead className="bg-muted/30">
             <tr>
               {["Holding", "Status", "Finding", "Suggested Action", "Confidence", "Sources"].map((header) => (
                 <th key={header} className="border-b border-border px-4 py-3 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
@@ -442,8 +442,8 @@ function SourcesTab({ sources, highlightedSourceId }: { sources: AgentSourceRefe
           target={source.href ? "_blank" : undefined}
           rel={source.href ? "noreferrer" : undefined}
           className={cn(
-            "block rounded-full border px-4 py-4 transition-colors hover:border-ring/60 hover:bg-accent/70",
-            highlightedSourceId === source.id ? "border-white/25 bg-accent" : "rounded-2xl border-border bg-secondary/30"
+            "block rounded-[18px] border px-4 py-4 transition-colors hover:border-ring/60 hover:bg-accent/60",
+            highlightedSourceId === source.id ? "border-ring/60 bg-accent" : "border-border/80 bg-background/20"
           )}
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -454,7 +454,7 @@ function SourcesTab({ sources, highlightedSourceId }: { sources: AgentSourceRefe
           <p className="mt-1 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{source.source} / {source.kind}</p>
           {source.excerpt ? <p className="mt-3 font-sans text-[12px] leading-[1.55] text-foreground/55">{plainText(source.excerpt)}</p> : null}
           {sourceFreshnessNeedsReview(source) ? (
-            <p className="mt-3 border border-destructive/40 bg-destructive/10 px-3 py-2 font-mono text-[10px] uppercase tracking-[1.2px] text-destructive">
+            <p className="mt-3 border-l border-destructive/50 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-destructive">
               Freshness requires verification before action
             </p>
           ) : null}
@@ -471,7 +471,7 @@ function SourcesTab({ sources, highlightedSourceId }: { sources: AgentSourceRefe
 
 function MemoTab({ markdown }: { markdown: string }) {
   return (
-    <div className="max-w-[980px] border rounded-2xl border-border bg-secondary/30 px-5 py-5">
+    <div className="max-w-[980px] border-l border-border/80 px-5 py-1">
       <div className="agent-markdown">
         <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
           {markdown}
@@ -483,7 +483,7 @@ function MemoTab({ markdown }: { markdown: string }) {
 
 function ReliabilityWarnings({ warnings }: { warnings: string[] }) {
   return (
-    <section className="border border-destructive/40 bg-destructive/10 px-5 py-4">
+    <section className="rounded-[18px] border border-border/70 bg-background/20 px-5 py-4">
       <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-destructive">Evidence Audit</p>
       <ul className="mt-3 space-y-2">
         {warnings.map((warning, index) => (
@@ -498,7 +498,7 @@ function ReliabilityWarnings({ warnings }: { warnings: string[] }) {
 
 function ListBlock({ title, items, tone }: { title: string; items: string[]; tone?: "risk" }) {
   return (
-    <section className={cn("rounded-full border px-4 py-4", tone === "risk" ? "border-destructive/40 bg-destructive/10" : "rounded-2xl border-border bg-secondary/30")}>
+    <section className={cn("rounded-[18px] border px-4 py-4", tone === "risk" ? "border-border/70 border-l-2 border-l-destructive/50 bg-background/20" : "border-border/70 bg-background/20")}>
       <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{title}</p>
       <ul className="mt-3 space-y-2">
         {items.map((item, index) => (
@@ -513,7 +513,7 @@ function ListBlock({ title, items, tone }: { title: string; items: string[]; ton
 
 function Callout({ label, value, tone }: { label: string; value: string; tone?: "risk" }) {
   return (
-    <div className={cn("rounded-full border px-3 py-3", tone === "risk" ? "border-destructive/40 bg-destructive/10" : "border-border bg-secondary/30")}>
+    <div className={cn("rounded-[16px] border px-3 py-3", tone === "risk" ? "border-border/70 border-l-2 border-l-destructive/50 bg-background/20" : "border-border/70 bg-background/20")}>
       <p className="font-mono text-[10px] uppercase tracking-[1.3px] text-muted-foreground">{label}</p>
       <p className="mt-1 font-sans text-[12px] leading-[1.55] text-foreground/70">{plainText(value)}</p>
     </div>
@@ -549,7 +549,7 @@ function SourceChip({ source, onClick }: { source: AgentSourceReference; onClick
       onClick={() => onClick(source.id)}
       aria-label={`Show source ${source.id}: ${source.label}`}
       className={cn(
-        "rounded-full border px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[1.2px] transition-colors hover:border-white/25 hover:text-foreground",
+        "rounded-full border px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[1.2px] transition-colors hover:border-ring/60 hover:text-foreground",
         getFreshnessTone(source.freshness)
       )}
       title={source.label}
@@ -603,7 +603,7 @@ function FreshnessBadge({ value }: { value: AgentSourceReference["freshness"] })
 }
 
 function EmptyPanel({ label }: { label: string }) {
-  return <div className="border rounded-2xl border-border bg-secondary/30 px-5 py-5 font-sans text-[14px] leading-[1.6] text-muted-foreground">{label}</div>;
+  return <div className="rounded-[18px] border border-border/70 bg-background/20 px-5 py-5 font-sans text-[14px] leading-[1.6] text-muted-foreground">{label}</div>;
 }
 
 function getConfidenceTone(value: "low" | "medium" | "high") {

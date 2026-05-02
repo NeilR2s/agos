@@ -48,6 +48,23 @@ const groupThreads = (threads: AgentThread[]): ThreadGroup[] => {
     .filter((group) => group.items.length > 0);
 };
 
+const cleanThreadPreview = (value?: string | null) => {
+  if (!value) return "";
+
+  return value
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    .replace(/^\s*\d+\.\s+/gm, "")
+    .replace(/\[([^\]]+)]\([^)]+\)/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/_([^_]+)_/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
 export function AgentThreadList({
   threads,
   activeThreadId,
@@ -86,33 +103,38 @@ export function AgentThreadList({
                 <div className="space-y-1">
                   {group.items.map((thread) => {
                     const isActive = thread.id === activeThreadId;
+                    const preview = cleanThreadPreview(thread.lastAssistantPreview);
                     return (
-                      <div key={thread.id} className="group relative">
+                      <div
+                        key={thread.id}
+                        className={cn(
+                          "group relative rounded-2xl border transition-colors",
+                          isActive
+                            ? "border-ring/60 bg-sidebar-accent text-sidebar-accent-foreground"
+                            : "border-transparent text-muted-foreground hover:border-border hover:bg-sidebar-accent/70 hover:text-foreground"
+                        )}
+                      >
                         <button
                           type="button"
                           onClick={() => onSelect(thread.id)}
-                          className={cn(
-                            "w-full rounded-2xl border px-3 py-3 text-left transition-colors",
-                            isActive
-                              ? "border-ring/60 bg-sidebar-accent text-sidebar-accent-foreground"
-                              : "border-transparent text-muted-foreground hover:border-border hover:bg-sidebar-accent/70 hover:text-foreground"
-                          )}
+                          className="w-full px-3 py-3 text-left"
                         >
-                          <div className="flex items-center justify-between gap-3">
+                          <div className="grid grid-cols-[minmax(0,1fr)_auto_28px] items-start gap-2">
                             <span className="min-w-0 truncate font-sans text-[14px] leading-[1.45] text-foreground">
                               {thread.title}
                             </span>
-                            <span className="shrink-0 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/70">
+                            <span className="shrink-0 pt-0.5 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/70">
                               {formatShortDate(thread.updatedAt)}
                             </span>
+                            <span aria-hidden="true" />
                           </div>
                           <div className="mt-2 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/70">
                             <span>{thread.selectedTicker || thread.mode}</span>
                             {thread.lastRunStatus ? <span>{thread.lastRunStatus}</span> : null}
                           </div>
-                          {thread.lastAssistantPreview ? (
+                          {preview ? (
                             <p className="mt-2 line-clamp-2 font-sans text-[12px] leading-[1.5] text-muted-foreground">
-                              {thread.lastAssistantPreview}
+                              {preview}
                             </p>
                           ) : null}
                         </button>
@@ -123,7 +145,7 @@ export function AgentThreadList({
                             onDelete(thread.id);
                           }}
                           className={cn(
-                            "absolute right-2 top-2 rounded-full p-2 text-muted-foreground/70 opacity-0 transition-colors hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100",
+                            "absolute right-2 top-2 flex size-7 items-center justify-center rounded-full border border-transparent text-muted-foreground/55 opacity-0 transition-all hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100",
                             isActive && "opacity-100"
                           )}
                           aria-label={`Delete ${thread.title}`}
@@ -181,10 +203,10 @@ export function AgentThreadList({
                     )}
                   >
                     <div className="flex w-full items-center justify-between gap-3 pr-6">
-                      <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30 truncate">
+                      <span className="truncate font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/60">
                         {thread.selectedTicker || thread.mode}
                       </span>
-                      <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/20 shrink-0">
+                      <span className="shrink-0 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/50">
                         {formatShortDate(thread.updatedAt)}
                       </span>
                     </div>

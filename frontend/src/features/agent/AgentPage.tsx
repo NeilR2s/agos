@@ -476,11 +476,11 @@ export function AgentPage() {
 
   return (
     <div className="flex h-[calc(100dvh-57px)] flex-col overflow-hidden bg-background text-foreground lg:h-dvh">
-      <header className="shrink-0 border-b border-border/70 bg-background/80 px-4 py-2.5 backdrop-blur-md md:px-5">
+      <header className="shrink-0 border-b border-border/60 bg-background/90 px-3 py-2 backdrop-blur-md md:px-4">
         <div className="flex min-h-[44px] flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="rounded-full border border-border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Agent Console</span>
-            <h1 className="font-sans text-[21px] leading-none text-foreground md:text-[24px]">AGOS Copilot</h1>
+            <span className="rounded-full border border-border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Frontier Agent</span>
+            <h1 className="font-sans text-[20px] leading-none text-foreground md:text-[22px]">AGOS</h1>
             <p className="max-w-[68vw] truncate font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/70 lg:max-w-[520px]">
               {activeThread?.title ?? "new session"}
             </p>
@@ -528,7 +528,7 @@ export function AgentPage() {
           </div>
         </div>
       ) : (
-        <div className="min-h-0 flex flex-1 flex-col gap-3 px-4 py-3 md:px-5">
+        <div className="min-h-0 flex flex-1 flex-col gap-2.5 px-3 py-2.5 md:px-4">
           {stopStreamNotice ? (
             <section className="mx-auto w-full max-w-[900px] rounded-2xl border border-chart-3/40 bg-chart-3/10 px-4 py-3">
               <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-chart-3">Stream Stopped</p>
@@ -583,10 +583,10 @@ export function AgentPage() {
         }}
       >
         <DialogContent
-          className="overflow-hidden border-border bg-popover/95 p-0 shadow-none"
-          style={{ width: "min(94vw, 1280px)", maxWidth: "none" }}
+          className="overflow-hidden rounded-[28px] border-border bg-popover/95 p-0 shadow-none"
+          style={{ width: activePanel === "run" ? "min(94vw, 1180px)" : "min(94vw, 1040px)", maxWidth: "none" }}
         >
-          <DialogHeader className="flex items-start justify-between gap-4 border-b border-border px-5 py-4 text-left">
+          <DialogHeader className="border-b border-border bg-background/25 px-5 py-4 pr-16 text-left">
             <div>
               <DialogTitle className="font-mono text-[11px] uppercase tracking-[1.4px] text-foreground">
                 {activePanel === "run" ? "Run Audit" : "Controls"}
@@ -597,21 +597,18 @@ export function AgentPage() {
                   : "Adjust model, generation, and tool settings without losing transcript space."}
               </DialogDescription>
             </div>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setActivePanel(null)}>
-              Close
-            </Button>
           </DialogHeader>
 
-          <div className="scrollbar-hidden max-h-[min(82vh,940px)] overflow-y-auto p-5">
+          <div className="scrollbar-hidden max-h-[min(82vh,900px)] overflow-y-auto p-5">
             {activePanel === "run" ? (
-              <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+              <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
                 <div className="space-y-4">
-                  <section className="rounded-2xl border border-border bg-card px-4 py-4">
+                  <section className="rounded-[20px] border border-border bg-card px-4 py-4">
                     <div className="flex items-center justify-between gap-3">
                       <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Run History</p>
                       {runsQuery.isFetching ? <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/70">Refreshing</span> : null}
                     </div>
-                    <div className="agent-scrollbar mt-3 max-h-[280px] space-y-2 overflow-y-auto pr-1">
+                    <div className="agent-scrollbar mt-3 max-h-[220px] space-y-2 overflow-y-auto pr-1">
                       {availableRuns.length ? (
                         availableRuns.map((run, index) => {
                           const isActive = run.id === activeRunId;
@@ -621,7 +618,7 @@ export function AgentPage() {
                               type="button"
                               onClick={() => handleSelectRun(run.id)}
                               className={[
-                                "w-full rounded-2xl border px-3 py-3 text-left transition-colors",
+                                "w-full rounded-[18px] border px-3 py-3 text-left transition-colors",
                                 isActive ? "border-ring/60 bg-accent" : "border-border hover:border-ring/60 hover:bg-accent/70",
                               ].join(" ")}
                             >
@@ -648,7 +645,7 @@ export function AgentPage() {
                     agentCount={agentCount}
                   />
                   {activeRun ? (
-                    <div className="rounded-2xl border border-border bg-card px-4 py-4">
+                    <div className="rounded-[20px] border border-border bg-card px-4 py-4">
                       <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Run Context</p>
                       <div className="mt-3 space-y-2 font-sans text-[13px] leading-[1.6] text-foreground/75">
                         <p>Mode: {activeRun.mode}</p>

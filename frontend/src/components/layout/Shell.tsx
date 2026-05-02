@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Bars3Icon, CommandLineIcon } from "@heroicons/react/24/outline";
 
@@ -91,6 +91,10 @@ export const Shell = ({ children }: { children: ReactNode }) => {
     window.localStorage.setItem("agos.shell.sidebar-expanded.v1", sidebarExpanded ? "1" : "0");
   }, [sidebarExpanded]);
 
+  const protectedMainStyle = showProtectedShell
+    ? ({ "--agos-shell-sidebar-width": `${desktopSidebarWidth}px` } as CSSProperties)
+    : undefined;
+
   return (
     <div className="relative min-h-dvh overflow-x-hidden bg-background text-foreground">
       {showProtectedShell ? (
@@ -147,7 +151,7 @@ export const Shell = ({ children }: { children: ReactNode }) => {
         </aside>
       ) : null}
 
-      <main className={cn("relative min-h-dvh")} style={showProtectedShell ? { paddingLeft: desktopSidebarWidth } : undefined}>
+      <main className={cn("relative min-h-dvh", showProtectedShell && "lg:pl-[var(--agos-shell-sidebar-width)]")} style={protectedMainStyle}>
         {children}
       </main>
 

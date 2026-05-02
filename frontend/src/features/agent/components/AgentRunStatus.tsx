@@ -23,8 +23,8 @@ export function AgentRunStatus({ run, isStreaming, error, citationCount, selecte
       <CardHeader className="border-b border-border">
         <CardTitle className="font-mono text-[11px] uppercase tracking-[1.4px]">Run Status</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-4 py-5 sm:grid-cols-2 xl:grid-cols-1">
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-border px-4 py-4">
+      <CardContent className="grid gap-2.5 py-4 sm:grid-cols-2 xl:grid-cols-1">
+        <div className="flex items-center justify-between gap-3 rounded-[18px] border border-border px-3 py-3">
           <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Status</span>
           <span
             className={cn(
@@ -46,7 +46,7 @@ export function AgentRunStatus({ run, isStreaming, error, citationCount, selecte
         <Metric label="Latency" value={formatDurationMs(run?.latencyMs)} />
         <Metric label="TTFT" value={run?.ttftMs ? `${formatNumber(run.ttftMs, "en-PH", 0)} ms` : "---"} />
         <Metric label="Sources" value={String(citationCount)} />
-        {error ? <p className="rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-4 font-sans text-[14px] leading-[1.6] text-destructive">{error}</p> : null}
+        {error ? <p className="rounded-[18px] border border-destructive/40 bg-destructive/10 px-4 py-4 font-sans text-[14px] leading-[1.6] text-destructive">{error}</p> : null}
       </CardContent>
     </Card>
   );
@@ -54,7 +54,7 @@ export function AgentRunStatus({ run, isStreaming, error, citationCount, selecte
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="space-y-2 rounded-2xl border border-border px-4 py-4">
+    <div className="space-y-1.5 rounded-[18px] border border-border px-3 py-3">
       <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{label}</p>
       <p className="font-mono text-[12px] uppercase tracking-[1.2px] text-foreground/85">{value}</p>
     </div>

@@ -48,28 +48,28 @@ export function AgentComposer({
   }, [value]);
 
   return (
-    <div className="mx-auto w-full max-w-[900px] rounded-[28px] border border-input bg-secondary/70 p-3 shadow-none backdrop-blur-xl">
-      <div className="mb-2 flex flex-col gap-2 px-2 lg:flex-row lg:items-center lg:justify-between">
+    <div className="mx-auto w-full max-w-[900px] shrink-0 rounded-[26px] border border-input bg-secondary/75 p-2 shadow-none backdrop-blur-xl md:rounded-[30px]">
+      <div className="mb-1.5 flex flex-col gap-2 px-2 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
           <span>{selectedModel?.label ?? "AGOS"}</span>
           <span>/</span>
-          <span>{config.maxAgents} concurrent workers</span>
-          <span>/</span>
+          <span className="hidden sm:inline">{config.maxAgents} concurrent workers</span>
+          <span className="hidden sm:inline">/</span>
           <span>{mode}</span>
           <span>/</span>
           <span>{selectedTicker ?? "no ticker"}</span>
-          <span>/</span>
-          <span>{config.thinkingLevel} thinking</span>
+          <span className="hidden sm:inline">/</span>
+          <span className="hidden sm:inline">{config.thinkingLevel} thinking</span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={onToggleRunPanel}
             aria-expanded={activePanel === "run"}
-            className="border-border text-muted-foreground hover:text-foreground"
+            className="h-7 border-border px-2.5 text-[10px] text-muted-foreground hover:text-foreground"
           >
             <Bars3BottomLeftIcon className="size-4" /> Trace Details
           </Button>
@@ -79,14 +79,14 @@ export function AgentComposer({
             size="sm"
             onClick={onToggleControlsPanel}
             aria-expanded={activePanel === "controls"}
-            className="border-border text-muted-foreground hover:text-foreground"
+            className="h-7 border-border px-2.5 text-[10px] text-muted-foreground hover:text-foreground"
           >
             <AdjustmentsHorizontalIcon className="size-4" /> Controls
           </Button>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-[22px] border border-border/70 bg-background/45">
+      <div className="overflow-hidden rounded-[22px] border border-border/70 bg-background/70">
         <textarea
           ref={textareaRef}
           id="agent-composer"
@@ -101,9 +101,9 @@ export function AgentComposer({
             }
           }}
           placeholder="Direct AGOS across research, portfolio context, execution risk, and grounded web retrieval."
-          className="max-h-[180px] min-h-[72px] w-full resize-none border-0 bg-transparent px-4 py-4 font-sans text-[15px] leading-[1.6] text-foreground outline-none placeholder:text-muted-foreground md:px-5"
+          className="max-h-[150px] min-h-[52px] w-full resize-none border-0 bg-transparent px-4 py-3.5 font-sans text-[15px] leading-[1.55] text-foreground outline-none placeholder:text-muted-foreground md:min-h-[56px] md:px-5"
         />
-        <div className="flex flex-col gap-3 border-t border-border/70 px-4 py-3 md:flex-row md:items-center md:justify-between md:px-5">
+        <div className="flex flex-col gap-2 border-t border-border/70 px-4 py-2.5 md:flex-row md:items-center md:justify-between md:px-5">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/75">Ctrl + Enter to send</p>
           </div>
@@ -116,7 +116,7 @@ export function AgentComposer({
             <Button
               onClick={onSubmit}
               disabled={isBusy || !value.trim()}
-              className="min-w-[176px]"
+              className="h-9 w-full min-w-[160px] rounded-full md:w-auto"
             >
               {actionLabel}
             </Button>

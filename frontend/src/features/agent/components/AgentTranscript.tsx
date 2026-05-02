@@ -4,6 +4,7 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 
+import landingHero from "@/assets/landing_hero.jpeg";
 import { Button } from "@/components/ui/button";
 import { AgentOutputTabs } from "@/features/agent/components/AgentOutputTabs";
 import { AgentWorkingTrace } from "@/features/agent/components/AgentWorkingTrace";
@@ -63,10 +64,10 @@ export function AgentTranscript({
   };
 
   return (
-    <div className="grok-starfield relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[28px] border border-border/60 bg-background/40">
-      <div ref={scrollRef} onScroll={handleScroll} className="agent-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-5 md:px-8">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
+      <div ref={scrollRef} onScroll={handleScroll} className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto px-2 py-5 md:px-5 md:py-6">
         {messages.length ? (
-          <div className="mx-auto w-full max-w-[860px] space-y-8 pb-6">
+          <div className="mx-auto w-full max-w-[1180px] space-y-9 pb-8">
             {messages.map((message) => {
               const isAssistant = message.role === "assistant";
               const showTrace = Boolean(isAssistant && message.runId && activeRunId && message.runId === activeRunId && events.length);
@@ -120,7 +121,7 @@ export function AgentTranscript({
                       </div>
                     </div>
                   ) : !isAssistant ? (
-                    <div className="ml-auto max-w-[760px] rounded-2xl border border-border bg-secondary/70 px-5 py-4 font-sans text-[15px] leading-[1.65] text-foreground">
+                    <div className="ml-auto max-w-[620px] rounded-[24px] border border-border bg-secondary/70 px-5 py-4 font-sans text-[15px] leading-[1.65] text-foreground">
                       <div className="whitespace-pre-wrap">{message.content}</div>
                     </div>
                   ) : null}
@@ -145,29 +146,39 @@ export function AgentTranscript({
             })}
           </div>
         ) : (
-          <div className="relative flex h-full min-h-[420px] items-center overflow-hidden">
-            <div className="pointer-events-none absolute inset-x-[-10%] top-[-35%] h-[420px] rounded-full bg-[radial-gradient(ellipse_at_center,color-mix(in_oklch,var(--foreground)_18%,transparent)_0%,color-mix(in_oklch,var(--chart-3)_18%,transparent)_28%,transparent_68%)] blur-3xl" aria-hidden="true" />
+          <div className="relative flex h-full min-h-[360px] items-center overflow-hidden md:min-h-[460px]">
+            <div
+              className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-30 grayscale"
+              style={{ backgroundImage: `url(${landingHero})` }}
+              aria-hidden="true"
+            />
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,var(--background)_0%,color-mix(in_oklch,var(--background)_82%,transparent)_38%,color-mix(in_oklch,var(--background)_54%,transparent)_64%,var(--background)_100%)]" aria-hidden="true" />
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,var(--background)_0%,transparent_24%,transparent_58%,var(--background)_100%)]" aria-hidden="true" />
 
-            <div className="relative z-10 mx-auto flex w-full max-w-[920px] flex-col justify-center gap-7 px-2 py-10 md:px-6">
+            <div className="relative z-10 mx-auto flex w-full max-w-[860px] flex-col justify-center gap-5 px-1 py-8 md:gap-6 md:px-6 md:py-10">
               <div className="text-center">
-                <p className="font-mono text-[12px] uppercase tracking-[1.4px] text-muted-foreground">AGOS chat shell</p>
-                <h2 className="mt-3 font-sans text-[42px] font-light leading-[1] tracking-[-0.04em] text-foreground md:text-[56px]">What should AGOS do?</h2>
+                <p className="font-mono text-[12px] uppercase tracking-[1.4px] text-muted-foreground">AGOS frontier lab</p>
+                <h2 className="mt-3 font-sans text-[34px] font-light leading-[1] tracking-[-0.04em] text-foreground md:text-[58px]">Direct the research floor.</h2>
+                <p className="mx-auto mt-4 max-w-[560px] font-sans text-[14px] leading-[1.65] text-muted-foreground">
+                  Route market context, portfolio memory, source retrieval, and worker traces from one operator console.
+                </p>
               </div>
 
-              <div className="mt-2 grid gap-3 md:grid-cols-4">
+              <div className="mt-1 grid gap-2 sm:grid-cols-2 md:mt-2 md:grid-cols-4 md:gap-2.5">
                 {[
                   "Review my portfolio allocation",
                   "Compare holdings against market conditions",
                   "Create a 30-day deployment plan",
                   "Research ticker-specific downside risks",
                 ].map((task) => (
-                  <div key={task} className="rounded-2xl border border-border bg-card/60 px-4 py-4 backdrop-blur-md">
-                    <p className="font-sans text-[13px] leading-[1.45] text-foreground/80">{task}</p>
+                  <div key={task} className="rounded-[18px] border border-border bg-background/70 px-4 py-3 backdrop-blur-md">
+                    <p className="font-sans text-[12px] leading-[1.5] text-foreground/80 md:text-left">{task}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="grid gap-2 rounded-2xl border border-border bg-card/60 p-4 backdrop-blur-md md:grid-cols-5">
+              <div className="overflow-x-auto rounded-full border border-border bg-background/75 px-4 py-3 backdrop-blur-md md:overflow-visible">
+                <div className="flex min-w-max gap-4 md:grid md:min-w-0 md:grid-cols-5 md:gap-2">
                 {[
                   ["OK", "Portfolio snapshot"],
                   ["OK", "Prior threads"],
@@ -180,6 +191,7 @@ export function AgentTranscript({
                     <span>{label}</span>
                   </div>
                 ))}
+                </div>
               </div>
             </div>
           </div>

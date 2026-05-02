@@ -841,9 +841,9 @@ export const ResearchView = () => {
 
                     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px] xl:items-start">
                         <div className="grid gap-3">
-                            <div className="relative h-[420px] overflow-hidden border border-border px-2 py-4">
+                            <div className="relative h-[420px] min-w-0 overflow-hidden border border-border px-2 py-4">
                                 {combinedChartData.length ? (
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                         <AreaChart
                                             syncId="research-price-action"
                                             data={combinedChartData}
@@ -891,8 +891,8 @@ export const ResearchView = () => {
                             </div>
 
                             {hasActivityData ? (
-                                <div className="relative h-[120px] overflow-hidden border border-border px-2 py-3">
-                                    <ResponsiveContainer width="100%" height="100%">
+                                <div className="relative h-[120px] min-w-0 overflow-hidden border border-border px-2 py-3">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                         <BarChart
                                             syncId="research-price-action"
                                             data={combinedChartData}
@@ -917,11 +917,11 @@ export const ResearchView = () => {
                             )}
 
                             {showRSI ? (
-                                <div className="relative h-[120px] overflow-hidden border border-border px-2 py-3">
+                                <div className="relative h-[120px] min-w-0 overflow-hidden border border-border px-2 py-3">
                                     <div className="absolute left-4 top-2 z-10 font-mono text-[8px] uppercase tracking-[1px] text-white/55">
                                         Relative Strength Index (14)
                                     </div>
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                         <AreaChart
                                             syncId="research-price-action"
                                             data={combinedChartData}

@@ -246,6 +246,39 @@
     @apply font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground;
   }
 
+  .maplibregl-ctrl-top-right {
+    top: 12px;
+    right: 12px;
+  }
+
+  .maplibregl-ctrl-group {
+    overflow: hidden;
+    border: 1px solid var(--border) !important;
+    border-radius: 14px !important;
+    background: color-mix(in oklch, var(--popover) 92%, transparent) !important;
+    box-shadow: none !important;
+    backdrop-filter: blur(16px);
+  }
+
+  .maplibregl-ctrl-group button {
+    width: 34px !important;
+    height: 34px !important;
+    background-color: transparent !important;
+    color: var(--foreground) !important;
+  }
+
+  .maplibregl-ctrl-group button + button {
+    border-top: 1px solid var(--border) !important;
+  }
+
+  .maplibregl-ctrl-group button:hover {
+    background-color: var(--accent) !important;
+  }
+
+  .maplibregl-ctrl button .maplibregl-ctrl-icon {
+    filter: invert(1) opacity(0.78);
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     .grok-starfield {
       animation: grok-star-drift 28s linear infinite;
