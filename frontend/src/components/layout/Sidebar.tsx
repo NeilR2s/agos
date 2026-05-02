@@ -176,7 +176,7 @@ export function Sidebar({
     };
 
     return (
-        <div className={cn("group/sidebar flex h-full w-full flex-col justify-between gap-6 overflow-hidden bg-background px-2 py-4 text-foreground", showLabels && "px-4", className)}>
+        <div className={cn("group/sidebar flex h-full w-full flex-col justify-between gap-6 overflow-hidden bg-sidebar px-2 py-4 text-sidebar-foreground", showLabels && "px-4", className)}>
             <div className={cn("flex min-h-0 flex-1 flex-col", !showLabels ? "gap-5" : "gap-6")}>
                 <div className={cn("relative flex items-center", showLabels ? "justify-between gap-3" : "justify-center")}>
                     <Link
@@ -202,7 +202,7 @@ export function Sidebar({
                                 variant="ghost"
                                 size="icon-sm"
                                 onClick={onToggleExpanded}
-                                className="text-white/40 hover:text-white"
+                                className="text-muted-foreground hover:text-foreground"
                                 aria-label={showLabels ? "Collapse sidebar" : "Expand sidebar"}
                             >
                                 {showLabels ? <ChevronDoubleLeftIcon className="size-4" /> : <ChevronDoubleRightIcon className="size-4" />}
@@ -214,7 +214,7 @@ export function Sidebar({
                                 variant="ghost"
                                 size="icon-sm"
                                 onClick={onOpenPalette}
-                                className="text-white/40 hover:text-white"
+                                className="text-muted-foreground hover:text-foreground"
                                 aria-label="Open command palette"
                             >
                                 <CommandLineIcon className="size-4" />
@@ -247,9 +247,9 @@ export function Sidebar({
                                 aria-label={item.label}
                                 title={item.label}
                                 className={cn(
-                                    "flex w-full items-center py-2 font-mono text-[12px] uppercase tracking-[1.4px] transition-colors",
-                                    showLabels ? "justify-start gap-3 px-2" : "justify-center gap-0 px-0",
-                                    isActive ? "text-white" : "text-white/50 hover:text-white"
+                                    "flex w-full items-center rounded-xl py-2.5 font-mono text-[12px] uppercase tracking-[1.4px] transition-colors",
+                                    showLabels ? "justify-start gap-3 px-3" : "justify-center gap-0 px-0",
+                                    isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground hover:bg-sidebar-accent/70 hover:text-foreground"
                                 )}
                             >
                                 <Icon className="size-4 shrink-0" />
@@ -274,7 +274,7 @@ export function Sidebar({
                                     <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">History</p>
                                     <p className="mt-1 font-sans text-[12px] leading-[1.5] text-white/45">Agent threads and saved runs</p>
                                 </div>
-                                <Button type="button" variant="outline" size="icon-sm" onClick={handleNewThread} className="border-white/15 text-white/75 hover:bg-white/[0.05]">
+                                 <Button type="button" variant="outline" size="icon-sm" onClick={handleNewThread} className="border-border text-muted-foreground hover:text-foreground">
                                     <PlusIcon className="size-4" />
                                 </Button>
                             </div>
@@ -302,7 +302,7 @@ export function Sidebar({
                                 variant="ghost"
                                 size="icon-sm"
                                 onClick={handleNewThread}
-                                className="mx-auto flex text-white/45 hover:text-white"
+                                className="mx-auto flex text-muted-foreground hover:text-foreground"
                                 aria-label="Create new agent thread"
                             >
                                 <PlusIcon className="size-4" />
@@ -325,10 +325,10 @@ export function Sidebar({
                                         key={holding.id}
                                         to={`/research?ticker=${holding.ticker}`}
                                         onClick={() => onNavigate?.()}
-                                        className="group flex items-center justify-between gap-3 px-2 py-2 text-white/50 transition-colors hover:text-white"
+                                            className="group flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-muted-foreground transition-colors hover:bg-sidebar-accent/70 hover:text-foreground"
                                         title={holding.ticker}
                                     >
-                                        <span className="font-mono text-[12px] uppercase tracking-[1.4px] text-white">{holding.ticker}</span>
+                                            <span className="font-mono text-[12px] uppercase tracking-[1.4px] text-foreground">{holding.ticker}</span>
                                         <span
                                             className={cn(
                                                 "min-w-0 truncate font-sans text-[12px] text-white/30 transition-[max-width,opacity] duration-200",
@@ -359,14 +359,14 @@ export function Sidebar({
                 {!isAgentMode ? (
                     <div className="flex items-center justify-between gap-3">
                         <span className={cn("font-mono text-[10px] uppercase tracking-[1.4px] text-white/30 transition-[max-width,opacity] duration-200", showLabels ? "opacity-100" : hiddenRevealClass)}>Engine</span>
-                        <Badge variant="outline" className={cn("border-border text-white/70 transition-[max-width,opacity,padding] duration-200", showLabels ? "opacity-100" : "max-w-0 overflow-hidden border-transparent px-0 opacity-0")}>
+                        <Badge variant="outline" className={cn("border-border text-muted-foreground transition-[max-width,opacity,padding] duration-200", showLabels ? "opacity-100" : "max-w-0 overflow-hidden border-transparent px-0 opacity-0")}>
                             {status}
                         </Badge>
                     </div>
                 ) : null}
                 <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
                     <span>{!isAgentMode ? `v${version}` : "agent console"}</span>
-                    <button onClick={logout} className={cn("flex items-center gap-1 text-white/50 transition-colors hover:text-white", showLabels ? "opacity-100" : hiddenRevealClass)}>
+                    <button onClick={logout} className={cn("flex items-center gap-1 text-muted-foreground transition-colors hover:text-foreground", showLabels ? "opacity-100" : hiddenRevealClass)}>
                         LOGOUT <ArrowLeftOnRectangleIcon className="size-3" />
                     </button>
                 </div>

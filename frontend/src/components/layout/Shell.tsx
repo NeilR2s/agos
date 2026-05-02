@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Bars3Icon, CommandLineIcon } from "@heroicons/react/24/outline";
 
@@ -11,7 +11,7 @@ import { useAuthStore } from "@/store/authStore";
 const CommandPalette = lazy(() => import("@/components/layout/CommandPalette").then((module) => ({ default: module.CommandPalette })));
 const Sidebar = lazy(() => import("@/components/layout/Sidebar").then((module) => ({ default: module.Sidebar })));
 
-const sidebarFallback = <div className="h-full border-r border-border bg-background" />;
+const sidebarFallback = <div className="h-full border-r border-sidebar-border bg-sidebar" />;
 
 export const Shell = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
@@ -91,10 +91,14 @@ export const Shell = ({ children }: { children: ReactNode }) => {
     window.localStorage.setItem("agos.shell.sidebar-expanded.v1", sidebarExpanded ? "1" : "0");
   }, [sidebarExpanded]);
 
+  const protectedMainStyle = showProtectedShell
+    ? ({ "--agos-shell-sidebar-width": `${desktopSidebarWidth}px` } as CSSProperties)
+    : undefined;
+
   return (
-    <div className="min-h-dvh bg-background text-foreground">
+    <div className="relative min-h-dvh overflow-x-hidden bg-background text-foreground">
       {showProtectedShell ? (
-        <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-background px-4 py-3 lg:hidden">
+        <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border/70 bg-background/80 px-4 py-3 backdrop-blur-md lg:hidden">
           <Link to="/" className="font-mono text-[14px] uppercase tracking-[1.4px] text-white">
             AGOS
           </Link>
@@ -132,7 +136,7 @@ export const Shell = ({ children }: { children: ReactNode }) => {
 
       {showProtectedShell ? (
         <aside
-          className="fixed inset-y-0 left-0 z-40 hidden overflow-hidden border-r border-border bg-background transition-[width] duration-200 lg:block"
+          className="fixed inset-y-0 left-0 z-40 hidden overflow-hidden border-r border-sidebar-border bg-sidebar/95 transition-[width] duration-200 lg:block"
           style={{ width: desktopSidebarWidth }}
         >
           <Suspense fallback={sidebarFallback}>
@@ -147,7 +151,7 @@ export const Shell = ({ children }: { children: ReactNode }) => {
         </aside>
       ) : null}
 
-      <main className={cn("min-h-dvh")} style={showProtectedShell ? { paddingLeft: desktopSidebarWidth } : undefined}>
+      <main className={cn("relative min-h-dvh", showProtectedShell && "lg:pl-[var(--agos-shell-sidebar-width)]")} style={protectedMainStyle}>
         {children}
       </main>
 

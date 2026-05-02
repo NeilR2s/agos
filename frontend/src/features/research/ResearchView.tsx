@@ -610,14 +610,14 @@ export const ResearchView = () => {
     };
 
     return (
-        <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-8 px-6 py-8 md:px-8 md:py-12">
+        <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-8 px-6 py-8 md:px-8 md:py-12">
             <header className="grid gap-4 border-b border-border pb-6 lg:grid-cols-[minmax(0,1fr)_minmax(560px,640px)] lg:items-start lg:gap-8">
                 <div className="space-y-3">
-                    <Badge variant="outline" className="border-border text-white/70">
-                        Market Research
+                    <Badge variant="outline" className="border-border text-muted-foreground">
+                        [ Market Research ]
                     </Badge>
                     <h1 className="font-sans text-[30px] leading-[1.2]">Research Terminal</h1>
-                    <p className="max-w-[760px] font-sans text-[16px] leading-[1.5] text-white/70">
+                    <p className="max-w-[760px] font-sans text-[16px] leading-[1.5] text-muted-foreground">
                         Live market context, chart history, engine forecasts, disclosures, and sentiment feeds pulled directly from the backend.
                     </p>
                 </div>
@@ -653,7 +653,7 @@ export const ResearchView = () => {
             </header>
 
             {marketQuery.error || chartQuery.error ? (
-                <div className="border border-border px-6 py-4 font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">
+                <div className="rounded-2xl border border-border bg-card px-6 py-4 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
                     Market data error: {extractErrorMessage(marketQuery.error ?? chartQuery.error)}
                 </div>
             ) : null}
@@ -781,7 +781,7 @@ export const ResearchView = () => {
                                     size="xs"
                                     onClick={() => setShowMovingAverage20((value) => !value)}
                                     aria-pressed={showMovingAverage20}
-                                    className={cn(showMovingAverage20 ? "border-[#7f9d83]/40 bg-[#7f9d83]/10 text-[#7f9d83]" : "text-white/50 hover:text-white")}
+                                    className={cn(showMovingAverage20 ? "border-chart-2/40 bg-chart-2/10 text-chart-2" : "text-white/50 hover:text-white")}
                                 >
                                     MA 20
                                 </Button>
@@ -791,7 +791,7 @@ export const ResearchView = () => {
                                     size="xs"
                                     onClick={() => setShowMovingAverage50((value) => !value)}
                                     aria-pressed={showMovingAverage50}
-                                    className={cn(showMovingAverage50 ? "border-[#d1b970]/40 bg-[#d1b970]/10 text-[#d1b970]" : "text-white/50 hover:text-white")}
+                                    className={cn(showMovingAverage50 ? "border-chart-1/40 bg-chart-1/10 text-chart-1" : "text-white/50 hover:text-white")}
                                 >
                                     MA 50
                                 </Button>
@@ -841,45 +841,45 @@ export const ResearchView = () => {
 
                     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px] xl:items-start">
                         <div className="grid gap-3">
-                            <div className="relative h-[420px] overflow-hidden border border-border px-2 py-4">
+                            <div className="relative h-[420px] min-w-0 overflow-hidden border border-border px-2 py-4">
                                 {combinedChartData.length ? (
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                         <AreaChart
                                             syncId="research-price-action"
                                             data={combinedChartData}
                                             onMouseMove={onChartHover}
                                             onMouseLeave={() => setHoveredChartPoint(null)}
                                         >
-                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                            <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in oklch, var(--foreground) 8%, transparent)" vertical={false} />
                                             <XAxis dataKey="index" hide />
                                             <YAxis
                                                 domain={["auto", "auto"]}
-                                                tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 10, fontFamily: "monospace" }}
+                                                tick={{ fill: "color-mix(in oklch, var(--foreground) 35%, transparent)", fontSize: 10, fontFamily: "monospace" }}
                                                 axisLine={false}
                                                 tickLine={false}
                                             />
                                             <Tooltip
-                                                cursor={{ stroke: "rgba(255,255,255,0.18)", strokeWidth: 1 }}
+                                                cursor={{ stroke: "color-mix(in oklch, var(--foreground) 22%, transparent)", strokeWidth: 1 }}
                                                 content={<PriceActionTooltip />}
                                             />
                                             {showForecast ? (
                                                 <>
-                                                    <Area type="monotone" dataKey="forecastBandBase" stackId="forecast" stroke="none" fill="#1f2228" connectNulls />
-                                                    <Area type="monotone" dataKey="forecastBandRange" stackId="forecast" stroke="none" fill="rgba(255,255,255,0.08)" connectNulls />
+                                                    <Area type="monotone" dataKey="forecastBandBase" stackId="forecast" stroke="none" fill="var(--card)" connectNulls />
+                                                    <Area type="monotone" dataKey="forecastBandRange" stackId="forecast" stroke="none" fill="color-mix(in oklch, var(--chart-1) 18%, transparent)" connectNulls />
                                                 </>
                                             ) : null}
-                                            <Line type="monotone" dataKey="price" stroke="#ffffff" strokeWidth={1.5} dot={false} activeDot={{ r: 3, fill: "#ffffff", strokeWidth: 0 }} connectNulls />
+                                            <Line type="monotone" dataKey="price" stroke="var(--foreground)" strokeWidth={1.5} dot={false} activeDot={{ r: 3, fill: "var(--foreground)", strokeWidth: 0 }} connectNulls />
                                             {showForecast ? (
-                                                <Line type="monotone" dataKey="forecastMedian" stroke="rgba(255,255,255,0.7)" strokeDasharray="5 5" strokeWidth={1} dot={false} activeDot={{ r: 3, fill: "rgba(255,255,255,0.7)", strokeWidth: 0 }} connectNulls />
+                                                <Line type="monotone" dataKey="forecastMedian" stroke="var(--chart-1)" strokeDasharray="5 5" strokeWidth={1} dot={false} activeDot={{ r: 3, fill: "var(--chart-1)", strokeWidth: 0 }} connectNulls />
                                             ) : null}
                                             {showMovingAverage20 ? (
-                                                <Line type="monotone" dataKey="movingAverage20" stroke="#7f9d83" strokeWidth={1} dot={false} activeDot={{ r: 2, fill: "#7f9d83", strokeWidth: 0 }} connectNulls />
+                                                <Line type="monotone" dataKey="movingAverage20" stroke="var(--chart-2)" strokeWidth={1} dot={false} activeDot={{ r: 2, fill: "var(--chart-2)", strokeWidth: 0 }} connectNulls />
                                             ) : null}
                                             {showMovingAverage50 ? (
-                                                <Line type="monotone" dataKey="movingAverage50" stroke="#d1b970" strokeWidth={1} dot={false} activeDot={{ r: 2, fill: "#d1b970", strokeWidth: 0 }} connectNulls />
+                                                <Line type="monotone" dataKey="movingAverage50" stroke="var(--chart-1)" strokeWidth={1} dot={false} activeDot={{ r: 2, fill: "var(--chart-1)", strokeWidth: 0 }} connectNulls />
                                             ) : null}
                                             {comparisonTicker ? (
-                                                <Line type="monotone" dataKey="comparisonPrice" stroke="rgba(255,255,255,0.4)" strokeWidth={1} strokeDasharray="3 3" dot={false} activeDot={{ r: 2, fill: "rgba(255,255,255,0.4)", strokeWidth: 0 }} connectNulls />
+                                                <Line type="monotone" dataKey="comparisonPrice" stroke="color-mix(in oklch, var(--foreground) 50%, transparent)" strokeWidth={1} strokeDasharray="3 3" dot={false} activeDot={{ r: 2, fill: "color-mix(in oklch, var(--foreground) 50%, transparent)", strokeWidth: 0 }} connectNulls />
                                             ) : null}
                                         </AreaChart>
                                     </ResponsiveContainer>
@@ -891,22 +891,22 @@ export const ResearchView = () => {
                             </div>
 
                             {hasActivityData ? (
-                                <div className="relative h-[120px] overflow-hidden border border-border px-2 py-3">
-                                    <ResponsiveContainer width="100%" height="100%">
+                                <div className="relative h-[120px] min-w-0 overflow-hidden border border-border px-2 py-3">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                         <BarChart
                                             syncId="research-price-action"
                                             data={combinedChartData}
                                             onMouseMove={onChartHover}
                                             onMouseLeave={() => setHoveredChartPoint(null)}
                                         >
-                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                                            <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in oklch, var(--foreground) 7%, transparent)" vertical={false} />
                                             <XAxis dataKey="index" hide />
                                             <YAxis hide />
                                             <Tooltip
-                                                cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                                                cursor={{ fill: "color-mix(in oklch, var(--foreground) 6%, transparent)" }}
                                                 content={<ActivityTooltip />}
                                             />
-                                            <Bar dataKey="value" fill="rgba(255,255,255,0.2)" radius={0} />
+                                            <Bar dataKey="value" fill="color-mix(in oklch, var(--foreground) 22%, transparent)" radius={4} />
                                         </BarChart>
                                     </ResponsiveContainer>
                                 </div>
@@ -917,36 +917,36 @@ export const ResearchView = () => {
                             )}
 
                             {showRSI ? (
-                                <div className="relative h-[120px] overflow-hidden border border-border px-2 py-3">
+                                <div className="relative h-[120px] min-w-0 overflow-hidden border border-border px-2 py-3">
                                     <div className="absolute left-4 top-2 z-10 font-mono text-[8px] uppercase tracking-[1px] text-white/55">
                                         Relative Strength Index (14)
                                     </div>
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                         <AreaChart
                                             syncId="research-price-action"
                                             data={combinedChartData}
                                             onMouseMove={onChartHover}
                                             onMouseLeave={() => setHoveredChartPoint(null)}
                                         >
-                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                                            <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in oklch, var(--foreground) 7%, transparent)" vertical={false} />
                                             <XAxis dataKey="index" hide />
                                             <YAxis 
                                                 domain={[0, 100]} 
                                                 ticks={[30, 70]}
-                                                tick={{ fill: "rgba(255,255,255,0.2)", fontSize: 8, fontFamily: "monospace" }}
+                                                tick={{ fill: "color-mix(in oklch, var(--foreground) 28%, transparent)", fontSize: 8, fontFamily: "monospace" }}
                                                 axisLine={false}
                                                 tickLine={false}
                                                 width={25}
                                             />
                                             <Tooltip
-                                                cursor={{ stroke: "rgba(255,255,255,0.18)", strokeWidth: 1 }}
+                                                cursor={{ stroke: "color-mix(in oklch, var(--foreground) 22%, transparent)", strokeWidth: 1 }}
                                                 content={<RSITooltip />}
                                             />
                                             <Area 
                                                 type="monotone" 
                                                 dataKey="rsi" 
-                                                stroke="#ffffff" 
-                                                fill="rgba(255,255,255,0.05)" 
+                                                stroke="var(--foreground)" 
+                                                fill="color-mix(in oklch, var(--foreground) 8%, transparent)" 
                                                 strokeWidth={1} 
                                                 dot={false} 
                                                 connectNulls 
@@ -958,7 +958,7 @@ export const ResearchView = () => {
                         </div>
 
                         <div className="flex flex-col gap-4">
-                            <div className="border border-border bg-[#20242b] p-3 xl:sticky xl:top-4">
+                            <div className="rounded-2xl border border-border bg-popover/95 p-3 xl:sticky xl:top-4">
                                 <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">
                                     {chartLegendPoint ? (chartLegendPoint.kind === "forecast" ? "FORECAST" : "HISTORICAL") : "HOVER"}
                                 </p>
@@ -977,11 +977,11 @@ export const ResearchView = () => {
                                     </div>
                                     <div className="flex items-center justify-between gap-3">
                                         <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">MA 20</span>
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-[#7f9d83]">{formatCurrency(chartLegendPoint?.movingAverage20)}</span>
+                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-chart-2">{formatCurrency(chartLegendPoint?.movingAverage20)}</span>
                                     </div>
                                     <div className="flex items-center justify-between gap-3">
                                         <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">MA 50</span>
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-[#d1b970]">{formatCurrency(chartLegendPoint?.movingAverage50)}</span>
+                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-chart-1">{formatCurrency(chartLegendPoint?.movingAverage50)}</span>
                                     </div>
                                     <div className="flex items-center justify-between gap-3">
                                         <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">RSI</span>
@@ -1008,7 +1008,7 @@ export const ResearchView = () => {
                                 </div>
                             </div>
 
-                            <div className="border border-border bg-[#20242b] p-3">
+                            <div className="rounded-2xl border border-border bg-popover/95 p-3">
                                 <div className="flex items-start justify-between gap-4">
                                     <div className="space-y-1">
                                         <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">Market Snapshot</p>
@@ -1304,7 +1304,7 @@ function PriceActionTooltip({
     }
 
     return (
-        <div className="space-y-1 border border-border bg-[#20242b] px-3 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/70">
+        <div className="space-y-1 rounded-2xl border border-border bg-popover/95 px-3 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
             <div className="flex items-center justify-between gap-4 text-white">
                 <span>Date</span>
                 <span>{point.date}</span>
@@ -1351,7 +1351,7 @@ function ActivityTooltip({
     }
 
     return (
-        <div className="space-y-1 border border-border bg-[#20242b] px-3 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/70">
+        <div className="space-y-1 rounded-2xl border border-border bg-popover/95 px-3 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
             <div className="flex items-center justify-between gap-4 text-white">
                 <span>Date</span>
                 <span>{point.date}</span>
@@ -1378,7 +1378,7 @@ function RSITooltip({
     }
 
     return (
-        <div className="space-y-1 border border-border bg-[#20242b] px-3 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/70">
+        <div className="space-y-1 rounded-2xl border border-border bg-popover/95 px-3 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
             <div className="flex items-center justify-between gap-4 text-white">
                 <span>Date</span>
                 <span>{point.date}</span>

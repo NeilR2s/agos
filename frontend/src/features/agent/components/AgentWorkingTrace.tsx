@@ -13,7 +13,7 @@ type AgentWorkingTraceProps = {
 };
 
 export function AgentWorkingTrace({ events, isStreaming, selectedAgentId, onSelectAgent }: AgentWorkingTraceProps) {
-  const [expanded, setExpanded] = useState(isStreaming);
+  const [expanded, setExpanded] = useState(false);
   const buckets = useMemo(() => buildAgentTraceBuckets(events), [events]);
   const workerBuckets = useMemo(
     () => buckets.filter((bucket) => bucket.role !== "runtime" && bucket.role !== "synthesizer"),
@@ -36,64 +36,64 @@ export function AgentWorkingTrace({ events, isStreaming, selectedAgentId, onSele
   const title = isStreaming ? "Running" : errorCount ? "Completed With Errors" : "Completed";
 
   return (
-    <div className="overflow-hidden border border-white/10 bg-[#14181e]">
+    <div className="overflow-hidden rounded-[20px] border border-border/70 bg-card/35">
       <button
         type="button"
         onClick={() => setExpanded((current) => !current)}
-        className="w-full px-5 py-4 text-left transition-colors hover:bg-white/[0.03]"
+        className="w-full px-4 py-3 text-left transition-colors hover:bg-accent/50 md:px-5"
       >
-        <div className="flex items-center justify-between gap-4">
-          <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="min-w-0 space-y-1.5">
+            <div className="flex min-w-0 flex-wrap items-center gap-3">
               <span
                 className={cn(
                   "size-2.5 rounded-full",
-                  isStreaming ? "bg-[#6d9ac0]" : errorCount ? "bg-[#a16f77]" : "bg-[#6e9973]"
+                  isStreaming ? "bg-chart-3" : errorCount ? "bg-destructive" : "bg-chart-2"
                 )}
               />
-              <p className="font-sans text-[15px] font-medium text-white">{title}</p>
-              <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">
+              <p className="font-sans text-[15px] font-medium text-foreground">{title}</p>
+              <div className="flex min-w-0 flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
                 <span>{countBuckets.length} total workers</span>
                 {duration ? <span>{duration}</span> : null}
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/28">
+            <div className="flex flex-wrap items-center gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/75">
               <span>{isStreaming ? `${activeCount || countBuckets.length} live` : `${completedCount} complete`}</span>
               <span>{errorCount} errors</span>
               <span>{toolTotal} tools</span>
               <span>{sourceTotal} sources</span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">
+          <div className="flex shrink-0 items-center gap-3 self-end md:self-auto">
+            <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
               {resolvedCount}/{countBuckets.length}
             </span>
-            {expanded ? <ChevronDown className="size-4 text-white/40" /> : <ChevronRight className="size-4 text-white/40" />}
+            {expanded ? <ChevronDown className="size-4 text-muted-foreground" /> : <ChevronRight className="size-4 text-muted-foreground" />}
           </div>
         </div>
 
-        <div className="mt-4 space-y-2">
-          <div className="relative h-[8px] overflow-hidden border border-white/10 bg-[#0f1318]">
+        <div className="mt-3 space-y-2">
+          <div className="relative h-[4px] overflow-hidden rounded-full bg-secondary">
             <div
               className={cn(
                 "absolute inset-y-0 left-0",
-                isStreaming ? "bg-[#486c8b]" : errorCount ? "bg-[#7a535b]" : "bg-[#5c7c61]"
+                 isStreaming ? "bg-chart-3" : errorCount ? "bg-destructive" : "bg-chart-2"
               )}
               style={{ width: `${progress}%` }}
             />
             <div
-              className="absolute inset-0 opacity-30"
-              style={{ backgroundImage: "repeating-linear-gradient(90deg, transparent 0 5px, rgba(255,255,255,0.18) 5px 6px)" }}
+              className="absolute inset-0 opacity-35"
+              style={{ backgroundImage: "repeating-linear-gradient(90deg, transparent 0 7px, color-mix(in oklch, var(--foreground) 24%, transparent) 7px 8px)" }}
             />
           </div>
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
-            {isStreaming ? "Live trace" : "Completed trace"} / click a worker for its breakdown
+          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/75">
+            {isStreaming ? "Live operations trace" : "Completed operations trace"} / expand for worker detail
           </p>
         </div>
       </button>
 
       {expanded ? (
-        <div className="grid gap-3 border-t border-white/10 p-4 md:grid-cols-2 2xl:grid-cols-3">
+        <div className="border-t border-border/70">
           {buckets.map((bucket) => {
             const latest = bucket.events[bucket.events.length - 1];
             const isSelected = bucket.agentId === selectedAgentId;
@@ -108,42 +108,33 @@ export function AgentWorkingTrace({ events, isStreaming, selectedAgentId, onSele
                 type="button"
                 onClick={() => onSelectAgent(bucket.agentId)}
                 className={cn(
-                  "space-y-3 border px-4 py-4 text-left transition-colors",
-                  getBucketTone(bucket.status, isSelected)
+                  "grid w-full gap-3 border-b border-l-2 border-b-border/60 px-4 py-3 text-left transition-colors last:border-b-0 md:grid-cols-[180px_minmax(0,1fr)_auto] md:items-start md:px-5",
+                  getBucketRowTone(bucket.status, isSelected)
                 )}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-white">{bucket.label}</p>
-                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">{bucket.role.replace(/-/g, " ")}</p>
-                  </div>
-                  <span
-                    className={cn(
-                      "font-mono text-[10px] uppercase tracking-[1.4px]",
-                      bucket.status === "error" && "text-[#d7a5ad]",
-                      bucket.status === "completed" && "text-white/50",
-                      bucket.status === "running" && "text-[#a9c4df]"
-                    )}
-                  >
-                    {bucket.status}
-                  </span>
+                <div className="min-w-0">
+                  <p className="truncate font-mono text-[11px] uppercase tracking-[1.4px] text-foreground">{bucket.label}</p>
+                  <p className="mt-1 truncate font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{bucket.role.replace(/-/g, " ")}</p>
                 </div>
-                <p className="line-clamp-3 font-sans text-[14px] leading-[1.6] text-white/80">
-                  {bucket.summary ?? (latest ? describeEvent(latest) : "Awaiting trace output.")}
-                </p>
-                {highlights.length ? (
-                  <div className="space-y-1.5">
-                    {highlights.map((highlight, index) => (
-                      <p key={`${bucket.agentId}-${index}`} className="line-clamp-1 font-sans text-[12px] leading-[1.5] text-white/45">
-                        {highlight}
-                      </p>
-                    ))}
-                  </div>
-                ) : null}
-                <div className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">
-                  <span>{bucket.toolCount} tools</span>
-                  <span>{bucket.citationCount} sources</span>
-                  <span>{bucket.events.length} events</span>
+                <div className="min-w-0 space-y-1.5">
+                  <p className="line-clamp-2 font-sans text-[13px] leading-[1.55] text-foreground/80">
+                    {bucket.summary ?? (latest ? describeEvent(latest) : "Awaiting trace output.")}
+                  </p>
+                  {highlights.length ? (
+                    <div className="space-y-1">
+                      {highlights.map((highlight, index) => (
+                        <p key={`${bucket.agentId}-${index}`} className="line-clamp-1 font-sans text-[12px] leading-[1.45] text-muted-foreground">
+                          {highlight}
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap items-center gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground md:justify-end">
+                  <span className={cn(bucket.status === "error" && "text-destructive", bucket.status === "completed" && "text-chart-2", bucket.status === "running" && "text-chart-3")}>{bucket.status}</span>
+                  <span>{bucket.toolCount}t</span>
+                  <span>{bucket.citationCount}s</span>
+                  <span>{bucket.events.length}e</span>
                 </div>
               </button>
             );
@@ -154,22 +145,22 @@ export function AgentWorkingTrace({ events, isStreaming, selectedAgentId, onSele
   );
 }
 
-function getBucketTone(status: "idle" | "running" | "completed" | "error", isSelected: boolean) {
+function getBucketRowTone(status: "idle" | "running" | "completed" | "error", isSelected: boolean) {
   if (status === "error") {
     return isSelected
-      ? "border-[#8b5862] bg-[#322229]"
-      : "border-[#5f3941] bg-[#281c21] hover:bg-[#2d1f25]";
+      ? "border-l-destructive bg-destructive/10"
+      : "border-l-destructive/70 bg-destructive/5 hover:bg-destructive/10";
   }
 
   if (status === "running") {
     return isSelected
-      ? "border-[#5a7f9f] bg-[#24313d]"
-      : "border-[#36536c] bg-[#1d2630] hover:bg-[#212c37]";
+      ? "border-l-chart-3 bg-chart-3/10"
+      : "border-l-chart-3/70 bg-chart-3/5 hover:bg-chart-3/10";
   }
 
   return isSelected
-    ? "border-white/20 bg-white/[0.06]"
-    : "border-white/10 bg-[#171b21] hover:bg-white/[0.03]";
+    ? "border-l-ring bg-accent/70"
+    : "border-l-border bg-transparent hover:bg-accent/50";
 }
 
 function formatTraceDuration(events: AgentSSEEvent[], isStreaming: boolean) {

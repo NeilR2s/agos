@@ -196,8 +196,23 @@ export function AgentPage() {
   const combinedMessages = useMemo(() => {
     const messages = [...(messagesQuery.data ?? [])];
 
-    if (pendingUserMessage && !messages.some((message) => message.id === pendingUserMessage.id)) {
-      messages.push(pendingUserMessage);
+    if (pendingUserMessage) {
+      const pendingMessage = {
+        ...pendingUserMessage,
+        runId: pendingUserMessage.runId ?? stream.run?.id ?? null,
+      };
+      const alreadyPresent = messages.some(
+        (message) =>
+          message.id === pendingMessage.id ||
+          (message.role === "user" &&
+            pendingMessage.runId &&
+            message.runId === pendingMessage.runId &&
+            message.content === pendingMessage.content)
+      );
+
+      if (!alreadyPresent) {
+        messages.push(pendingMessage);
+      }
     }
 
     if (stream.completedMessage) {
@@ -475,18 +490,18 @@ export function AgentPage() {
   const supplementalErrors = [messageErrorMessage, runErrorMessage, runEventsErrorMessage].filter(Boolean) as string[];
 
   return (
-    <div className="flex h-[calc(100dvh-57px)] flex-col overflow-hidden bg-background text-foreground lg:h-[calc(100dvh-1px)]">
-      <header className="shrink-0 border-b border-white/10 px-4 py-2.5 md:px-5">
+    <div className="flex h-[calc(100dvh-57px)] flex-col overflow-hidden bg-background text-foreground lg:h-dvh">
+      <header className="shrink-0 border-b border-border/60 bg-background/90 px-3 py-2 backdrop-blur-md md:px-4">
         <div className="flex min-h-[44px] flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="border border-white/15 px-2 py-1 font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">Agent Console</span>
-            <h1 className="font-sans text-[21px] leading-none text-white md:text-[24px]">AGOS Copilot</h1>
-            <p className="max-w-[68vw] truncate font-mono text-[10px] uppercase tracking-[1.4px] text-white/30 lg:max-w-[520px]">
+            <span className="rounded-full border border-border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Frontier Agent</span>
+            <h1 className="font-sans text-[20px] leading-none text-foreground md:text-[22px]">AGOS</h1>
+            <p className="max-w-[68vw] truncate font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/70 lg:max-w-[520px]">
               {activeThread?.title ?? "new session"}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">
+          <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
             <span>{mode}</span>
             <span>/</span>
             <span>{selectedTicker ?? "no ticker"}</span>
@@ -497,15 +512,15 @@ export function AgentPage() {
               <button
                 type="button"
                 onClick={() => setActivePanel("run")}
-                className="border border-white/10 px-2.5 py-1 text-white/55 transition-colors hover:border-white/20 hover:text-white"
+                className="rounded-full border border-border px-2.5 py-1 text-muted-foreground transition-colors hover:border-ring/60 hover:text-foreground"
               >
                 {activeRunLabel ?? "Run"} / {activeRun.status}
               </button>
             ) : threadId && runsQuery.isLoading ? (
-              <span className="border border-white/10 px-2.5 py-1 text-white/35">loading runs</span>
+              <span className="rounded-full border border-border px-2.5 py-1 text-muted-foreground/70">loading runs</span>
             ) : null}
             {stream.status === "cancelled" && stream.run?.id === activeRunId ? (
-              <span className="border border-white/10 px-2.5 py-1 text-white/45">cancelled</span>
+              <span className="rounded-full border border-border px-2.5 py-1 text-muted-foreground">cancelled</span>
             ) : null}
           </div>
         </div>
@@ -513,10 +528,10 @@ export function AgentPage() {
 
       {threadErrorMessage ? (
         <div className="flex min-h-0 flex-1 items-center justify-center px-5 py-5 md:px-6">
-          <div className="w-full max-w-[640px] border border-[#5f3941] bg-[#281c21] px-6 py-6">
-            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-[#d7a5ad]">Thread Unavailable</p>
-            <h2 className="mt-3 font-sans text-[24px] leading-[1.1] text-white">The selected AGOS session could not be loaded.</h2>
-            <p className="mt-3 font-sans text-[14px] leading-[1.7] text-white/75">{threadErrorMessage}</p>
+          <div className="w-full max-w-[640px] rounded-3xl border border-destructive/40 bg-destructive/10 px-6 py-6">
+            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-destructive">Thread Unavailable</p>
+            <h2 className="mt-3 font-sans text-[24px] leading-[1.1] text-foreground">The selected AGOS session could not be loaded.</h2>
+            <p className="mt-3 font-sans text-[14px] leading-[1.7] text-foreground/75">{threadErrorMessage}</p>
             <div className="mt-5 flex flex-wrap gap-2">
               <Button type="button" variant="outline" size="sm" onClick={handleStartFreshThread}>
                 Start Fresh Session
@@ -528,19 +543,19 @@ export function AgentPage() {
           </div>
         </div>
       ) : (
-        <div className="min-h-0 flex flex-1 flex-col gap-3 px-4 py-3 md:px-5">
+        <div className="min-h-0 flex flex-1 flex-col gap-2.5 px-3 py-2.5 md:px-4">
           {stopStreamNotice ? (
-            <section className="border border-[#36536c] bg-[#1d2630] px-4 py-3">
-              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-[#a9c4df]">Stream Stopped</p>
-              <p className="mt-2 font-sans text-[13px] leading-[1.6] text-white/80">{stopStreamNotice}</p>
+            <section className="mx-auto w-full max-w-[900px] rounded-2xl border border-chart-3/40 bg-chart-3/10 px-4 py-3">
+              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-chart-3">Stream Stopped</p>
+              <p className="mt-2 font-sans text-[13px] leading-[1.6] text-foreground/80">{stopStreamNotice}</p>
             </section>
           ) : null}
 
           {supplementalErrors.length ? (
             <div className="space-y-2">
               {supplementalErrors.map((message) => (
-                <section key={message} className="border border-[#5f3941] bg-[#281c21] px-4 py-3">
-                  <p className="font-sans text-[13px] leading-[1.6] text-[#d7a5ad]">{message}</p>
+                <section key={message} className="mx-auto w-full max-w-[900px] rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3">
+                  <p className="font-sans text-[13px] leading-[1.6] text-destructive">{message}</p>
                 </section>
               ))}
             </div>
@@ -583,35 +598,32 @@ export function AgentPage() {
         }}
       >
         <DialogContent
-          className="overflow-hidden border-white/10 bg-[#171a20] p-0 shadow-none"
-          style={{ width: "min(94vw, 1280px)", maxWidth: "none" }}
+          className="overflow-hidden rounded-[28px] border-border bg-popover/95 p-0 shadow-none"
+          style={{ width: activePanel === "run" ? "min(94vw, 1180px)" : "min(94vw, 1040px)", maxWidth: "none" }}
         >
-          <DialogHeader className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4 text-left">
+          <DialogHeader className="border-b border-border bg-background/25 px-5 py-4 pr-16 text-left">
             <div>
-              <DialogTitle className="font-mono text-[11px] uppercase tracking-[1.4px] text-white">
+              <DialogTitle className="font-mono text-[11px] uppercase tracking-[1.4px] text-foreground">
                 {activePanel === "run" ? "Run Audit" : "Controls"}
               </DialogTitle>
-              <DialogDescription className="mt-1 max-w-[720px] font-sans text-[13px] normal-case leading-[1.5] text-white/60">
+              <DialogDescription className="mt-1 max-w-[720px] font-sans text-[13px] normal-case leading-[1.5] text-muted-foreground">
                 {activePanel === "run"
                   ? "Inspect persisted run telemetry, worker summaries, and the agent-by-agent event trail."
                   : "Adjust model, generation, and tool settings without losing transcript space."}
               </DialogDescription>
             </div>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setActivePanel(null)}>
-              Close
-            </Button>
           </DialogHeader>
 
-          <div className="scrollbar-hidden max-h-[min(82vh,940px)] overflow-y-auto p-5">
+          <div className="scrollbar-hidden max-h-[min(82vh,900px)] overflow-y-auto p-5">
             {activePanel === "run" ? (
-              <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+              <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
                 <div className="space-y-4">
-                  <section className="border border-white/10 bg-[#1b1f25] px-4 py-4">
+                  <section className="rounded-[20px] border border-border bg-card px-4 py-4">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Run History</p>
-                      {runsQuery.isFetching ? <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/25">Refreshing</span> : null}
+                      <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Run History</p>
+                      {runsQuery.isFetching ? <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/70">Refreshing</span> : null}
                     </div>
-                    <div className="agent-scrollbar mt-3 max-h-[280px] space-y-2 overflow-y-auto pr-1">
+                    <div className="agent-scrollbar mt-3 max-h-[220px] space-y-2 overflow-y-auto pr-1">
                       {availableRuns.length ? (
                         availableRuns.map((run, index) => {
                           const isActive = run.id === activeRunId;
@@ -621,21 +633,21 @@ export function AgentPage() {
                               type="button"
                               onClick={() => handleSelectRun(run.id)}
                               className={[
-                                "w-full border px-3 py-3 text-left transition-colors",
-                                isActive ? "border-white/20 bg-white/[0.06]" : "border-white/10 hover:border-white/20 hover:bg-white/[0.03]",
+                                "w-full rounded-[18px] border px-3 py-3 text-left transition-colors",
+                                isActive ? "border-ring/60 bg-accent" : "border-border hover:border-ring/60 hover:bg-accent/70",
                               ].join(" ")}
                             >
                               <div className="flex items-center justify-between gap-3">
-                                <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/40">{formatRunLabel(run, index)}</p>
-                                <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/30">{run.status}</span>
+                                <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{formatRunLabel(run, index)}</p>
+                                <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/75">{run.status}</span>
                               </div>
-                              <p className="mt-2 line-clamp-2 font-sans text-[13px] leading-[1.45] text-white/80">{run.summary ?? "Inspect run trace"}</p>
-                              <p className="mt-2 font-mono text-[10px] uppercase tracking-[1.2px] text-white/25">{run.mode}</p>
+                              <p className="mt-2 line-clamp-2 font-sans text-[13px] leading-[1.45] text-foreground/80">{run.summary ?? "Inspect run trace"}</p>
+                              <p className="mt-2 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/70">{run.mode}</p>
                             </button>
                           );
                         })
                       ) : (
-                        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/25">No persisted runs yet</p>
+                        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/70">No persisted runs yet</p>
                       )}
                     </div>
                   </section>
@@ -648,9 +660,9 @@ export function AgentPage() {
                     agentCount={agentCount}
                   />
                   {activeRun ? (
-                    <div className="border border-white/10 bg-[#1b1f25] px-4 py-4">
-                      <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/35">Run Context</p>
-                      <div className="mt-3 space-y-2 font-sans text-[13px] leading-[1.6] text-white/75">
+                    <div className="rounded-[20px] border border-border bg-card px-4 py-4">
+                      <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Run Context</p>
+                      <div className="mt-3 space-y-2 font-sans text-[13px] leading-[1.6] text-foreground/75">
                         <p>Mode: {activeRun.mode}</p>
                         <p>Ticker: {activeRun.selectedTicker ?? "none"}</p>
                         <p>Started: {formatShortDate(activeRun.startedAt)}</p>

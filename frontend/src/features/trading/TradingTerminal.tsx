@@ -7,7 +7,7 @@ export const TradingTerminal = () => {
     const ticker = (searchParams.get("ticker") ?? "TEL").toUpperCase();
 
     return (
-        <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-8 px-6 py-8 md:px-8 md:py-12">
+        <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-8 px-6 py-8 md:px-8 md:py-12">
             <TradeWorkbench
                 ticker={ticker}
                 onTickerChange={(nextTicker) => {

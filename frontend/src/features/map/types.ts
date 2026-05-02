@@ -31,6 +31,8 @@ export type MapConnectionLine = {
   description: string;
 };
 
+export type MapExpandedConnectionLine = MapConnectionLine & { coordinates: LngLat[] };
+
 export type MapTrackPoint = {
   timestamp: TimestampId;
   location: LngLat;
@@ -84,7 +86,7 @@ export type MapBounds = {
 export type MapFeatureCollection = {
   assets: MapAssetPoint[];
   zones: MapZonePolygon[];
-  connections: Array<MapConnectionLine & { coordinates: LngLat[] }>;
+  connections: MapExpandedConnectionLine[];
   tracks: MapTrack[];
   events: MapEvent[];
   timeline: TimestampId[];
@@ -104,4 +106,18 @@ export type MapFocusTarget = {
     | { type: "point"; coordinates: LngLat }
     | { type: "line"; coordinates: LngLat[] }
     | { type: "polygon"; coordinates: LngLat[] };
+};
+
+export type MapObjectDetail = {
+  selection: Exclude<MapSelection, null>;
+  asset: MapAssetPoint | null;
+  zone: MapZonePolygon | null;
+  connection: MapExpandedConnectionLine | null;
+  track: MapTrack | null;
+  event: MapEvent | null;
+  relatedAssets: MapAssetPoint[];
+  relatedZones: MapZonePolygon[];
+  relatedConnections: MapExpandedConnectionLine[];
+  relatedTracks: MapTrack[];
+  relatedEvents: MapEvent[];
 };

@@ -67,14 +67,14 @@ type HoldingDialogState = {
 // Portfolio normalization moved to src/data/normalizePortfolio
 
 const allocationPalette = [
-    "rgba(255,255,255,0.92)",
-    "rgba(255,255,255,0.75)",
-    "rgba(255,255,255,0.58)",
-    "rgba(255,255,255,0.44)",
-    "rgba(255,255,255,0.32)",
-    "rgba(127,157,131,0.8)",
-    "rgba(209,185,112,0.78)",
-    "rgba(166,123,123,0.76)",
+    "var(--foreground)",
+    "color-mix(in oklch, var(--foreground) 78%, transparent)",
+    "color-mix(in oklch, var(--foreground) 62%, transparent)",
+    "color-mix(in oklch, var(--foreground) 46%, transparent)",
+    "color-mix(in oklch, var(--foreground) 30%, transparent)",
+    "var(--chart-2)",
+    "var(--chart-1)",
+    "var(--destructive)",
 ];
 
 export const Dashboard = () => {
@@ -222,7 +222,7 @@ export const Dashboard = () => {
     const allocationTotal = allocationSegments.reduce((sum, segment) => sum + segment.value, 0);
 
     const gainClass = (value: number) =>
-        value > 0 ? "text-[#7f9d83]" : value < 0 ? "text-[#a67b7b]" : "text-white/70";
+        value > 0 ? "text-chart-2" : value < 0 ? "text-destructive" : "text-muted-foreground";
 
     const portfolioError = portfolioQuery.error ? extractErrorMessage(portfolioQuery.error) : null;
 
@@ -235,14 +235,14 @@ export const Dashboard = () => {
     const cashPct = totalVal > 0 ? (cashAmount / totalVal) * 100 : 0;
 
     return (
-        <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-8 px-6 py-8 md:px-8 md:py-12">
+        <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-8 px-6 py-8 md:px-8 md:py-12">
             <header className="flex flex-col gap-4 border-b border-border pb-6 md:flex-row md:items-end md:justify-between">
                 <div className="space-y-3">
-                    <Badge variant="outline" className="border-border text-white/70">
-                        Portfolio
+                    <Badge variant="outline" className="border-border text-muted-foreground">
+                        [ Portfolio ]
                     </Badge>
                     <h1 className="font-sans text-[30px] leading-[1.2]">Portfolio Control Surface</h1>
-                    <p className="max-w-[700px] font-sans text-[16px] leading-[1.5] text-white/70">
+                    <p className="max-w-[700px] font-sans text-[16px] leading-[1.5] text-muted-foreground">
                         Manage holdings and cash directly from the dashboard. The live portfolio value, cash balance, and position-level metrics refresh automatically from the backend.
                     </p>
                 </div>
@@ -256,7 +256,7 @@ export const Dashboard = () => {
             </header>
 
             {portfolioError ? (
-                <div className="border border-border px-6 py-4 font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">
+                <div className="rounded-2xl border border-border bg-card px-6 py-4 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
                     Portfolio error: {portfolioError}
                 </div>
             ) : null}
@@ -311,8 +311,8 @@ export const Dashboard = () => {
                         <CardTitle className="text-[14px] uppercase tracking-[1.4px] text-white/50">Largest Position</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="font-mono text-2xl font-bold text-white">{largestPos}</p>
-                        <p className="mt-1 font-mono text-[10px] uppercase tracking-[1px] text-white/30">
+                        <p className="font-mono text-2xl font-semibold text-foreground">{largestPos}</p>
+                        <p className="mt-1 font-mono text-[10px] uppercase tracking-[1px] text-muted-foreground">
                             {sortedHoldings[0] ? `${((sortedHoldings[0].marketValue ?? 0) / totalVal * 100).toFixed(1)}% of portfolio` : "No positions"}
                         </p>
                     </CardContent>
@@ -323,8 +323,8 @@ export const Dashboard = () => {
                         <CardTitle className="text-[14px] uppercase tracking-[1.4px] text-white/50">Top 3 Concentration</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="font-mono text-2xl font-bold text-white">{top3Pct.toFixed(1)}%</p>
-                        <p className="mt-1 font-mono text-[10px] uppercase tracking-[1px] text-white/30">
+                        <p className="font-mono text-2xl font-semibold text-foreground">{top3Pct.toFixed(1)}%</p>
+                        <p className="mt-1 font-mono text-[10px] uppercase tracking-[1px] text-muted-foreground">
                             Combined weight of top holdings
                         </p>
                     </CardContent>
@@ -335,8 +335,8 @@ export const Dashboard = () => {
                         <CardTitle className="text-[14px] uppercase tracking-[1.4px] text-white/50">Cash Ratio</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="font-mono text-2xl font-bold text-white">{cashPct.toFixed(1)}%</p>
-                        <p className="mt-1 font-mono text-[10px] uppercase tracking-[1px] text-white/30">
+                        <p className="font-mono text-2xl font-semibold text-foreground">{cashPct.toFixed(1)}%</p>
+                        <p className="mt-1 font-mono text-[10px] uppercase tracking-[1px] text-muted-foreground">
                             Liquid capital availability
                         </p>
                     </CardContent>
@@ -344,7 +344,7 @@ export const Dashboard = () => {
             </section>
 
             {portfolio?.totalGainLoss === null ? (
-                <div className="border border-dashed border-white/10 px-4 py-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">
+                <div className="rounded-2xl border border-dashed border-border px-4 py-3 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
                     Gain and loss are unavailable for one or more holdings until a valid average price is saved.
                 </div>
             ) : null}

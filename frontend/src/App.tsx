@@ -41,10 +41,10 @@ function App() {
             </Shell>
             <Toaster theme="dark" position="bottom-right" toastOptions={{
                 style: {
-                    background: '#1f2228',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: '#ffffff',
-                    borderRadius: '0px',
+                    background: 'var(--popover)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--popover-foreground)',
+                    borderRadius: '20px',
                     fontFamily: 'Geist Mono Variable, monospace'
                 }
             }} />

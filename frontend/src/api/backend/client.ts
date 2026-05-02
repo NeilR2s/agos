@@ -10,7 +10,7 @@ import type {
   AgentThread,
   AgentThreadCreateRequest,
 } from "../../features/agent/types";
-import type { MapBounds, MapFeatureCollection, MapPlaceSearchResult } from "../../features/map/types";
+import type { MapBounds, MapFeatureCollection, MapObjectDetail, MapPlaceSearchResult, MapSelection } from "../../features/map/types";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
@@ -179,6 +179,10 @@ export const mapApi = {
       method: "POST",
       body: JSON.stringify({ polygon, search }),
     });
+  },
+
+  getObjectDetail(objectType: NonNullable<MapSelection>["type"], objectId: string) {
+    return backendJson<MapObjectDetail>(`/api/v1/map/objects/${objectType}/${objectId}`);
   },
 
   async searchPlaces(query: string, limit = 5) {

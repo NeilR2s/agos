@@ -52,6 +52,45 @@ const draftSourceId = "agos-map-draft";
 const handlesSourceId = "agos-map-handles";
 
 const interactiveFeatureLayers = ["agos-assets", "agos-zones-fill", "agos-connections", "agos-events", "agos-tracks"] as const;
+const mapPaint = {
+  foreground: "white",
+  panel: "#1f2228",
+};
+
+const calibrateBaseMapStyle = (map: maplibregl.Map) => {
+  const style = map.getStyle();
+  style.layers?.forEach((layer) => {
+    const id = layer.id.toLowerCase();
+
+    if (layer.type === "background") {
+      map.setPaintProperty(layer.id, "background-color", "#050505");
+      return;
+    }
+
+    if (layer.type === "fill") {
+      if (id.includes("water")) {
+        map.setPaintProperty(layer.id, "fill-color", "#080b0d");
+        return;
+      }
+
+      map.setPaintProperty(layer.id, "fill-color", "#181a1c");
+      map.setPaintProperty(layer.id, "fill-opacity", id.includes("landcover") || id.includes("landuse") ? 0.42 : 0.72);
+      return;
+    }
+
+    if (layer.type === "line") {
+      map.setPaintProperty(layer.id, "line-color", id.includes("road") || id.includes("boundary") ? "#4e545a" : "#32373c");
+      map.setPaintProperty(layer.id, "line-opacity", 0.55);
+      return;
+    }
+
+    if (layer.type === "symbol") {
+      map.setPaintProperty(layer.id, "text-color", "#929aa4");
+      map.setPaintProperty(layer.id, "text-halo-color", "#050505");
+      map.setPaintProperty(layer.id, "text-halo-width", 1);
+    }
+  });
+};
 
 const extendBounds = (coordinates: [number, number][]) => {
   const bounds = new maplibregl.LngLatBounds(coordinates[0], coordinates[0]);
@@ -216,6 +255,7 @@ export function MapCanvas({
 
     map.on("load", () => {
       loadedRef.current = true;
+      calibrateBaseMapStyle(map);
 
       map.addSource(assetsSourceId, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addSource(zonesSourceId, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -231,7 +271,7 @@ export function MapCanvas({
         type: "fill",
         source: zonesSourceId,
         paint: {
-          "fill-color": "#ffffff",
+          "fill-color": mapPaint.foreground,
           "fill-opacity": ["case", ["==", ["get", "selected"], 1], 0.12, 0.05],
         },
       });
@@ -240,7 +280,7 @@ export function MapCanvas({
         type: "line",
         source: zonesSourceId,
         paint: {
-          "line-color": "#ffffff",
+          "line-color": mapPaint.foreground,
           "line-opacity": ["case", ["==", ["get", "selected"], 1], 0.9, 0.3],
           "line-width": ["case", ["==", ["get", "selected"], 1], 2, 1],
         },
@@ -250,7 +290,7 @@ export function MapCanvas({
         type: "line",
         source: connectionsSourceId,
         paint: {
-          "line-color": "#ffffff",
+          "line-color": mapPaint.foreground,
           "line-opacity": ["case", ["==", ["get", "selected"], 1], 0.9, 0.28],
           "line-width": ["case", ["==", ["get", "selected"], 1], 2.6, 1.2],
         },
@@ -260,7 +300,7 @@ export function MapCanvas({
         type: "line",
         source: tracksSourceId,
         paint: {
-          "line-color": "#ffffff",
+          "line-color": mapPaint.foreground,
           "line-dasharray": [1, 1.2],
           "line-opacity": ["case", ["==", ["get", "selected"], 1], 1, 0.45],
           "line-width": ["case", ["==", ["get", "selected"], 1], 3, 1.5],
@@ -271,10 +311,10 @@ export function MapCanvas({
         type: "circle",
         source: assetsSourceId,
         paint: {
-          "circle-color": "#ffffff",
+          "circle-color": mapPaint.foreground,
           "circle-opacity": ["case", ["==", ["get", "selected"], 1], 1, 0.85],
           "circle-radius": ["case", ["==", ["get", "selected"], 1], 7, 5],
-          "circle-stroke-color": "#1f2228",
+          "circle-stroke-color": mapPaint.panel,
           "circle-stroke-width": 1.5,
         },
       });
@@ -283,10 +323,10 @@ export function MapCanvas({
         type: "circle",
         source: eventsSourceId,
         paint: {
-          "circle-color": "#1f2228",
+          "circle-color": mapPaint.panel,
           "circle-opacity": 0.95,
           "circle-radius": ["case", ["==", ["get", "selected"], 1], 7, 4],
-          "circle-stroke-color": "#ffffff",
+          "circle-stroke-color": mapPaint.foreground,
           "circle-stroke-opacity": ["case", ["==", ["get", "selected"], 1], 1, 0.7],
           "circle-stroke-width": 1.5,
         },
@@ -295,27 +335,27 @@ export function MapCanvas({
         id: "agos-query-fill",
         type: "fill",
         source: querySourceId,
-        paint: { "fill-color": "#ffffff", "fill-opacity": 0.06 },
+        paint: { "fill-color": mapPaint.foreground, "fill-opacity": 0.06 },
       });
       map.addLayer({
         id: "agos-query-line",
         type: "line",
         source: querySourceId,
-        paint: { "line-color": "#ffffff", "line-width": 2, "line-opacity": 0.9 },
+        paint: { "line-color": mapPaint.foreground, "line-width": 2, "line-opacity": 0.9 },
       });
       map.addLayer({
         id: "agos-draft-line",
         type: "line",
         source: draftSourceId,
-        paint: { "line-color": "#ffffff", "line-width": 1.5, "line-opacity": 0.5 },
+        paint: { "line-color": mapPaint.foreground, "line-width": 1.5, "line-opacity": 0.5 },
       });
       map.addLayer({
         id: "agos-polygon-handles",
         type: "circle",
         source: handlesSourceId,
         paint: {
-          "circle-color": "#1f2228",
-          "circle-stroke-color": "#ffffff",
+          "circle-color": mapPaint.panel,
+          "circle-stroke-color": mapPaint.foreground,
           "circle-stroke-width": 1.5,
           "circle-radius": 6,
         },
@@ -476,23 +516,24 @@ export function MapCanvas({
   }, [focusTarget]);
 
   return (
-    <div className="relative min-h-[560px] overflow-hidden border border-white/10 bg-[#171a20] xl:min-h-[calc(100dvh-16rem)] xl:max-h-[860px]">
-      <div className="absolute left-4 top-4 z-10 border border-white/10 bg-background/90 px-3 py-2 backdrop-blur-sm">
-        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">Map Surface</p>
-        <p className="mt-1 font-sans text-[13px] text-white/70">
+    <div className="relative min-h-[420px] flex-1 overflow-hidden bg-card md:min-h-[520px] xl:min-h-0">
+      <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(180deg,var(--background)_0%,transparent_16%,transparent_78%,color-mix(in_oklch,var(--background)_82%,transparent)_100%)]" aria-hidden="true" />
+      <div className="absolute left-3 top-3 z-20 rounded-2xl border border-border bg-background/90 px-3 py-2 backdrop-blur-xl">
+        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Map Surface</p>
+        <p className="mt-1 font-sans text-[13px] text-muted-foreground">
           {queryMode === "bbox" ? "Viewport query active" : "Polygon drawing active"}
         </p>
       </div>
       {hoverState ? (
         <div
-          className="pointer-events-none absolute z-20 border border-white/10 bg-background/95 px-3 py-2"
+          className="pointer-events-none absolute z-30 rounded-2xl border border-border bg-popover/95 px-3 py-2 backdrop-blur-xl"
           style={{ left: Math.min(hoverState.x + 18, Math.max(24, tooltipWidth - 180)), top: Math.max(16, hoverState.y + 18) }}
         >
-          <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-white/40">{hoverState.kind}</p>
-          <p className="mt-1 font-sans text-[13px] text-white">{hoverState.label}</p>
+          <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{hoverState.kind}</p>
+          <p className="mt-1 font-sans text-[13px] text-foreground">{hoverState.label}</p>
         </div>
       ) : null}
-      <div ref={containerRef} className={cn("h-[560px] w-full xl:h-[calc(100dvh-16rem)] xl:max-h-[860px]", queryMode === "polygon" && "cursor-crosshair")} />
+      <div ref={containerRef} className={cn("h-[420px] w-full md:h-[520px] xl:h-full", queryMode === "polygon" && "cursor-crosshair")} />
     </div>
   );
 }
