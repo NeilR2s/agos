@@ -29,8 +29,11 @@ class DecisionEngine:
 
         # 1. Fetch Data
         try:
-            historical_prices = await self.data_provider.fetch_historical_prices(request.ticker, request.lookback_days, token=token)
-            portfolio_state = await self.data_provider.fetch_portfolio_state(request.user_id, token=token)
+            import asyncio
+            fetch_history_task = self.data_provider.fetch_historical_prices(request.ticker, request.lookback_days, token=token)
+            fetch_portfolio_task = self.data_provider.fetch_portfolio_state(request.user_id, token=token)
+            historical_prices, portfolio_state = await asyncio.gather(fetch_history_task, fetch_portfolio_task)
+            
             latest_close = historical_prices[-1].close if historical_prices else None
             trace.append(
                 DecisionTraceStep(

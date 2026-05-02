@@ -59,16 +59,14 @@ def test_fetch_historical_prices_uses_backend_chart_when_cosmos_history_is_spars
         )
         for day in range(14)
     ]
-
-    async def fake_get_cosmos_client():
-        return _FakeCosmosClient(cosmos_items)
-
-    async def fake_fetch_backend_chart_prices(ticker, lookback_days):
+    
+    async def fake_fetch_backend_chart_prices(ticker, lookback_days, token=None):
         assert ticker == "JGS"
         assert lookback_days == 30
         return backend_prices
 
-    monkeypatch.setattr(provider, "get_cosmos_client", fake_get_cosmos_client)
+    # Monkeypatch the private CosmosClient field
+    provider._cosmos_client = _FakeCosmosClient(cosmos_items)
     monkeypatch.setattr(provider, "_fetch_backend_chart_prices", fake_fetch_backend_chart_prices)
 
     result = asyncio.run(provider.fetch_historical_prices("jgs", 30))

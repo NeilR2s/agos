@@ -31,8 +31,7 @@ class RuleBasedModule:
             return True, "Hold action automatically approved.", 0
 
         # 1. Technical Analysis Gate
-        df = pd.DataFrame([p.model_dump() for p in prices])
-        df['close'] = pd.to_numeric(df['close'])
+        df = pd.DataFrame({"close": [p.close for p in prices]})
         
         # Calculate RSI (using Wilder's Smoothing / EMA)
         delta = df['close'].diff()
