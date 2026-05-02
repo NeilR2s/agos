@@ -496,6 +496,7 @@ export const ResearchView = () => {
 
     const overview = !marketQuery.isPlaceholderData && marketQuery.data?.ticker === selectedTicker ? marketQuery.data : null;
     const stockData = useMemo(() => overview?.stockData ?? {}, [overview]);
+    const pseDataRecord = useMemo(() => pseQuery.data?.[0] ?? {}, [pseQuery.data]);
     const latestChart = chartData?.at(-1);
     const latestForecast = forecastData?.forecasts?.["q_0.5"]?.at(-1);
     const latestForecastLow = forecastData?.forecasts?.["q_0.1"]?.at(-1);
@@ -671,9 +672,9 @@ export const ResearchView = () => {
                             <>
                                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                                     <Metric label="Price" value={formatCurrency(overview?.price)} />
-                                    <Metric label="52W High" value={formatNumber(toNumber(stockData["week_52_high"] ?? stockData["52W High"]))} />
-                                    <Metric label="52W Low" value={formatNumber(toNumber(stockData["week_52_low"] ?? stockData["52W Low"]))} />
-                                    <Metric label="Volume" value={formatNumber(toNumber(stockData["Volume"] ?? stockData["volume"]), "en-PH", 0)} />
+                                    <Metric label="52W High" value={formatNumber(toNumber(stockData["week_52_high"] ?? stockData["52W High"] ?? pseDataRecord["week_52_high"]))} />
+                                    <Metric label="52W Low" value={formatNumber(toNumber(stockData["week_52_low"] ?? stockData["52W Low"] ?? pseDataRecord["week_52_low"]))} />
+                                    <Metric label="Volume" value={formatNumber(toNumber(stockData["Volume"] ?? stockData["volume"] ?? pseDataRecord["volume"]), "en-PH", 0)} />
                                 </div>
 
                                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -681,7 +682,7 @@ export const ResearchView = () => {
                                         <div key={label} className="space-y-1 border border-border px-4 py-3">
                                             <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">{label}</p>
                                             <p className="text-right font-mono text-sm tabular-nums text-white">
-                                                {renderMetricValue(stockData, latestChart, overview?.price ?? null, key, label)}
+                                                {renderMetricValue(stockData, pseDataRecord, latestChart, overview?.price ?? null, key, label)}
                                             </p>
                                         </div>
                                     ))}
@@ -843,7 +844,7 @@ export const ResearchView = () => {
                         <div className="grid gap-3">
                             <div className="relative h-[420px] min-w-0 overflow-hidden border border-border px-2 py-4">
                                 {combinedChartData.length ? (
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                         <AreaChart
                                             syncId="research-price-action"
                                             data={combinedChartData}
@@ -892,7 +893,7 @@ export const ResearchView = () => {
 
                             {hasActivityData ? (
                                 <div className="relative h-[120px] min-w-0 overflow-hidden border border-border px-2 py-3">
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                         <BarChart
                                             syncId="research-price-action"
                                             data={combinedChartData}
@@ -921,7 +922,7 @@ export const ResearchView = () => {
                                     <div className="absolute left-4 top-2 z-10 font-mono text-[8px] uppercase tracking-[1px] text-white/55">
                                         Relative Strength Index (14)
                                     </div>
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                         <AreaChart
                                             syncId="research-price-action"
                                             data={combinedChartData}
@@ -1549,6 +1550,7 @@ function formatStatementValue(value: unknown) {
 
 function renderMetricValue(
     stockData: Record<string, unknown>,
+    pseDataRecord: Record<string, unknown>,
     latestChart: { open?: number | null; high?: number | null; low?: number | null; close?: number | null; value?: number | null } | undefined,
     overviewPrice: number | null,
     key: string,
@@ -1574,7 +1576,15 @@ function renderMetricValue(
         return formatNumber(toNumber(stockData["Volume"] ?? stockData["volume"]), "en-PH", 0);
     }
 
-    const value = stockData[key] ?? stockData[key.replace(/ /g, "_")];
+    let value = stockData[key] ?? stockData[key.replace(/ /g, "_")];
+
+    // Fallbacks to PSE Data
+    if (value === null || value === undefined) {
+        if (key === "Free Float Level(%)") value = pseDataRecord["free_float_level"];
+        if (key === "Foreign Ownership Limit(%)") value = pseDataRecord["foreign_ownership_limit"];
+        if (key === "Market Capitalization") value = pseDataRecord["market_cap"];
+        if (key === "Board Lot") value = pseDataRecord["board_lot"];
+    }
 
     if (value === null || value === undefined) {
         return "---";
