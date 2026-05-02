@@ -5,6 +5,7 @@ import { LandingPage } from "./features/landing/LandingPage";
 import { LoginPage } from "./features/auth/LoginPage";
 import { Toaster } from "sonner";
 import { AuthGuard } from "./components/auth/AuthGuard";
+import { ErrorBoundary } from "./components/shared/ErrorBoundary";
 
 const ResearchView = lazy(() => import("./features/research/ResearchView").then((module) => ({ default: module.ResearchView })));
 const Dashboard = lazy(() => import("./features/portfolio/Dashboard").then((module) => ({ default: module.Dashboard })));
@@ -28,17 +29,19 @@ const withProtectedSuspense = (children: ReactNode) => (
 function App() {
     return (
         <Router>
-            <Shell>
-                <Routes>
-                    <Route path="/" element={<LandingPage />} />
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/research" element={withProtectedSuspense(<ResearchView />)} />
-                    <Route path="/portfolio" element={withProtectedSuspense(<Dashboard />)} />
-                    <Route path="/trading" element={withProtectedSuspense(<TradingTerminal />)} />
-                    <Route path="/map" element={withProtectedSuspense(<MapPage />)} />
-                    <Route path="/agent" element={withProtectedSuspense(<AgentPage />)} />
-                </Routes>
-            </Shell>
+            <ErrorBoundary>
+                <Shell>
+                    <Routes>
+                        <Route path="/" element={<LandingPage />} />
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/research" element={withProtectedSuspense(<ResearchView />)} />
+                        <Route path="/portfolio" element={withProtectedSuspense(<Dashboard />)} />
+                        <Route path="/trading" element={withProtectedSuspense(<TradingTerminal />)} />
+                        <Route path="/map" element={withProtectedSuspense(<MapPage />)} />
+                        <Route path="/agent" element={withProtectedSuspense(<AgentPage />)} />
+                    </Routes>
+                </Shell>
+            </ErrorBoundary>
             <Toaster theme="dark" position="bottom-right" toastOptions={{
                 style: {
                     background: 'var(--popover)',
