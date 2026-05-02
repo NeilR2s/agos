@@ -161,16 +161,6 @@
   }
 }
 
-@keyframes grok-star-drift {
-  from {
-    background-position: 0 0, 0 0, 0 0;
-  }
-
-  to {
-    background-position: 180px 120px, -220px 180px, 90px -160px;
-  }
-}
-
 .cursor-block {
   animation: terminal-blink 1s steps(1) infinite;
 }
@@ -222,14 +212,6 @@
     display: none;
   }
 
-  .grok-starfield {
-    background-image:
-      radial-gradient(circle at 12% 22%, color-mix(in oklch, var(--foreground) 72%, transparent) 0 1px, transparent 1.6px),
-      radial-gradient(circle at 72% 18%, color-mix(in oklch, var(--foreground) 42%, transparent) 0 1px, transparent 1.4px),
-      radial-gradient(circle at 44% 78%, color-mix(in oklch, var(--chart-3) 36%, transparent) 0 1px, transparent 1.6px);
-    background-size: 240px 180px, 340px 260px, 420px 320px;
-  }
-
   .xai-horizon-glow {
     background: radial-gradient(ellipse at bottom, color-mix(in oklch, var(--chart-1) 34%, transparent) 0%, color-mix(in oklch, var(--chart-1) 10%, transparent) 34%, transparent 72%);
   }
@@ -277,12 +259,6 @@
 
   .maplibregl-ctrl button .maplibregl-ctrl-icon {
     filter: invert(1) opacity(0.78);
-  }
-
-  @media (prefers-reduced-motion: no-preference) {
-    .grok-starfield {
-      animation: grok-star-drift 28s linear infinite;
-    }
   }
 
   .agent-markdown {
@@ -411,5 +387,30 @@
   .agent-markdown td,
   .agent-markdown th {
     font-variant-numeric: tabular-nums;
+  }
+
+  .agent-markdown-chat {
+    @apply text-[16px] leading-[1.72] text-foreground/95;
+  }
+
+  .agent-markdown-chat p {
+    @apply my-3 text-foreground/92;
+  }
+
+  .agent-markdown-chat h1 {
+    @apply mt-7 mb-4 text-[30px] font-semibold tracking-[-0.03em];
+  }
+
+  .agent-markdown-chat h2 {
+    @apply mt-7 mb-4 text-[25px] font-semibold tracking-[-0.025em];
+  }
+
+  .agent-markdown-chat h3 {
+    @apply mt-6 mb-3 text-[20px] font-semibold tracking-[-0.015em];
+  }
+
+  .agent-markdown-chat pre,
+  .agent-markdown-chat .agent-markdown-table-wrap {
+    @apply rounded-[18px];
   }
 }

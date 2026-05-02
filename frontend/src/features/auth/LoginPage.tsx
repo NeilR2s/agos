@@ -59,7 +59,6 @@ export const LoginPage = () => {
   if (isLoading) {
     return (
       <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-background px-6 text-center text-foreground">
-        <div className="absolute inset-0 grok-starfield opacity-25" aria-hidden="true" />
         <div className="absolute inset-x-0 bottom-0 h-1/2 xai-horizon-glow opacity-25" aria-hidden="true" />
         <div className="relative border border-border/70 bg-card/60 px-7 py-5 backdrop-blur-xl">
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Authentication Handshake</p>
@@ -112,7 +111,6 @@ export const LoginPage = () => {
       </section>
 
       <section className="relative flex min-h-[620px] items-center justify-center overflow-hidden px-5 py-12 sm:px-8 lg:min-h-dvh lg:px-12">
-        <div className="absolute inset-0 grok-starfield opacity-10" aria-hidden="true" />
         <div className="absolute left-1/2 top-1/2 h-[640px] w-[640px] -translate-x-1/2 -translate-y-1/2 blur-3xl" style={authPanelGlowStyle} aria-hidden="true" />
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent lg:hidden" aria-hidden="true" />
         <LoginForm onSubmit={handleSubmit} isSigningIn={isSigningIn} />

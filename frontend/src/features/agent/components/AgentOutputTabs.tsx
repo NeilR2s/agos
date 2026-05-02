@@ -51,24 +51,33 @@ export function AgentOutputTabs({ output, markdown, traceNode }: AgentOutputTabs
   const [highlightedSourceId, setHighlightedSourceId] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<{ kind: "memo" | "evidence"; ok: boolean } | null>(null);
   const sourceById = useMemo(() => new Map(output.sources.map((source) => [source.id, source])), [output.sources]);
-  const tabItems = useMemo<TabItem[]>(() => [
-    { id: "summary", label: "Synthesis", count: output.reliabilityWarnings?.length || undefined },
-    { id: "evidence", label: "Audit", count: output.evidence.length },
-    { id: "recommendations", label: "Actions", count: output.recommendations.length },
-    { id: "memo", label: "Transcript" },
-    { id: "trace", label: "Trace", disabled: !traceNode },
-    { id: "sources", label: "Citations", count: output.sources.length },
-  ], [output.evidence.length, output.recommendations.length, output.reliabilityWarnings?.length, output.sources.length, traceNode]);
+  const tabItems = useMemo<TabItem[]>(() => {
+    const items: TabItem[] = [
+      { id: "summary", label: "Synthesis", count: output.reliabilityWarnings?.length || undefined },
+      { id: "evidence", label: "Audit", count: output.evidence.length },
+      { id: "recommendations", label: "Actions", count: output.recommendations.length },
+      { id: "memo", label: "Transcript" },
+    ];
+
+    if (traceNode) {
+      items.push({ id: "trace", label: "Trace" });
+    }
+
+    items.push({ id: "sources", label: "Citations", count: output.sources.length });
+    return items;
+  }, [output.evidence.length, output.recommendations.length, output.reliabilityWarnings?.length, output.sources.length, traceNode]);
+
+  const resolvedActiveTab = tabItems.some((item) => item.id === activeTab && !item.disabled) ? activeTab : "summary";
 
   useEffect(() => {
-    if (activeTab !== "sources" || !highlightedSourceId) {
+    if (resolvedActiveTab !== "sources" || !highlightedSourceId) {
       return;
     }
 
     window.requestAnimationFrame(() => {
       document.getElementById(`agent-source-${highlightedSourceId}`)?.scrollIntoView({ block: "nearest" });
     });
-  }, [activeTab, highlightedSourceId]);
+  }, [resolvedActiveTab, highlightedSourceId]);
 
   const showSource = (sourceId: string) => {
     setHighlightedSourceId(sourceId);
@@ -105,12 +114,16 @@ export function AgentOutputTabs({ output, markdown, traceNode }: AgentOutputTabs
     window.requestAnimationFrame(() => document.getElementById(`${tabBaseId}-${nextTab.id}`)?.focus());
   };
 
-  const panelId = `${tabBaseId}-${activeTab}-panel`;
+  const panelId = `${tabBaseId}-${resolvedActiveTab}-panel`;
 
   return (
-    <div className="w-full max-w-[1180px] overflow-hidden border-y border-border/70 bg-transparent md:rounded-[24px] md:border md:bg-card/35">
-      <div className="flex flex-col gap-3 border-b border-border/70 px-4 py-3 xl:flex-row xl:items-center xl:justify-between">
-        <div role="tablist" aria-label="Agent output sections" className="flex flex-wrap gap-1.5">
+    <div className="w-full overflow-hidden rounded-[26px] border border-border/70 bg-card/55 shadow-[inset_0_1px_0_color-mix(in_oklch,var(--foreground)_5%,transparent)] backdrop-blur-xl">
+      <div className="flex flex-col gap-3 border-b border-border/70 bg-gradient-to-b from-foreground/[0.035] to-background/20 px-4 py-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="min-w-0">
+          <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-foreground/80">Run Information</p>
+          <p className="mt-1 font-sans text-[13px] leading-[1.45] text-muted-foreground/80">Structured synthesis, evidence, actions, and citations for the selected run.</p>
+        </div>
+        <div role="tablist" aria-label="Agent output sections" className="flex flex-wrap gap-1.5 xl:justify-end">
           {tabItems.map((tab) => {
             return (
               <button
@@ -118,17 +131,17 @@ export function AgentOutputTabs({ output, markdown, traceNode }: AgentOutputTabs
                 id={`${tabBaseId}-${tab.id}`}
                 type="button"
                 role="tab"
-                aria-selected={activeTab === tab.id}
+                aria-selected={resolvedActiveTab === tab.id}
                 aria-controls={panelId}
-                tabIndex={activeTab === tab.id ? 0 : -1}
+                tabIndex={resolvedActiveTab === tab.id ? 0 : -1}
                 disabled={tab.disabled}
                 onClick={() => setActiveTab(tab.id)}
                 onKeyDown={(event) => handleTabKeyDown(event, tab)}
                 className={cn(
                   "inline-flex items-center gap-2 rounded-full border px-3 py-2 font-mono text-[10px] uppercase tracking-[1.2px] transition-colors",
-                  activeTab === tab.id
-                    ? "border-ring/60 bg-accent text-foreground"
-                    : "border-border text-muted-foreground hover:border-ring/60 hover:text-foreground",
+                  resolvedActiveTab === tab.id
+                    ? "border-chart-2/35 bg-chart-2/[0.06] text-foreground"
+                    : "border-border/70 bg-secondary/20 text-muted-foreground hover:border-ring/50 hover:bg-accent/45 hover:text-foreground",
                   tab.disabled && "cursor-not-allowed opacity-40 hover:border-border hover:text-muted-foreground"
                 )}
               >
@@ -139,22 +152,22 @@ export function AgentOutputTabs({ output, markdown, traceNode }: AgentOutputTabs
           })}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => void copyText("memo", markdown)} className="border-border text-foreground/70">
+          <Button type="button" variant="outline" size="sm" onClick={() => void copyText("memo", markdown)} className="rounded-full border-border/70 bg-secondary/20 text-foreground/70 hover:border-ring/50 hover:bg-accent/45">
             <ClipboardDocumentIcon className="size-4" /> {copyStatus?.kind === "memo" ? (copyStatus.ok ? "Transcript Copied" : "Copy Failed") : "Copy Transcript"}
           </Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => void copyText("evidence", JSON.stringify(output, null, 2))} className="border-border text-foreground/70">
+          <Button type="button" variant="outline" size="sm" onClick={() => void copyText("evidence", JSON.stringify(output, null, 2))} className="rounded-full border-border/70 bg-secondary/20 text-foreground/70 hover:border-ring/50 hover:bg-accent/45">
             <ClipboardDocumentIcon className="size-4" /> {copyStatus?.kind === "evidence" ? (copyStatus.ok ? "Audit Copied" : "Copy Failed") : "Copy Audit JSON"}
           </Button>
         </div>
       </div>
 
-      <div id={panelId} role="tabpanel" aria-labelledby={`${tabBaseId}-${activeTab}`} className="px-3 py-4 md:p-5">
-        {activeTab === "summary" ? <SummaryTab output={output} onSourceClick={showSource} /> : null}
-        {activeTab === "evidence" ? <EvidenceTab output={output} sourceById={sourceById} onSourceClick={showSource} /> : null}
-        {activeTab === "recommendations" ? <RecommendationsTab output={output} sourceById={sourceById} onSourceClick={showSource} /> : null}
-        {activeTab === "memo" ? <MemoTab markdown={markdown} /> : null}
-        {activeTab === "trace" ? traceNode ?? <EmptyPanel label="Zero session traces returned." /> : null}
-        {activeTab === "sources" ? <SourcesTab sources={output.sources} highlightedSourceId={highlightedSourceId} /> : null}
+      <div id={panelId} role="tabpanel" aria-labelledby={`${tabBaseId}-${resolvedActiveTab}`} className="px-3 py-4 md:p-5">
+        {resolvedActiveTab === "summary" ? <SummaryTab output={output} onSourceClick={showSource} /> : null}
+        {resolvedActiveTab === "evidence" ? <EvidenceTab output={output} sourceById={sourceById} onSourceClick={showSource} /> : null}
+        {resolvedActiveTab === "recommendations" ? <RecommendationsTab output={output} sourceById={sourceById} onSourceClick={showSource} /> : null}
+        {resolvedActiveTab === "memo" ? <MemoTab markdown={markdown} /> : null}
+        {resolvedActiveTab === "trace" ? traceNode ?? <EmptyPanel label="Zero session traces returned." /> : null}
+        {resolvedActiveTab === "sources" ? <SourcesTab sources={output.sources} highlightedSourceId={highlightedSourceId} /> : null}
       </div>
     </div>
   );
@@ -165,19 +178,19 @@ function SummaryTab({ output, onSourceClick }: { output: AgentStructuredOutput; 
   const reliabilityWarnings = output.reliabilityWarnings ?? [];
   return (
     <div className="space-y-5">
-      <section className="rounded-[20px] border border-border/70 bg-background/20 px-5 py-5">
+      <section className="rounded-[22px] border border-border/70 bg-background/35 px-5 py-5 shadow-[inset_0_1px_0_color-mix(in_oklch,var(--foreground)_4%,transparent)]">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Main Finding</p>
+          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-foreground/75">Main Finding</p>
           <span
             className={cn(
               "rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.2px]",
-              output.executionReady ? "border-chart-2/50 text-chart-2" : "border-border text-muted-foreground"
+              output.executionReady ? "border-chart-2/40 bg-chart-2/[0.06] text-chart-2" : "border-border/70 bg-secondary/20 text-muted-foreground"
             )}
           >
             {output.executionReady ? "execution-ready" : "advisory only"}
           </span>
         </div>
-        <p className="mt-3 max-w-[960px] font-sans text-[20px] leading-[1.4] text-foreground md:text-[22px]">{plainText(output.summary)}</p>
+        <p className="mt-3 max-w-[960px] font-sans text-[18px] leading-[1.5] tracking-[-0.01em] text-foreground/95 md:text-[21px]">{plainText(output.summary)}</p>
         {firstSources.length ? (
           <div className="mt-4 flex flex-wrap gap-2">
             {firstSources.map((source) => (
@@ -189,7 +202,7 @@ function SummaryTab({ output, onSourceClick }: { output: AgentStructuredOutput; 
 
       {reliabilityWarnings.length ? <ReliabilityWarnings warnings={reliabilityWarnings} /> : null}
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-3 lg:grid-cols-3">
         <ListBlock title="Assumptions" items={output.assumptions} />
         <ListBlock title="Risks" items={output.risks} tone="risk" />
         <ListBlock title="Next Steps" items={output.nextSteps} />

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DEFAULT_AGENT_RUN_CONFIG, AGENT_CONFIG_STORAGE_KEY } from "@/features/agent/config";
 import { AgentComposer } from "@/features/agent/components/AgentComposer";
-import { AgentRunStatus } from "@/features/agent/components/AgentRunStatus";
+import { AgentOutputTabs } from "@/features/agent/components/AgentOutputTabs";
 import { AgentSettingsPanel } from "@/features/agent/components/AgentSettingsPanel";
 import { AgentTracePanel } from "@/features/agent/components/AgentTracePanel";
 import { AgentTranscript } from "@/features/agent/components/AgentTranscript";
@@ -16,7 +16,8 @@ import { useAgentStream } from "@/features/agent/hooks/useAgentStream";
 import { humanizeAgentError } from "@/features/agent/lib/errors";
 import { pickDefaultAgentId } from "@/features/agent/lib/traces";
 import type { AgentMessage, AgentMode, AgentRun, AgentRunConfig, AgentRunRequest, AgentSSEEvent, AgentThread, Citation } from "@/features/agent/types";
-import { formatShortDate } from "@/lib/format";
+import { formatDurationMs, formatNumber, formatShortDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 const allowedModes: AgentMode[] = ["general", "research", "trading"];
 
@@ -244,6 +245,12 @@ export function AgentPage() {
     () => combinedMessages.filter((message) => message.runId === activeRunId),
     [activeRunId, combinedMessages]
   );
+
+  const activeRunAssistantMessage = useMemo(() => {
+    const assistantMessages = activeRunMessages.filter((message) => message.role === "assistant");
+    const structuredMessages = assistantMessages.filter((message) => message.structuredOutput);
+    return structuredMessages[structuredMessages.length - 1] ?? assistantMessages[assistantMessages.length - 1] ?? null;
+  }, [activeRunMessages]);
 
   const citations = useMemo(
     () => dedupeCitations(activeRunMessages.flatMap((message) => message.citations ?? [])),
@@ -488,40 +495,53 @@ export function AgentPage() {
       ? "Cancellation was requested. Refreshes will continue briefly so final run status, titles, and any persisted output can still appear."
       : null;
   const supplementalErrors = [messageErrorMessage, runErrorMessage, runEventsErrorMessage].filter(Boolean) as string[];
+  const isLanding = combinedMessages.length === 0 && !threadErrorMessage;
 
   return (
-    <div className="flex h-[calc(100dvh-57px)] flex-col overflow-hidden bg-background text-foreground lg:h-dvh">
-      <header className="shrink-0 border-b border-border/60 bg-background/90 px-3 py-2 backdrop-blur-md md:px-4">
-        <div className="flex min-h-[44px] flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="rounded-full border border-border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Frontier Agent</span>
-            <h1 className="font-sans text-[20px] leading-none text-foreground md:text-[22px]">AGOS</h1>
-            <p className="max-w-[68vw] truncate font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/70 lg:max-w-[520px]">
-              {activeThread?.title ?? "new session"}
-            </p>
+    <div className="relative flex h-[calc(100dvh-57px)] flex-col overflow-hidden bg-background text-foreground lg:h-dvh">
+      <div className={cn("pointer-events-none absolute inset-x-0 top-0 bg-[radial-gradient(ellipse_at_top,color-mix(in_oklch,var(--foreground)_7%,transparent),transparent_66%)]", isLanding ? "h-28 opacity-60" : "h-40")} aria-hidden="true" />
+
+      <header className={cn("relative z-10 shrink-0 px-3 py-2 backdrop-blur-xl md:px-5", isLanding ? "border-b border-border/25 bg-background/35" : "border-b border-border/50 bg-background/70")}>
+        <div className="mx-auto flex min-h-[44px] w-full max-w-[1180px] items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="hidden size-8 shrink-0 items-center justify-center rounded-full border border-border bg-secondary/50 font-mono text-[10px] uppercase tracking-[1.2px] text-foreground sm:flex">
+              A
+            </div>
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-2">
+                <h1 className="font-sans text-[18px] leading-none tracking-[-0.02em] text-foreground md:text-[20px]">AGOS</h1>
+                <span className="hidden rounded-full border border-border bg-secondary/40 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[1.4px] text-muted-foreground sm:inline-flex">
+                  Frontier Agent
+                </span>
+              </div>
+              <p className="mt-1 max-w-[58vw] truncate font-sans text-[12px] leading-none text-muted-foreground md:max-w-[520px]">
+                {activeThread?.title ?? "New chat"}
+              </p>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
-            <span>{mode}</span>
-            <span>/</span>
-            <span>{selectedTicker ?? "no ticker"}</span>
-            <span>/</span>
-            <span>{runConfig.maxAgents} workers</span>
-            {runsQuery.isFetching ? <span>/ refreshing</span> : null}
+          <div className="flex shrink-0 items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
+            <span className="hidden rounded-full border border-border/70 bg-secondary/35 px-2.5 py-1 sm:inline-flex">{mode}</span>
+            <span className="hidden rounded-full border border-border/70 bg-secondary/35 px-2.5 py-1 md:inline-flex">{selectedTicker ?? "no ticker"}</span>
+            <span className="hidden rounded-full border border-border/70 bg-secondary/35 px-2.5 py-1 lg:inline-flex">{runConfig.maxAgents} workers</span>
+            {runsQuery.isFetching ? <span className="hidden rounded-full border border-border/70 bg-secondary/35 px-2.5 py-1 lg:inline-flex">refreshing</span> : null}
             {activeRun ? (
               <button
                 type="button"
                 onClick={() => setActivePanel("run")}
-                className="rounded-full border border-border px-2.5 py-1 text-muted-foreground transition-colors hover:border-ring/60 hover:text-foreground"
+                className="rounded-full border border-border bg-secondary/45 px-2.5 py-1 text-muted-foreground transition-colors hover:border-ring/60 hover:bg-accent hover:text-foreground"
               >
                 {activeRunLabel ?? "Run"} / {activeRun.status}
               </button>
             ) : threadId && runsQuery.isLoading ? (
-              <span className="rounded-full border border-border px-2.5 py-1 text-muted-foreground/70">loading runs</span>
+              <span className="rounded-full border border-border/70 bg-secondary/35 px-2.5 py-1 text-muted-foreground/70">loading runs</span>
             ) : null}
             {stream.status === "cancelled" && stream.run?.id === activeRunId ? (
-              <span className="rounded-full border border-border px-2.5 py-1 text-muted-foreground">cancelled</span>
+              <span className="rounded-full border border-border/70 bg-secondary/35 px-2.5 py-1 text-muted-foreground">cancelled</span>
             ) : null}
+            <Button type="button" variant="outline" size="sm" onClick={handleStartFreshThread} disabled={stream.isStreaming || isSubmitting} className="h-8 rounded-full border-border bg-secondary/35 px-3 text-[10px] text-muted-foreground hover:bg-accent hover:text-foreground">
+              New Chat
+            </Button>
           </div>
         </div>
       </header>
@@ -543,16 +563,16 @@ export function AgentPage() {
           </div>
         </div>
       ) : (
-        <div className="min-h-0 flex flex-1 flex-col gap-2.5 px-3 py-2.5 md:px-4">
+        <div className={cn("relative z-10 min-h-0 flex flex-1 flex-col overflow-hidden", isLanding ? "justify-center gap-6 px-4 py-8 md:gap-7 md:py-10" : "px-2 py-2 md:px-4 md:py-3")}>
           {stopStreamNotice ? (
-            <section className="mx-auto w-full max-w-[900px] rounded-2xl border border-chart-3/40 bg-chart-3/10 px-4 py-3">
+            <section className="mx-auto mb-2 w-full max-w-[900px] rounded-2xl border border-chart-3/40 bg-chart-3/10 px-4 py-3">
               <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-chart-3">Stream Stopped</p>
               <p className="mt-2 font-sans text-[13px] leading-[1.6] text-foreground/80">{stopStreamNotice}</p>
             </section>
           ) : null}
 
           {supplementalErrors.length ? (
-            <div className="space-y-2">
+            <div className="mb-2 space-y-2">
               {supplementalErrors.map((message) => (
                 <section key={message} className="mx-auto w-full max-w-[900px] rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3">
                   <p className="font-sans text-[13px] leading-[1.6] text-destructive">{message}</p>
@@ -569,6 +589,8 @@ export function AgentPage() {
             activeRunId={activeRunId}
             selectedAgentId={selectedAgentId}
             onSelectAgent={setSelectedAgentId}
+            onSelectRun={handleSelectRun}
+            isLanding={isLanding}
           />
 
           <AgentComposer
@@ -585,6 +607,7 @@ export function AgentPage() {
             selectedTicker={selectedTicker}
             mode={mode}
             config={runConfig}
+            isLanding={isLanding}
           />
         </div>
       )}
@@ -614,44 +637,48 @@ export function AgentPage() {
             </div>
           </DialogHeader>
 
-          <div className="scrollbar-hidden max-h-[min(82vh,900px)] overflow-y-auto p-5">
+          <div className={cn("scrollbar-hidden max-h-[min(82vh,900px)] overflow-y-auto", activePanel === "run" ? "p-0" : "p-5")}>
             {activePanel === "run" ? (
-              <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
-                <div className="space-y-4">
-                  <section className="rounded-[20px] border border-border bg-card px-4 py-4">
-                    <div className="flex items-center justify-between gap-3">
+              <div className="grid xl:grid-cols-[260px_minmax(0,1fr)]">
+                <aside className="border-b border-border/60 p-4 xl:border-b-0 xl:border-r xl:p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
                       <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Run History</p>
-                      {runsQuery.isFetching ? <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/70">Refreshing</span> : null}
+                      <p className="mt-1 font-sans text-[12px] leading-[1.45] text-muted-foreground/70">Select a persisted run.</p>
                     </div>
-                    <div className="agent-scrollbar mt-3 max-h-[220px] space-y-2 overflow-y-auto pr-1">
-                      {availableRuns.length ? (
-                        availableRuns.map((run, index) => {
-                          const isActive = run.id === activeRunId;
-                          return (
-                            <button
-                              key={run.id}
-                              type="button"
-                              onClick={() => handleSelectRun(run.id)}
-                              className={[
-                                "w-full rounded-[18px] border px-3 py-3 text-left transition-colors",
-                                isActive ? "border-ring/60 bg-accent" : "border-border hover:border-ring/60 hover:bg-accent/70",
-                              ].join(" ")}
-                            >
-                              <div className="flex items-center justify-between gap-3">
-                                <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{formatRunLabel(run, index)}</p>
-                                <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/75">{run.status}</span>
-                              </div>
-                              <p className="mt-2 line-clamp-2 font-sans text-[13px] leading-[1.45] text-foreground/80">{run.summary ?? "Inspect run trace"}</p>
-                              <p className="mt-2 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/70">{run.mode}</p>
-                            </button>
-                          );
-                        })
-                      ) : (
-                        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/70">No persisted runs yet</p>
-                      )}
-                    </div>
-                  </section>
-                  <AgentRunStatus
+                    {runsQuery.isFetching ? <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/70">Sync</span> : null}
+                  </div>
+                  <div className="agent-scrollbar mt-4 max-h-[min(64vh,620px)] space-y-1.5 overflow-y-auto pr-1">
+                    {availableRuns.length ? (
+                      availableRuns.map((run, index) => {
+                        const isActive = run.id === activeRunId;
+                        return (
+                          <button
+                            key={run.id}
+                            type="button"
+                            onClick={() => handleSelectRun(run.id)}
+                            className={cn(
+                              "w-full rounded-[16px] border px-3 py-3 text-left transition-colors",
+                              isActive ? "border-ring/50 bg-accent/45" : "border-transparent hover:border-border/70 hover:bg-accent/25"
+                            )}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{formatRunLabel(run, index)}</p>
+                              <span className="font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/70">{run.status}</span>
+                            </div>
+                            <p className="mt-2 line-clamp-2 font-sans text-[13px] leading-[1.45] text-foreground/80">{run.summary ?? "Inspect run trace"}</p>
+                            <p className="mt-2 font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/65">{run.mode}</p>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/70">No persisted runs yet</p>
+                    )}
+                  </div>
+                </aside>
+
+                <div className="min-w-0 space-y-4 p-4 md:p-5">
+                  <RunTelemetryStrip
                     run={activeRun}
                     isStreaming={stream.isStreaming && stream.run?.id === activeRunId}
                     error={activeRunError}
@@ -659,26 +686,36 @@ export function AgentPage() {
                     selectedTicker={activeRun?.selectedTicker ?? selectedTicker}
                     agentCount={agentCount}
                   />
-                  {activeRun ? (
-                    <div className="rounded-[20px] border border-border bg-card px-4 py-4">
-                      <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Run Context</p>
-                      <div className="mt-3 space-y-2 font-sans text-[13px] leading-[1.6] text-foreground/75">
-                        <p>Mode: {activeRun.mode}</p>
-                        <p>Ticker: {activeRun.selectedTicker ?? "none"}</p>
-                        <p>Started: {formatShortDate(activeRun.startedAt)}</p>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
 
-                <AgentTracePanel
-                  key={activeRunId ?? "no-run"}
-                  events={mergedEvents}
-                  run={activeRun}
-                  selectedAgentId={selectedAgentId}
-                  onSelectAgent={setSelectedAgentId}
-                  streamNotice={stopStreamNotice}
-                />
+                  {activeRunAssistantMessage?.structuredOutput ? (
+                    <AgentOutputTabs
+                      output={activeRunAssistantMessage.structuredOutput}
+                      markdown={activeRunAssistantMessage.content}
+                      traceNode={
+                        <AgentTracePanel
+                          key={activeRunId ?? "no-run"}
+                          events={mergedEvents}
+                          run={activeRun}
+                          selectedAgentId={selectedAgentId}
+                          onSelectAgent={setSelectedAgentId}
+                          streamNotice={stopStreamNotice}
+                        />
+                      }
+                    />
+                  ) : (
+                    <>
+                      <RunMessagePanel message={activeRunAssistantMessage} />
+                      <AgentTracePanel
+                        key={activeRunId ?? "no-run"}
+                        events={mergedEvents}
+                        run={activeRun}
+                        selectedAgentId={selectedAgentId}
+                        onSelectAgent={setSelectedAgentId}
+                        streamNotice={stopStreamNotice}
+                      />
+                    </>
+                  )}
+                </div>
               </div>
             ) : (
               <AgentSettingsPanel config={runConfig} mode={mode} onChange={setRunConfig} />
@@ -687,5 +724,81 @@ export function AgentPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function RunTelemetryStrip({
+  run,
+  isStreaming,
+  error,
+  citationCount,
+  selectedTicker,
+  agentCount,
+}: {
+  run: AgentRun | null;
+  isStreaming: boolean;
+  error: string | null;
+  citationCount: number;
+  selectedTicker?: string | null;
+  agentCount: number;
+}) {
+  const config = run?.config ?? {};
+  const modelLabel = typeof config.modelLabel === "string" ? config.modelLabel : run?.model ?? "---";
+  const thinkingLevel = typeof config.thinkingLevel === "string" ? config.thinkingLevel : "---";
+  const statusLabel = error ? "error" : isStreaming ? "streaming" : run?.status ?? "idle";
+  const ttft = typeof run?.ttftMs === "number" ? `${formatNumber(run.ttftMs, "en-PH", 0)} ms` : "---";
+
+  return (
+    <section className="space-y-3 border-y border-border/60 py-3">
+      <div className="flex flex-wrap gap-1.5 font-mono text-[10px] uppercase tracking-[1.25px] text-muted-foreground">
+        <TelemetryPill label="Status" value={statusLabel} tone={error ? "error" : isStreaming ? "active" : undefined} />
+        <TelemetryPill label="Mode" value={run?.mode ?? "---"} />
+        <TelemetryPill label="Ticker" value={selectedTicker ?? run?.selectedTicker ?? "---"} />
+        <TelemetryPill label="Model" value={modelLabel} />
+        <TelemetryPill label="Agents" value={String(agentCount)} />
+        <TelemetryPill label="Thinking" value={thinkingLevel} />
+        <TelemetryPill label="Latency" value={formatDurationMs(run?.latencyMs)} />
+        <TelemetryPill label="TTFT" value={ttft} />
+        <TelemetryPill label="Sources" value={String(citationCount)} />
+        <TelemetryPill label="Started" value={formatShortDate(run?.startedAt)} />
+      </div>
+      {error ? <p className="border-l border-destructive/50 px-3 py-1.5 font-sans text-[13px] leading-[1.6] text-destructive">{error}</p> : null}
+    </section>
+  );
+}
+
+function TelemetryPill({ label, value, tone }: { label: string; value: string; tone?: "active" | "error" }) {
+  return (
+    <span
+      className={cn(
+        "rounded-full border px-2.5 py-1",
+        tone === "active" && "border-chart-1/40 bg-chart-1/[0.06] text-chart-1",
+        tone === "error" && "border-destructive/45 bg-destructive/10 text-destructive",
+        !tone && "border-border/70 bg-secondary/20 text-muted-foreground"
+      )}
+    >
+      {label} {value}
+    </span>
+  );
+}
+
+function RunMessagePanel({ message }: { message: AgentMessage | null }) {
+  return (
+    <section className="rounded-[24px] border border-border bg-card/80 px-4 py-4 md:px-5">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground">Run Information</p>
+          <p className="mt-1 font-sans text-[13px] leading-[1.45] text-muted-foreground/80">
+            {message ? "Assistant transcript for the selected run." : "No assistant output has been persisted for this run yet."}
+          </p>
+        </div>
+      </div>
+
+      {message?.content ? (
+        <div className="mt-4 whitespace-pre-wrap font-sans text-[14px] leading-[1.7] text-foreground/85">{message.content}</div>
+      ) : (
+        <p className="mt-4 font-sans text-[14px] leading-[1.7] text-muted-foreground">Select another run or wait for the stream to finish syncing.</p>
+      )}
+    </section>
   );
 }

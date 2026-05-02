@@ -4,11 +4,10 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 
-import landingHero from "@/assets/landing_hero.jpeg";
 import { Button } from "@/components/ui/button";
-import { AgentOutputTabs } from "@/features/agent/components/AgentOutputTabs";
 import { AgentWorkingTrace } from "@/features/agent/components/AgentWorkingTrace";
 import type { AgentMessage, AgentSSEEvent, Citation } from "@/features/agent/types";
+import { cn } from "@/lib/utils";
 
 type AgentTranscriptProps = {
   messages: AgentMessage[];
@@ -18,6 +17,8 @@ type AgentTranscriptProps = {
   activeRunId?: string | null;
   selectedAgentId: string | null;
   onSelectAgent: (agentId: string) => void;
+  onSelectRun: (runId: string) => void;
+  isLanding?: boolean;
 };
 
 const markdownComponents: Components = {
@@ -45,6 +46,8 @@ export function AgentTranscript({
   activeRunId,
   selectedAgentId,
   onSelectAgent,
+  onSelectRun,
+  isLanding = false,
 }: AgentTranscriptProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [stickToBottom, setStickToBottom] = useState(true);
@@ -64,13 +67,22 @@ export function AgentTranscript({
   };
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      <div ref={scrollRef} onScroll={handleScroll} className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto px-2 py-5 md:px-5 md:py-6">
+    <div className={cn("relative flex min-h-0 flex-col", isLanding ? "flex-none overflow-visible" : "flex-1 overflow-hidden")}>
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className={cn(
+          "scrollbar-hidden min-h-0",
+          isLanding ? "overflow-visible px-2 pb-0 pt-0" : "flex-1 overflow-y-auto px-2 pb-6 pt-5 md:px-5 md:pb-8 md:pt-8"
+        )}
+      >
         {messages.length ? (
-          <div className="mx-auto w-full max-w-[1180px] space-y-9 pb-8">
+          <div className="mx-auto w-full max-w-[920px] space-y-10 pb-8">
             {messages.map((message) => {
               const isAssistant = message.role === "assistant";
-              const showTrace = Boolean(isAssistant && message.runId && activeRunId && message.runId === activeRunId && events.length);
+              const isLiveRunMessage = Boolean(isAssistant && isStreaming && message.id.startsWith("live-") && message.runId === activeRunId);
+              const showRunDetailsCard = Boolean(isAssistant && message.runId && !isLiveRunMessage);
+              const showTrace = Boolean(isAssistant && !showRunDetailsCard && message.runId && activeRunId && message.runId === activeRunId && events.length);
               const msgCitations = showTrace ? citations : message.citations;
 
               const traceNode = showTrace ? (
@@ -83,17 +95,13 @@ export function AgentTranscript({
               ) : null;
 
               return (
-                <article key={message.id} className={isAssistant ? "space-y-4" : "flex flex-col items-end gap-3"}>
-                  <div className={isAssistant ? "flex items-center justify-between gap-3" : "flex w-full max-w-[760px] items-center justify-end gap-3"}>
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-8 items-center justify-center rounded-full border border-border bg-secondary/50 font-mono text-[10px] uppercase tracking-[1.4px] text-foreground">
-                        {isAssistant ? "A" : "U"}
+                <article key={message.id} className={isAssistant ? "space-y-4" : "flex justify-end"}>
+                  {isAssistant ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/75">
+                        <span className="size-1.5 rounded-full bg-chart-2" />
+                        <span>AGOS</span>
                       </div>
-                      <span className="font-mono text-[11px] uppercase tracking-[1.4px] text-muted-foreground">
-                        {isAssistant ? "AGOS" : "Operator"}
-                      </span>
-                    </div>
-                    {isAssistant ? (
                       <Button
                         type="button"
                         variant="ghost"
@@ -102,39 +110,42 @@ export function AgentTranscript({
                           void navigator.clipboard.writeText(message.content);
                         }}
                         aria-label="Copy message"
+                        className="text-muted-foreground hover:text-foreground"
                       >
                         <ClipboardDocumentIcon className="size-4" />
                       </Button>
-                    ) : null}
-                  </div>
+                    </div>
+                  ) : null}
 
-                  {isAssistant && message.structuredOutput ? (
-                    <AgentOutputTabs output={message.structuredOutput} markdown={message.content} traceNode={traceNode} />
-                  ) : traceNode}
+                  {showRunDetailsCard && message.runId ? (
+                    <RunSummaryCard message={message} isActive={message.runId === activeRunId} onSelectRun={onSelectRun} />
+                  ) : null}
 
-                  {isAssistant && !message.structuredOutput && (message.content || !showTrace) ? (
-                    <div className="max-w-[1040px]">
-                      <div className="agent-markdown">
+                  {traceNode}
+
+                  {isAssistant && (message.content || !showTrace) ? (
+                    <div className="max-w-[820px]">
+                      <div className="agent-markdown agent-markdown-chat">
                         <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
                           {message.content}
                         </ReactMarkdown>
                       </div>
                     </div>
                   ) : !isAssistant ? (
-                    <div className="ml-auto max-w-[620px] rounded-[24px] border border-border bg-secondary/70 px-5 py-4 font-sans text-[15px] leading-[1.65] text-foreground">
+                    <div className="ml-auto max-w-[680px] rounded-[22px] border border-border/80 bg-secondary/80 px-5 py-3.5 font-sans text-[15px] leading-[1.6] text-foreground shadow-none backdrop-blur-xl">
                       <div className="whitespace-pre-wrap">{message.content}</div>
                     </div>
                   ) : null}
 
                   {isAssistant && !message.structuredOutput && msgCitations.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex max-w-[820px] flex-wrap gap-2">
                       {msgCitations.map((citation, index) => (
                         <a
                           key={`${message.id}-${citation.source}-${index}`}
                           href={citation.href ?? undefined}
                           target={citation.href ? "_blank" : undefined}
                           rel={citation.href ? "noreferrer" : undefined}
-                          className="rounded-full border border-border bg-secondary/40 px-3 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground transition-colors hover:border-ring/60 hover:text-foreground"
+                          className="rounded-full border border-border bg-secondary/45 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground transition-colors hover:border-ring/60 hover:bg-accent hover:text-foreground"
                         >
                           {citation.label}
                         </a>
@@ -146,53 +157,21 @@ export function AgentTranscript({
             })}
           </div>
         ) : (
-          <div className="relative flex h-full min-h-[360px] items-center overflow-hidden md:min-h-[460px]">
-            <div
-              className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-30 grayscale"
-              style={{ backgroundImage: `url(${landingHero})` }}
-              aria-hidden="true"
-            />
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,var(--background)_0%,color-mix(in_oklch,var(--background)_82%,transparent)_38%,color-mix(in_oklch,var(--background)_54%,transparent)_64%,var(--background)_100%)]" aria-hidden="true" />
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,var(--background)_0%,transparent_24%,transparent_58%,var(--background)_100%)]" aria-hidden="true" />
+          <div className={cn("relative flex items-center overflow-visible", isLanding ? "min-h-0" : "h-full min-h-[360px] md:min-h-[460px]")}>
+            {!isLanding ? (
+              <div className="pointer-events-none absolute inset-x-0 top-1/2 h-72 -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,color-mix(in_oklch,var(--foreground)_6%,transparent),transparent_64%)]" aria-hidden="true" />
+            ) : null}
 
-            <div className="relative z-10 mx-auto flex w-full max-w-[860px] flex-col justify-center gap-5 px-1 py-8 md:gap-6 md:px-6 md:py-10">
+            <div className={cn("relative z-10 mx-auto flex w-full flex-col justify-center", isLanding ? "max-w-[820px] gap-3 px-1 py-0 text-center" : "max-w-[880px] gap-6 px-1 py-8 md:px-6 md:py-10")}>
               <div className="text-center">
-                <p className="font-mono text-[12px] uppercase tracking-[1.4px] text-muted-foreground">AGOS frontier lab</p>
-                <h2 className="mt-3 font-sans text-[34px] font-light leading-[1] tracking-[-0.04em] text-foreground md:text-[58px]">Orchestrate research.</h2>
-                <p className="mx-auto mt-4 max-w-[560px] font-sans text-[14px] leading-[1.65] text-muted-foreground">
-                  Coordinate market telemetry, portfolio state, and source retrieval from one operator console.
+                <p className="font-mono text-[11px] uppercase tracking-[1.7px] text-muted-foreground/80">AGOS</p>
+                <h2 className={cn("mt-3 font-sans font-light tracking-[-0.055em] text-foreground", isLanding ? "text-[40px] leading-[1.02] md:text-[56px]" : "text-[42px] leading-[0.95] md:text-[64px]")}>Where should we start?</h2>
+                <p className="mx-auto mt-4 max-w-[560px] font-sans text-[14px] leading-[1.65] text-muted-foreground md:text-[15px]">
+                  Ask for a portfolio memo, source-backed research, or a multi-agent trading review.
                 </p>
               </div>
 
-              <div className="mt-1 grid gap-2 sm:grid-cols-2 md:mt-2 md:grid-cols-4 md:gap-2.5">
-                {[
-                  "Audit portfolio allocation",
-                  "Compare holdings against volatility",
-                  "Synthesize deployment plan",
-                  "Evaluate ticker-specific risks",
-                ].map((task) => (
-                  <div key={task} className="rounded-[18px] border border-border bg-background/70 px-4 py-3 backdrop-blur-md">
-                    <p className="font-sans text-[12px] leading-[1.5] text-foreground/80 md:text-left">{task}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="overflow-x-auto rounded-full border border-border bg-background/75 px-4 py-3 backdrop-blur-md md:overflow-visible">
-                <div className="flex min-w-max gap-4 md:grid md:min-w-0 md:grid-cols-5 md:gap-2">
-                {[
-                  ["OK", "Portfolio state"],
-                  ["OK", "Thread history"],
-                  ["OK", "Market tools"],
-                  ["OK", "Citations"],
-                  ["OFF", "Execution gate"],
-                ].map(([state, label]) => (
-                  <div key={label} className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
-                    <span className={state === "OK" ? "text-chart-2" : "text-muted-foreground/55"}>{state}</span>
-                    <span>{label}</span>
-                  </div>
-                ))}
-                </div>
-              </div>
+              {!isLanding ? <ReadinessStrip /> : null}
             </div>
           </div>
         )}
@@ -217,5 +196,74 @@ export function AgentTranscript({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function ReadinessStrip() {
+  return (
+    <div className="mx-auto max-w-full overflow-x-auto rounded-full border border-border/70 bg-background/55 px-4 py-3 backdrop-blur-xl md:overflow-visible">
+      <div className="flex min-w-max gap-4 md:grid md:min-w-0 md:grid-cols-5 md:gap-2">
+        {[
+          ["OK", "Portfolio state"],
+          ["OK", "Thread history"],
+          ["OK", "Market tools"],
+          ["OK", "Citations"],
+          ["OFF", "Execution gate"],
+        ].map(([state, label]) => (
+          <div key={label} className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
+            <span className={state === "OK" ? "text-chart-2" : "text-muted-foreground/55"}>{state}</span>
+            <span>{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RunSummaryCard({ message, isActive, onSelectRun }: { message: AgentMessage; isActive: boolean; onSelectRun: (runId: string) => void }) {
+  const output = message.structuredOutput;
+  const sourceCount = output?.sources.length ?? message.citations.length;
+  const actionCount = output?.recommendations.length ?? 0;
+  const warningCount = output?.reliabilityWarnings?.length ?? 0;
+  const riskCount = output?.risks.length ?? 0;
+  const runId = message.runId;
+
+  if (!runId) {
+    return null;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelectRun(runId)}
+      className={cn(
+        "group relative max-w-[820px] overflow-hidden rounded-[24px] border px-4 py-3 text-left shadow-[inset_0_1px_0_color-mix(in_oklch,var(--foreground)_5%,transparent)] backdrop-blur-xl transition-colors",
+        isActive
+          ? "border-border/80 bg-card/45"
+          : "border-border/70 bg-card/35 hover:border-ring/45 hover:bg-accent/20"
+      )}
+    >
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-foreground/[0.025] to-transparent" aria-hidden="true" />
+      <div className="relative flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0 space-y-2">
+          <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1.25px] text-muted-foreground/75">
+            <span className="rounded-full border border-border/55 bg-secondary/20 px-2 py-0.5">
+              {output?.executionReady ? "execution ready" : "advisory only"}
+            </span>
+            <span className="hidden text-muted-foreground/45 sm:inline">/</span>
+            <span className="text-muted-foreground/70">Run audit available</span>
+          </div>
+          <p className="font-sans text-[13px] leading-[1.55] text-muted-foreground">Open synthesis, evidence, actions, citations, and worker timeline.</p>
+        </div>
+
+        <div className="flex shrink-0 flex-wrap gap-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
+          <span className="rounded-full border border-border/60 bg-secondary/20 px-2.5 py-1">{sourceCount} citations</span>
+          <span className="rounded-full border border-border/60 bg-secondary/20 px-2.5 py-1">{actionCount} actions</span>
+          <span className="rounded-full border border-border/60 bg-secondary/20 px-2.5 py-1">{riskCount} risks</span>
+          {warningCount ? <span className="rounded-full border border-chart-1/35 bg-chart-1/[0.06] px-2.5 py-1 text-chart-1/90">{warningCount} warnings</span> : null}
+          <span className="rounded-full border border-ring/35 bg-secondary/25 px-2.5 py-1 text-foreground/75 transition-colors group-hover:border-chart-1/45 group-hover:text-foreground">View Details</span>
+        </div>
+      </div>
+    </button>
   );
 }
