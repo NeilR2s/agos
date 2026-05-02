@@ -196,8 +196,23 @@ export function AgentPage() {
   const combinedMessages = useMemo(() => {
     const messages = [...(messagesQuery.data ?? [])];
 
-    if (pendingUserMessage && !messages.some((message) => message.id === pendingUserMessage.id)) {
-      messages.push(pendingUserMessage);
+    if (pendingUserMessage) {
+      const pendingMessage = {
+        ...pendingUserMessage,
+        runId: pendingUserMessage.runId ?? stream.run?.id ?? null,
+      };
+      const alreadyPresent = messages.some(
+        (message) =>
+          message.id === pendingMessage.id ||
+          (message.role === "user" &&
+            pendingMessage.runId &&
+            message.runId === pendingMessage.runId &&
+            message.content === pendingMessage.content)
+      );
+
+      if (!alreadyPresent) {
+        messages.push(pendingMessage);
+      }
     }
 
     if (stream.completedMessage) {
