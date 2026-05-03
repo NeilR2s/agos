@@ -348,8 +348,8 @@ export function MapPage() {
             </div>
             
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/50">
-              <span className="text-foreground/40">{queryMode === "bbox" ? "Viewport Mode" : "Polygon Mode"}</span>
-              <span className="text-foreground/40">{playing ? "Temporal Playback" : "Static View"}</span>
+              <span className="text-foreground/60">{queryMode === "bbox" ? "Viewport Mode" : "Polygon Mode"}</span>
+              <span className="text-foreground/60">{playing ? "Temporal Playback" : "Static View"}</span>
               <span className="text-foreground/70">{selectionSummaryLabel}</span>
               <span>{summary.activeTimestamp.replace("T", " ").replace("Z", " UTC")}</span>
               {focusedPlaceLabel ? <span className="text-primary/70">/ {focusedPlaceLabel}</span> : null}
@@ -365,7 +365,7 @@ export function MapPage() {
               ["Tracks", tracks.filter((track) => track.visibleCoordinates.length >= 2).length],
             ].map(([label, value]) => (
               <div key={label} className="flex items-baseline gap-2">
-                <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/40">{label}</span>
+                <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/50">{label}</span>
                 <span className="font-mono text-[16px] text-foreground/90">{value}</span>
               </div>
             ))}
@@ -404,7 +404,7 @@ export function MapPage() {
               </div>
             ) : null}
 
-            <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden border border-border/40 bg-card/10 xl:min-h-0">
+            <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden xl:min-h-0">
               <MapCanvas
                 assets={featureData.assets}
                 zones={featureData.zones}
@@ -442,7 +442,7 @@ export function MapPage() {
 
               <MapDetailRail
                 key={selection ? `${selection.type}:${selection.id}` : "none"}
-                className="xl:absolute xl:inset-y-0 xl:right-0 xl:z-40 xl:w-[340px] xl:border-l"
+                className="xl:absolute xl:inset-y-0 xl:right-0 xl:z-40 xl:w-[340px] xl:border-l xl:border-border/50"
                 open={inspectorOpen}
                 selection={selection}
                 detail={detailQuery.data ?? null}

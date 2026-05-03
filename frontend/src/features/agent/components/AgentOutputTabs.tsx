@@ -262,7 +262,7 @@ function EvidenceTab({
                   <span className="min-w-0 pl-4">
                     <span className="flex flex-wrap items-center gap-3">
                       <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/60">{item.id}</span>
-                      <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/40">{hasSources ? `${item.sourceIds.length} sources` : "no citation"}</span>
+                      <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/50">{hasSources ? `${item.sourceIds.length} sources` : "no citation"}</span>
                     </span>
                     <span className={cn(
                       "mt-2 block line-clamp-2 font-sans text-[15px] leading-[1.45]",

@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
-import landingHero from "@/assets/landing_hero.jpeg";
 import { LoginForm } from "@/components/login-form";
 import { useAuthStore } from "@/store/authStore";
 
@@ -71,12 +70,7 @@ export const LoginPage = () => {
   return (
     <div className="grid min-h-dvh overflow-hidden bg-background text-foreground lg:grid-cols-[minmax(0,1.08fr)_minmax(520px,0.92fr)]">
       <section className="relative isolate min-h-[430px] overflow-hidden border-b border-border/70 lg:min-h-dvh lg:border-b-0 lg:border-r">
-        <img
-          src={landingHero}
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 -z-30 size-full object-cover object-[42%_50%] opacity-75 grayscale contrast-125"
-        />
+        <div className="absolute inset-0 -z-30 size-full bg-background" aria-hidden="true" />
         <div className="absolute inset-0 -z-20" style={authHeroVeilStyle} aria-hidden="true" />
         <div className="absolute inset-0 -z-10 opacity-35" style={authHeroGridStyle} aria-hidden="true" />
         <div className="absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-foreground/30 to-transparent" aria-hidden="true" />

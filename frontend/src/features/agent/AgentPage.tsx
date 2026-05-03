@@ -520,7 +520,7 @@ export function AgentPage() {
     <div className="relative flex h-[calc(100dvh-57px)] flex-col overflow-hidden bg-background text-foreground lg:h-dvh">
       <div className={cn("pointer-events-none absolute inset-x-0 top-0 bg-[radial-gradient(ellipse_at_top,color-mix(in_oklch,var(--foreground)_7%,transparent),transparent_66%)]", isLanding ? "h-28 opacity-60" : "h-40")} aria-hidden="true" />
 
-      <header className={cn("relative z-10 shrink-0 px-3 py-2 backdrop-blur-xl md:px-5", isLanding ? "border-b border-border/25 bg-background/35" : "border-b border-border/50 bg-background/70")}>
+      <header className={cn("relative z-10 shrink-0 px-3 py-2 backdrop-blur-xl md:px-5", isLanding ? "border-b border-border/50 bg-background/35" : "border-b border-border/50 bg-background/70")}>
         <div className="mx-auto flex min-h-[44px] w-full max-w-[1180px] items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="hidden size-8 shrink-0 items-center justify-center rounded-full border border-border bg-secondary/50 font-mono text-[10px] uppercase tracking-[1.2px] text-foreground sm:flex">
@@ -580,7 +580,7 @@ export function AgentPage() {
 
       {threadErrorMessage ? (
         <div className="flex min-h-0 flex-1 items-center justify-center px-5 py-5 md:px-6">
-          <div className="w-full max-w-[640px] rounded-3xl border border-destructive/40 bg-destructive/10 px-6 py-6">
+          <div className="w-full max-w-[640px] px-6 py-6">
             <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-destructive">Thread Unavailable</p>
             <h2 className="mt-3 font-sans text-[24px] leading-[1.1] text-foreground">AGOS session unavailable.</h2>
             <p className="mt-3 font-sans text-[14px] leading-[1.7] text-foreground/75">{threadErrorMessage}</p>
@@ -597,7 +597,7 @@ export function AgentPage() {
       ) : (
         <div className={cn("relative z-10 min-h-0 flex flex-1 flex-col overflow-hidden", isLanding ? "justify-center gap-6 px-4 py-8 md:gap-7 md:py-10" : "px-2 py-2 md:px-4 md:py-3")}>
           {stopStreamNotice ? (
-            <section className="mx-auto mb-2 w-full max-w-[900px] rounded-2xl border border-chart-3/40 bg-chart-3/10 px-4 py-3">
+            <section className="mx-auto mb-2 w-full max-w-[900px] border-l-2 border-chart-3/50 px-4 py-3">
               <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-chart-3">Stream Stopped</p>
               <p className="mt-2 font-sans text-[13px] leading-[1.6] text-foreground/80">{stopStreamNotice}</p>
             </section>
@@ -606,7 +606,7 @@ export function AgentPage() {
           {supplementalErrors.length ? (
             <div className="mb-2 space-y-2">
               {supplementalErrors.map((message) => (
-                <section key={message} className="mx-auto w-full max-w-[900px] rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3">
+                <section key={message} className="mx-auto w-full max-w-[900px] border-l-2 border-destructive/50 px-4 py-3">
                   <p className="font-sans text-[13px] leading-[1.6] text-destructive">{message}</p>
                 </section>
               ))}

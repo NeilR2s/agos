@@ -168,7 +168,7 @@ export function AgentTranscript({
             <div className={cn("relative z-10 mx-auto flex w-full flex-col justify-center", isLanding ? "max-w-[820px] gap-3 px-1 py-0 text-center" : "max-w-[880px] gap-6 px-1 py-8 md:px-6 md:py-10")}>
               <div className="text-center">
                 <p className="font-mono text-[11px] uppercase tracking-[1.7px] text-muted-foreground/80">AGOS</p>
-                <h2 className={cn("mt-3 font-sans font-light tracking-[-0.055em] text-foreground", isLanding ? "text-[40px] leading-[1.02] md:text-[56px]" : "text-[42px] leading-[0.95] md:text-[64px]")}>Where should we start?</h2>
+                <h2 className={cn("mt-3 font-sans tracking-[-0.055em] text-foreground", isLanding ? "text-[40px] leading-[1.02] md:text-[56px]" : "text-[42px] leading-[0.95] md:text-[64px]")}>Where should we start?</h2>
                 <p className="mx-auto mt-4 max-w-[560px] font-sans text-[14px] leading-[1.65] text-muted-foreground md:text-[15px]">
                   Ask for a portfolio memo, source-backed research, or a multi-agent trading review.
                 </p>

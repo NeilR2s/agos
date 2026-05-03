@@ -83,7 +83,7 @@ export function MapControlRail({
           
           <div className="mt-1 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/40">Matches</span>
+              <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/50">Matches</span>
               {searchResultsLoading && <span className="animate-pulse font-mono text-[9px] uppercase tracking-[1px] text-primary/60">Resolving</span>}
             </div>
             
@@ -101,9 +101,9 @@ export function MapControlRail({
                   </button>
                 ))
               ) : placeSearchQuery.trim().length >= 2 && !searchResultsLoading ? (
-                <p className="font-sans text-[12px] text-muted-foreground/40 italic">Zero results.</p>
+                <p className="font-sans text-[12px] text-muted-foreground/50 italic">Zero results.</p>
               ) : (
-                <p className="font-sans text-[12px] text-muted-foreground/30">Buffer: 2 chars</p>
+                <p className="font-sans text-[12px] text-muted-foreground/50">Buffer: 2 chars</p>
               )}
             </div>
           </div>
@@ -112,7 +112,7 @@ export function MapControlRail({
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h3 className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/60">Layers</h3>
-            <button onClick={onResetView} className="font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/40 hover:text-primary transition-colors">
+            <button onClick={onResetView} className="font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/50 hover:text-primary transition-colors">
               [ Reset View ]
             </button>
           </div>
@@ -124,7 +124,7 @@ export function MapControlRail({
                 onClick={() => onLayerToggle(layer.key)}
                 className="flex items-center justify-between py-2 text-left group"
               >
-                <span className={layerState[layer.key] ? "font-mono text-[11px] uppercase tracking-[1.5px] text-foreground" : "font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground/40 group-hover:text-muted-foreground/70"}>
+                <span className={layerState[layer.key] ? "font-mono text-[11px] uppercase tracking-[1.5px] text-foreground" : "font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground/50 group-hover:text-muted-foreground/70"}>
                   {layer.label}
                 </span>
                 <div className={`h-1.5 w-1.5 rounded-full ${layerState[layer.key] ? "bg-primary shadow-[0_0_8px_rgba(var(--primary),0.6)]" : "bg-muted-foreground/20"}`} />
@@ -136,7 +136,7 @@ export function MapControlRail({
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h3 className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/60">Query Mode</h3>
-            <span className="font-mono text-[9px] text-muted-foreground/40 tabular-nums">{queryLabel}</span>
+            <span className="font-mono text-[9px] text-muted-foreground/50 tabular-nums">{queryLabel}</span>
           </div>
           <div className="flex gap-1 border border-border/40 p-0.5">
             {(["bbox", "polygon"] as const).map((mode) => (
@@ -183,7 +183,7 @@ export function MapControlRail({
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h3 className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/60">Legend</h3>
-            <button onClick={() => setLegendExpanded(!legendExpanded)} className="font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/40 hover:text-primary transition-colors">
+            <button onClick={() => setLegendExpanded(!legendExpanded)} className="font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/50 hover:text-primary transition-colors">
               {legendExpanded ? "[ Hide ]" : "[ Show ]"}
             </button>
           </div>

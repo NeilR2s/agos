@@ -520,7 +520,7 @@ export function MapCanvas({
       <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(180deg,rgba(3,3,3,1)_0%,transparent_12%,transparent_85%,rgba(3,3,3,0.8)_100%)]" aria-hidden="true" />
       
       <div className="absolute left-6 top-6 z-20 flex flex-col gap-1">
-        <span className="font-mono text-[9px] uppercase tracking-[2px] text-muted-foreground/30">
+        <span className="font-mono text-[9px] uppercase tracking-[2px] text-muted-foreground/50">
           Geospatial Surface
         </span>
         <span className="font-sans text-[12px] text-muted-foreground/50">

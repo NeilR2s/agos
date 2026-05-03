@@ -128,7 +128,7 @@ export function AgentThreadList({
                             onDelete(thread.id);
                           }}
                           className={cn(
-                            "absolute right-2 top-1/2 -translate-y-1/2 flex size-7 items-center justify-center rounded-full text-muted-foreground/40 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100",
+                            "absolute right-2 top-1/2 -translate-y-1/2 flex size-7 items-center justify-center rounded-full text-muted-foreground/50 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100",
                             isActive && "opacity-100"
                           )}
                           aria-label={`Delete ${thread.title}`}

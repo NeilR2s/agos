@@ -305,7 +305,7 @@ export const Dashboard = () => {
             </header>
 
             {portfolioError ? (
-                <div className="rounded-2xl border border-border bg-card px-6 py-4 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
+                <div className="flex flex-col gap-4 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground sm:flex-row sm:items-center">
                     Portfolio error: {portfolioError}
                 </div>
             ) : null}
@@ -405,7 +405,7 @@ export const Dashboard = () => {
                                                         <Button
                                                             variant="ghost"
                                                             size="icon-sm"
-                                                            className="text-white/30 hover:bg-white/5 hover:text-white"
+                                                            className="text-white/50 hover:bg-white/5 hover:text-white"
                                                             onClick={() => setHoldingDialog({ mode: "edit", holding })}
                                                         >
                                                             <PencilLine className="size-4" />
@@ -414,7 +414,7 @@ export const Dashboard = () => {
                                                         <Button
                                                             variant="ghost"
                                                             size="icon-sm"
-                                                            className="text-white/30 hover:bg-white/5 hover:text-white"
+                                                            className="text-white/50 hover:bg-white/5 hover:text-white"
                                                             onClick={() => {
                                                                 setTickerToDelete(holding.ticker);
                                                             }}
@@ -429,7 +429,7 @@ export const Dashboard = () => {
                                         ))}
                                         {portfolio?.holdings.length === 0 && (
                                             <TableRow className="border-b-0 hover:bg-transparent">
-                                                <TableCell colSpan={8} className="py-10 text-center font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
+                                                <TableCell colSpan={8} className="py-10 text-center font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">
                                                     No active positions found.
                                                 </TableCell>
                                             </TableRow>
@@ -601,7 +601,7 @@ function HoldingDialog({
                             placeholder="TEL"
                             showHint={false}
                         />
-                        {mode === "add" && <p className="font-sans text-[11px] text-white/40">Press Enter to select a ticker.</p>}
+                        {mode === "add" && <p className="font-sans text-[11px] text-white/50">Press Enter to select a ticker.</p>}
                     </div>
 
                     <div className="space-y-1">
@@ -615,7 +615,7 @@ function HoldingDialog({
                             value={shares}
                             onChange={(event) => setShares(event.target.value)}
                             required
-                            className="flex h-11 w-full rounded-none border border-border/50 bg-transparent px-3 py-2 font-mono text-sm text-white outline-none placeholder:text-white/30 focus:border-ring focus:ring-1 focus:ring-ring"
+                            className="flex h-11 w-full rounded-none border border-border/50 bg-transparent px-3 py-2 font-mono text-sm text-white outline-none placeholder:text-white/50 focus:border-ring focus:ring-1 focus:ring-ring"
                         />
                     </div>
 
@@ -634,9 +634,9 @@ function HoldingDialog({
                             }}
                             required
                             placeholder={latestKnownPrice !== null && latestKnownPrice !== undefined && latestKnownPrice > 0 ? latestKnownPrice.toFixed(2) : "0.00"}
-                            className="flex h-11 w-full rounded-none border border-border/50 bg-transparent px-3 py-2 font-mono text-sm text-white outline-none placeholder:text-white/30 focus:border-ring focus:ring-1 focus:ring-ring"
+                            className="flex h-11 w-full rounded-none border border-border/50 bg-transparent px-3 py-2 font-mono text-sm text-white outline-none placeholder:text-white/50 focus:border-ring focus:ring-1 focus:ring-ring"
                         />
-                        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40 pt-1">
+                        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50 pt-1">
                             {latestPriceQuery.isFetching && !latestKnownPrice
                                 ? "Fetching latest market price..."
                                 : latestKnownPrice !== null && latestKnownPrice !== undefined && latestKnownPrice > 0
@@ -706,7 +706,7 @@ function CashDialog({
                             value={amount}
                             onChange={(event) => setAmount(event.target.value)}
                             required
-                            className="flex h-11 w-full rounded-none border border-border/50 bg-transparent px-3 py-2 font-mono text-sm text-white outline-none placeholder:text-white/30 focus:border-ring focus:ring-1 focus:ring-ring"
+                            className="flex h-11 w-full rounded-none border border-border/50 bg-transparent px-3 py-2 font-mono text-sm text-white outline-none placeholder:text-white/50 focus:border-ring focus:ring-1 focus:ring-ring"
                         />
                     </div>
 

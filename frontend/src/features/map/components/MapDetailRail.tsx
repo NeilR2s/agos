@@ -92,9 +92,9 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
   ) : error ? (
     <p className="font-sans text-[13px] text-destructive/80">{error}</p>
   ) : !selection ? (
-    <p className="font-sans text-[13px] italic text-muted-foreground/40">Select an object to inspect context.</p>
+    <p className="font-sans text-[13px] italic text-muted-foreground/50">Select an object to inspect context.</p>
   ) : !detail || !primary ? (
-    <p className="font-sans text-[13px] text-muted-foreground/40 text-center py-12">No object details available.</p>
+    <p className="font-sans text-[13px] text-muted-foreground/50 text-center py-12">No object details available.</p>
   ) : (
     <div className="space-y-6">
       {detail.asset && (
@@ -107,7 +107,7 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
           </div>
           <p className="font-sans text-[14px] leading-relaxed text-muted-foreground/80">{detail.asset.description}</p>
           <div className="flex flex-col gap-1 pt-2">
-            <span className="font-mono text-[9px] uppercase tracking-[1px] text-muted-foreground/40 text-left">Coordinates</span>
+            <span className="font-mono text-[9px] uppercase tracking-[1px] text-muted-foreground/50 text-left">Coordinates</span>
             <span className="font-mono text-[11px] tabular-nums text-foreground/70">
               {detail.asset.location[1].toFixed(6)} N / {detail.asset.location[0].toFixed(6)} E
             </span>
@@ -149,7 +149,7 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
           </div>
           <p className="font-sans text-[14px] leading-relaxed text-muted-foreground/80">{detail.event.detail}</p>
           <div className="flex flex-col gap-1 pt-2">
-            <span className="font-mono text-[9px] uppercase tracking-[1px] text-muted-foreground/40">Registered</span>
+            <span className="font-mono text-[9px] uppercase tracking-[1px] text-muted-foreground/50">Registered</span>
             <span className="font-mono text-[11px] tabular-nums text-foreground/70">{formatTimestamp(detail.event.timestamp)}</span>
           </div>
         </div>
@@ -183,7 +183,7 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
             <span className="font-mono text-[10px] tabular-nums text-muted-foreground/50 group-hover:text-muted-foreground/70">
               {formatTimestamp(event.timestamp)}
             </span>
-            <span className="font-mono text-[9px] uppercase tracking-[1px] text-muted-foreground/40">{event.severity}</span>
+            <span className="font-mono text-[9px] uppercase tracking-[1px] text-muted-foreground/50">{event.severity}</span>
           </div>
           <h4 className="font-sans text-[14px] font-medium text-foreground/90 group-hover:text-foreground transition-colors">{event.title}</h4>
           <p className="mt-1 font-sans text-[13px] leading-relaxed text-muted-foreground/60">{event.detail}</p>
@@ -191,7 +191,7 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
       ))}
     </div>
   ) : (
-    <p className="font-sans text-[13px] text-muted-foreground/30 py-12 text-center">Zero historical traces.</p>
+    <p className="font-sans text-[13px] text-muted-foreground/50 py-12 text-center">Zero historical traces.</p>
   );
 
   const connectionsContent = isLoading ? (
@@ -202,7 +202,7 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
         <div className="space-y-6">
           {detail.relatedConnections.map((connection) => (
             <div key={connection.id} className="group flex flex-col gap-1">
-              <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/40 group-hover:text-muted-foreground/60 transition-colors">{connection.kind}</span>
+              <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/50 group-hover:text-muted-foreground/60 transition-colors">{connection.kind}</span>
               <p className="font-sans text-[14px] text-foreground/80 group-hover:text-foreground transition-colors">{connection.description}</p>
             </div>
           ))}
@@ -212,11 +212,11 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
       {detail.relatedAssets.length > 0 && <NamedCollection label="Infrastructure" items={detail.relatedAssets.map((asset) => asset.name)} />}
       
       {!detail.relatedConnections.length && !detail.relatedAssets.length && !detail.relatedZones.length && (
-        <p className="font-sans text-[13px] text-muted-foreground/30 py-12 text-center">Zero topological links.</p>
+        <p className="font-sans text-[13px] text-muted-foreground/50 py-12 text-center">Zero topological links.</p>
       )}
     </div>
   ) : (
-    <p className="font-sans text-[13px] text-muted-foreground/30 py-12 text-center">Zero topological links.</p>
+    <p className="font-sans text-[13px] text-muted-foreground/50 py-12 text-center">Zero topological links.</p>
   );
 
   const trackContent = isLoading ? (
@@ -227,15 +227,15 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
         <div key={track.id} className="space-y-6">
           <div className="flex flex-col gap-1">
             <h4 className="font-sans text-[15px] font-medium text-foreground">{track.label}</h4>
-            <span className="font-mono text-[10px] uppercase tracking-[1px] text-muted-foreground/40">{track.points.length} checkpoints</span>
+            <span className="font-mono text-[10px] uppercase tracking-[1px] text-muted-foreground/50">{track.points.length} checkpoints</span>
           </div>
           <div className="space-y-4">
             {track.points.map((point, index) => (
               <div key={`${track.id}-${point.timestamp}-${index}`} className="flex items-start gap-4">
-                <span className="font-mono text-[9px] text-muted-foreground/30 pt-1">{(index + 1).toString().padStart(2, "0")}</span>
+                <span className="font-mono text-[9px] text-muted-foreground/50 pt-1">{(index + 1).toString().padStart(2, "0")}</span>
                 <div className="flex flex-col flex-1">
                   <span className="font-mono text-[10px] tabular-nums text-muted-foreground/60">{formatTimestamp(point.timestamp)}</span>
-                  <span className="font-mono text-[10px] tabular-nums text-muted-foreground/40 mt-0.5">
+                  <span className="font-mono text-[10px] tabular-nums text-muted-foreground/50 mt-0.5">
                     {point.location[1].toFixed(5)} / {point.location[0].toFixed(5)}
                   </span>
                 </div>
@@ -246,7 +246,7 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
       ))}
     </div>
   ) : (
-    <p className="font-sans text-[13px] text-muted-foreground/30 py-12 text-center">Zero movement traces.</p>
+    <p className="font-sans text-[13px] text-muted-foreground/50 py-12 text-center">Zero movement traces.</p>
   );
 
   const tabContent = {
@@ -264,11 +264,11 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
             <span className="font-mono text-[10px] uppercase tracking-[2px] text-muted-foreground/50">Object Detail</span>
             <div className="flex items-center gap-4">
               {selection && (
-                <button onClick={onFitSelection} className="font-mono text-[10px] uppercase tracking-[1px] text-muted-foreground/40 hover:text-primary transition-colors">
+                <button onClick={onFitSelection} className="font-mono text-[10px] uppercase tracking-[1px] text-muted-foreground/50 hover:text-primary transition-colors">
                   [ Fit ]
                 </button>
               )}
-              <button onClick={onClose} className="text-muted-foreground/40 hover:text-foreground transition-colors">
+              <button onClick={onClose} className="text-muted-foreground/50 hover:text-foreground transition-colors">
                 <XMarkIcon className="size-5" />
               </button>
             </div>
@@ -280,9 +280,9 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
                 {selectionTitle}
               </h2>
             ) : (
-              <h2 className="font-sans text-[20px] font-medium text-muted-foreground/30 italic">No Title</h2>
+              <h2 className="font-sans text-[20px] font-medium text-muted-foreground/50 italic">No Title</h2>
             )}
-            <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/40 tabular-nums">
+            <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/50 tabular-nums">
               {selectionMeta}
             </span>
           </div>
@@ -298,7 +298,7 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
                 "flex-1 py-3 font-mono text-[10px] uppercase tracking-[1.2px] transition-all",
                 activeTab === tab.key 
                   ? "bg-foreground/5 text-foreground border-b-2 border-primary" 
-                  : "text-muted-foreground/40 hover:text-muted-foreground/70",
+                  : "text-muted-foreground/50 hover:text-muted-foreground/70",
                 tab.disabled && "opacity-20 cursor-not-allowed"
               )}
             >
@@ -318,7 +318,7 @@ export function MapDetailRail({ open, selection, detail, isLoading, error, onFit
 function NamedCollection({ label, items }: { label: string; items: string[] }) {
   return (
     <div className="flex flex-col gap-4">
-      <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/40">{label}</span>
+      <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/50">{label}</span>
       <div className="flex flex-wrap gap-2">
         {items.map((item) => (
           <span key={item} className="px-2 py-1 bg-foreground/[0.03] border border-border/20 font-mono text-[10px] uppercase tracking-[1px] text-muted-foreground/70 hover:text-foreground hover:border-border/40 transition-colors cursor-default">

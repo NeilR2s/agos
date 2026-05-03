@@ -643,18 +643,18 @@ export const ResearchView = () => {
                             onSelect={(item) => setSelectedTicker(item.ticker)}
                             showHint={false}
                             className="w-full h-12 bg-transparent border-b border-border/30 hover:border-border/60 transition-colors text-[16px] px-2 focus:outline-none"
-                            inputClassName="w-full h-full bg-transparent text-white placeholder:text-white/20 border-none focus-visible:ring-0"
+                            inputClassName="w-full h-full bg-transparent text-white placeholder:text-white/50 border-none focus-visible:ring-0"
                             placeholder="Search ticker..."
                         />
                         <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
-                             <span className="font-mono text-[10px] text-white/20 tracking-widest border border-white/10 rounded px-1.5 py-0.5">⌘K</span>
+                             <span className="font-mono text-[10px] text-white/50 tracking-widest border border-white/10 rounded px-1.5 py-0.5">⌘K</span>
                         </div>
                     </div>
                     <div className="flex flex-wrap justify-center gap-6 text-[13px] font-sans text-muted-foreground">
                          <Link to={`/agent?ticker=${selectedTicker}&mode=research`} className="hover:text-white transition-colors">
                             Analyze
                         </Link>
-                        <span className="text-white/10">·</span>
+                        <span className="text-white/50">·</span>
                         <button 
                             type="button" 
                             className="hover:text-white transition-colors"
@@ -668,7 +668,7 @@ export const ResearchView = () => {
                         >
                             Evaluate Trade
                         </button>
-                        <span className="text-white/10">·</span>
+                        <span className="text-white/50">·</span>
                          <button 
                             type="button" 
                             className={cn("hover:text-white transition-colors", isExporting && "opacity-50 cursor-wait")}
@@ -682,7 +682,7 @@ export const ResearchView = () => {
             </header>
 
             {marketQuery.error || chartQuery.error ? (
-                <div className="rounded-2xl border border-border bg-card px-6 py-4 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
+                <div className="flex flex-col gap-4 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground sm:flex-row sm:items-center">
                     Telemetry error: {extractErrorMessage(marketQuery.error ?? chartQuery.error)}
                 </div>
             ) : null}
@@ -728,12 +728,12 @@ export const ResearchView = () => {
                 </div>
 
                 <div className="flex flex-col">
-                    <h3 className="font-sans text-[18px] font-medium text-white tracking-tight mb-4 border-b border-border-soft pb-4">Research Signals</h3>
+                    <h3 className="font-sans text-[18px] font-medium text-white tracking-tight mb-4 border-b border-border/50 pb-4">Research Signals</h3>
                     <div className="space-y-4">
                         {overview ? (
                             <>
                                 {researchSignals.map((signal) => (
-                                    <div key={signal.label} className="space-y-1 pb-4 border-b border-border-soft last:border-b-0">
+                                    <div key={signal.label} className="space-y-1 pb-4 border-b border-border/50 last:border-b-0">
                                         <div className="flex items-center justify-between gap-3">
                                             <p className="font-sans text-[15px] text-white">{signal.label}</p>
                                             <p className={cn(
@@ -745,7 +745,7 @@ export const ResearchView = () => {
                                     </div>
                                 ))}
 
-                                <div className="space-y-3 pt-4 border-t border-border-soft">
+                                <div className="space-y-3 pt-4 border-t border-border/50">
                                     <p className="font-sans text-[15px] text-white">Forecast Window</p>
                                     <div className="flex gap-12">
                                         <MiniMetric label="Low" value={formatCurrency(latestForecastLow)} />
@@ -760,9 +760,9 @@ export const ResearchView = () => {
                 </div>
             </section>
 
-            <section className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_280px] xl:items-start pt-10 border-t border-border-soft">
+            <section className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_280px] xl:items-start pt-10 border-t border-border/50">
                 <div className="flex flex-col">
-                    <h3 className="font-sans text-[20px] font-medium text-white tracking-tight mb-2 border-b border-border-soft pb-4">Historical Performance</h3>
+                    <h3 className="font-sans text-[20px] font-medium text-white tracking-tight mb-2 border-b border-border/50 pb-4">Historical Performance</h3>
                     <div className="flex flex-wrap items-center gap-6 mb-6 mt-4">
                         <div className="flex items-center gap-2">
                             {chartRangeOptions.map((option) => (
@@ -775,20 +775,20 @@ export const ResearchView = () => {
                                         "font-sans text-[14px] transition-colors",
                                         chartRange === option.id
                                             ? "text-white"
-                                            : "text-white/40 hover:text-white/80"
+                                            : "text-white/50 hover:text-white/80"
                                     )}
                                 >
                                     {option.label}
                                 </button>
                             ))}
                         </div>
-                        <span className="text-white/10 hidden sm:inline">·</span>
+                        <span className="text-white/50 hidden sm:inline">·</span>
                         <div className="flex flex-wrap items-center gap-4">
                             <button
                                 type="button"
                                 onClick={() => setShowForecast((value) => !value)}
                                 aria-pressed={showForecast}
-                                className={cn("font-sans text-[14px] transition-colors", showForecast ? "text-white" : "text-white/40 hover:text-white/80")}
+                                className={cn("font-sans text-[14px] transition-colors", showForecast ? "text-white" : "text-white/50 hover:text-white/80")}
                             >
                                 Forecast
                             </button>
@@ -796,7 +796,7 @@ export const ResearchView = () => {
                                 type="button"
                                 onClick={() => setShowMovingAverage20((value) => !value)}
                                 aria-pressed={showMovingAverage20}
-                                className={cn("font-sans text-[14px] transition-colors", showMovingAverage20 ? "text-chart-2" : "text-white/40 hover:text-white/80")}
+                                className={cn("font-sans text-[14px] transition-colors", showMovingAverage20 ? "text-chart-2" : "text-white/50 hover:text-white/80")}
                             >
                                 MA20
                             </button>
@@ -804,7 +804,7 @@ export const ResearchView = () => {
                                 type="button"
                                 onClick={() => setShowMovingAverage50((value) => !value)}
                                 aria-pressed={showMovingAverage50}
-                                className={cn("font-sans text-[14px] transition-colors", showMovingAverage50 ? "text-chart-1" : "text-white/40 hover:text-white/80")}
+                                className={cn("font-sans text-[14px] transition-colors", showMovingAverage50 ? "text-chart-1" : "text-white/50 hover:text-white/80")}
                             >
                                 MA50
                             </button>
@@ -812,7 +812,7 @@ export const ResearchView = () => {
                                 type="button"
                                 onClick={() => setShowRSI((value) => !value)}
                                 aria-pressed={showRSI}
-                                className={cn("font-sans text-[14px] transition-colors", showRSI ? "text-white" : "text-white/40 hover:text-white/80")}
+                                className={cn("font-sans text-[14px] transition-colors", showRSI ? "text-white" : "text-white/50 hover:text-white/80")}
                             >
                                 RSI
                             </button>
@@ -828,7 +828,7 @@ export const ResearchView = () => {
                                     onMouseMove={onChartHover}
                                     onMouseLeave={() => setHoveredChartPoint(null)}
                                 >
-                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-soft)" vertical={false} />
+                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                                     <XAxis dataKey="index" hide />
                                     <YAxis
                                         domain={["auto", "auto"]}
@@ -844,7 +844,7 @@ export const ResearchView = () => {
                                     {showForecast ? (
                                         <>
                                             <Area type="monotone" dataKey="forecastBandBase" stackId="forecast" stroke="none" fill="transparent" connectNulls />
-                                            <Area type="monotone" dataKey="forecastBandRange" stackId="forecast" stroke="none" fill="var(--border-soft)" connectNulls />
+                                            <Area type="monotone" dataKey="forecastBandRange" stackId="forecast" stroke="none" fill="var(--border)" connectNulls />
                                         </>
                                     ) : null}
                                     <Line type="monotone" dataKey="price" stroke="var(--foreground)" strokeWidth={1.5} dot={false} activeDot={{ r: 3, fill: "var(--foreground)", strokeWidth: 0 }} connectNulls />
@@ -878,7 +878,7 @@ export const ResearchView = () => {
                                     onMouseMove={onChartHover}
                                     onMouseLeave={() => setHoveredChartPoint(null)}
                                 >
-                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-soft)" vertical={false} />
+                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                                     <XAxis dataKey="index" hide />
                                     <YAxis 
                                         domain={[0, 100]} 
@@ -907,9 +907,9 @@ export const ResearchView = () => {
                     ) : null}
                 </div>
 
-                <div className="flex flex-col gap-6 pt-4 border-t border-border-soft mt-8 xl:mt-0 xl:border-0 xl:pt-0">
-                    <div className="rounded-[8px] bg-surface p-4 xl:sticky xl:top-4">
-                        <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-white/40 mb-4 border-b border-border-soft pb-2">
+                <div className="flex flex-col gap-6 pt-4 border-t border-border/50 mt-8 xl:mt-0 xl:border-0 xl:pt-0">
+                    <div>
+                        <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-white/50 mb-4 border-b border-border/50 pb-2">
                             {chartLegendPoint ? (chartLegendPoint.kind === "forecast" ? "FORECAST" : "HISTORICAL") : "HOVER"}
                         </p>
                         <div className="space-y-2">
@@ -940,18 +940,18 @@ export const ResearchView = () => {
                                 </span>
                             </div>
                             {comparisonTicker ? (
-                                <div className="flex items-center justify-between gap-3 border-t border-border-soft pt-2 mt-1">
+                                <div className="flex items-center justify-between gap-3 border-t border-border/50 pt-2 mt-1">
                                     <span className="font-sans text-[14px] text-white/50">Compare {comparisonTicker}</span>
                                     <span className="font-mono text-[14px] tabular-nums text-white/70">{formatCurrency(chartLegendPoint?.comparisonPrice)}</span>
                                 </div>
                             ) : null}
-                            <div className="flex items-center justify-between gap-3 border-t border-border-soft pt-2 mt-1">
+                            <div className="flex items-center justify-between gap-3 border-t border-border/50 pt-2 mt-1">
                                 <span className="font-sans text-[14px] text-white/50">High / Low</span>
                                 <span className="font-mono text-[14px] tabular-nums text-white">
                                     {formatCurrency(chartLegendPoint?.high)} / {formatCurrency(chartLegendPoint?.low)}
                                 </span>
                             </div>
-                            <div className="flex items-center justify-between gap-3 border-t border-border-soft pt-2 mt-1">
+                            <div className="flex items-center justify-between gap-3 border-t border-border/50 pt-2 mt-1">
                                 <span className="font-sans text-[14px] text-white/50">Activity / Value</span>
                                 <span className="font-mono text-[14px] tabular-nums text-white">{formatNumber(chartLegendPoint?.value, "en-PH", 0)}</span>
                             </div>
@@ -959,7 +959,7 @@ export const ResearchView = () => {
                     </div>
 
                     <div className="rounded-[8px] bg-surface p-4">
-                        <div className="mb-4 border-b border-border-soft pb-2">
+                        <div className="mb-4 border-b border-border/50 pb-2">
                             <p className="font-sans text-[15px] font-medium text-white">Market Snapshot</p>
                             <p className="font-sans text-[13px] text-white/50 mt-1">
                                 Technical market tape. Price, movement, and activity metrics.
@@ -969,7 +969,7 @@ export const ResearchView = () => {
                         <div className="space-y-4">
                             {marketSnapshotRows.length ? (
                                 marketSnapshotRows.map((row) => (
-                                    <div key={row.ticker} className="space-y-2 border-b border-border-soft pb-4 last:border-b-0 last:pb-0">
+                                    <div key={row.ticker} className="space-y-2 border-b border-border/50 pb-4 last:border-b-0 last:pb-0">
                                         <div className="flex items-center justify-between gap-3">
                                             <p className="font-mono text-[13px] text-white">{row.ticker}</p>
                                             <p className={cn(
@@ -1012,11 +1012,11 @@ export const ResearchView = () => {
                             const externalUrl = typeof item.Link === "string" && item.Link.trim() ? item.Link : disclosureViewer?.externalUrl;
 
                             return (
-                                <div key={index} className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 pb-4 border-b border-border-soft last:border-b-0">
+                                <div key={index} className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 pb-4 border-b border-border/50 last:border-b-0">
                                     <div className="flex flex-col">
                                         <div className="flex flex-wrap items-center gap-2">
                                             <p className="font-sans text-[15px] text-white">{String(item["Report Type"] ?? item.report_type ?? "Report")}</p>
-                                            <span className="font-mono text-[10px] text-white/40 uppercase tracking-widest border border-border-soft px-1.5 py-[1px] rounded">
+                                            <span className="font-mono text-[10px] text-white/50 uppercase tracking-widest border border-border/50 px-1.5 py-[1px] rounded">
                                                 {String(item["PSE Form Number"] ?? item.form ?? "Form")}
                                             </span>
                                         </div>
@@ -1024,7 +1024,7 @@ export const ResearchView = () => {
                                             {String(item["Company Name"] ?? item.company_name ?? overview?.companyName ?? selectedTicker)}
                                         </p>
                                     </div>
-                                    <div className="flex flex-wrap items-center gap-4 font-mono text-[11px] uppercase tracking-[1.4px] text-white/40">
+                                    <div className="flex flex-wrap items-center gap-4 font-mono text-[11px] uppercase tracking-[1.4px] text-white/50">
                                         <span>{String(item.Date ?? item.date ?? "---")}</span>
                                         <span>{String(item["Report Number"] ?? item.report_number ?? "---")}</span>
                                         {disclosureViewer ? (
@@ -1074,7 +1074,7 @@ export const ResearchView = () => {
                             <div key={index} className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 pb-4 border-b border-border-soft last:border-b-0">
                                 <div className="flex flex-col">
                                     <p className="font-sans text-[15px] text-white">{String(item.indicator ?? item.name ?? "Indicator")}</p>
-                                    <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-white/40 mt-1">{String(item.date ?? item.period ?? "---")}</p>
+                                    <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-white/50 mt-1">{String(item.date ?? item.period ?? "---")}</p>
                                 </div>
                                 <p className="font-mono text-[14px] tabular-nums text-white">{formatNumber(Number(item.value))}</p>
                             </div>
@@ -1091,7 +1091,7 @@ export const ResearchView = () => {
                             const sourceUrl = getNewsSourceUrl(item);
 
                             return (
-                                <article key={index} className="flex flex-col pb-6 border-b border-border-soft last:border-b-0">
+                                <article key={index} className="flex flex-col pb-6 border-b border-border/50 last:border-b-0">
                                     <div className="flex items-start justify-between gap-3 mb-2">
                                         <div className="min-w-0">
                                             {sourceUrl ? (
@@ -1111,7 +1111,7 @@ export const ResearchView = () => {
                                             "font-mono text-[10px] uppercase tracking-widest border px-1.5 py-[1px] rounded whitespace-nowrap",
                                             String(item.sentiment_label).toLowerCase() === "bullish" ? "text-positive border-positive/30" : 
                                             String(item.sentiment_label).toLowerCase() === "bearish" ? "text-negative border-negative/30" :
-                                            "text-white/50 border-border-soft"
+                                            "text-white/50 border-border/50"
                                         )}>
                                             {String(item.sentiment_label ?? "Neutral")}
                                         </span>
@@ -1119,7 +1119,7 @@ export const ResearchView = () => {
                                     <p className="font-sans text-[14px] leading-[1.6] text-white/60 mb-3 line-clamp-3">
                                         {String(item.summary ?? "")}
                                     </p>
-                                    <div className="flex flex-wrap gap-4 font-mono text-[11px] uppercase tracking-[1.4px] text-white/40">
+                                    <div className="flex flex-wrap gap-4 font-mono text-[11px] uppercase tracking-[1.4px] text-white/50">
                                         <span>{String(item.date ?? "---")}</span>
                                         <span>Score: {formatNumber(Number(item.sentiment_score ?? 0))}</span>
                                     </div>
@@ -1212,7 +1212,7 @@ function Metric({ label, value }: { label: string; value: string }) {
                 <p className="font-sans text-[14px] text-white/50">{label}</p>
                 <p className="text-right font-mono text-[14px] tabular-nums text-white">{value}</p>
             </div>
-            <hr className="border-border-soft border-t" />
+            <hr className="border-border/50 border-t" />
         </div>
     );
 }
@@ -1244,7 +1244,7 @@ function PriceActionTooltip({
     }
 
     return (
-        <div className="space-y-1 rounded-[8px] border border-border-soft bg-surface px-3 py-2 font-mono text-[11px] uppercase tracking-[1.4px] text-white/50">
+        <div className="space-y-1 rounded-[8px] border border-border/50 bg-surface px-3 py-2 font-mono text-[11px] uppercase tracking-[1.4px] text-white/50">
             <div className="flex items-center justify-between gap-4 text-white">
                 <span>Date</span>
                 <span>{point.date}</span>
@@ -1265,11 +1265,11 @@ function PriceActionTooltip({
                 <span>MA 50</span>
                 <span className="text-chart-1">{formatCurrency(point.movingAverage50)}</span>
             </div>
-            <div className="flex items-center justify-between gap-4 pt-1 border-t border-border-soft mt-1">
+            <div className="flex items-center justify-between gap-4 pt-1 border-t border-border/50 mt-1">
                 <span>High / Low</span>
                 <span>{formatCurrency(point.high)} / {formatCurrency(point.low)}</span>
             </div>
-            <div className="flex items-center justify-between gap-4 pt-1 border-t border-border-soft mt-1">
+            <div className="flex items-center justify-between gap-4 pt-1 border-t border-border/50 mt-1">
                 <span>Activity / Value</span>
                 <span>{formatNumber(point.value, "en-PH", 0)}</span>
             </div>
@@ -1291,7 +1291,7 @@ function RSITooltip({
     }
 
     return (
-        <div className="space-y-1 rounded-[8px] border border-border-soft bg-surface px-3 py-2 font-mono text-[11px] uppercase tracking-[1.4px] text-white/50">
+        <div className="space-y-1 rounded-[8px] border border-border/50 bg-surface px-3 py-2 font-mono text-[11px] uppercase tracking-[1.4px] text-white/50">
             <div className="flex items-center justify-between gap-4 text-white">
                 <span>Date</span>
                 <span>{point.date}</span>
@@ -1301,7 +1301,7 @@ function RSITooltip({
                 <span>{point.rsi !== null ? point.rsi.toFixed(1) : "---"}</span>
             </div>
             {point.comparisonPrice !== null ? (
-            <div className="flex items-center justify-between gap-4 border-t border-border-soft pt-1 mt-1">
+            <div className="flex items-center justify-between gap-4 border-t border-border/50 pt-1 mt-1">
                 <span>Compare</span>
                 <span>{formatCurrency(point.comparisonPrice)}</span>
             </div>
@@ -1355,7 +1355,7 @@ function FinancialReportBlock({
 
     return (
         <div className="space-y-4">
-            <div className="flex items-start justify-between gap-4 border-b border-border-soft pb-4">
+            <div className="flex items-start justify-between gap-4 border-b border-border/50 pb-4">
                 <div className="space-y-1">
                     <p className="font-sans text-[16px] font-medium text-white">{title}</p>
                     <p className="font-sans text-[14px] text-white/50">
@@ -1363,7 +1363,7 @@ function FinancialReportBlock({
                     </p>
                 </div>
                 {scaleFactor !== undefined ? (
-                    <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-white/40">
+                    <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-white/50">
                         Scale {formatNumber(Number(scaleFactor), "en-PH", 0)}
                     </p>
                 ) : null}
@@ -1372,7 +1372,7 @@ function FinancialReportBlock({
             {metaEntries.length ? (
                 <div className="grid gap-x-12 gap-y-4 sm:grid-cols-2">
                     {metaEntries.map(([key, value]) => (
-                        <div key={key} className="flex justify-between items-center py-2 border-b border-border-soft last:border-0">
+                        <div key={key} className="flex justify-between items-center py-2 border-b border-border/50 last:border-0">
                             <p className="font-sans text-[14px] text-white/50">{formatLabel(key)}</p>
                             <p className="font-mono text-[14px] tabular-nums text-white">{formatStatementValue(value)}</p>
                         </div>
@@ -1388,10 +1388,10 @@ function FinancialReportBlock({
                 <div className="space-y-6 pt-4">
                     {objectEntries.map(([key, value]) => (
                         <div key={key} className="space-y-3">
-                            <p className="font-sans text-[15px] font-medium text-white border-b border-border-soft pb-2">{formatLabel(key)}</p>
+                            <p className="font-sans text-[15px] font-medium text-white border-b border-border/50 pb-2">{formatLabel(key)}</p>
                             <div className="grid gap-x-12 gap-y-2 sm:grid-cols-2">
                                 {Object.entries(value).map(([nestedKey, nestedValue]) => (
-                                    <div key={nestedKey} className="flex justify-between items-center py-2 border-b border-border-soft last:border-0">
+                                    <div key={nestedKey} className="flex justify-between items-center py-2 border-b border-border/50 last:border-0">
                                         <p className="font-sans text-[14px] text-white/50">{formatLabel(nestedKey)}</p>
                                         <p className="font-mono text-[14px] tabular-nums text-white">{formatStatementValue(nestedValue)}</p>
                                     </div>
@@ -1423,7 +1423,7 @@ function StatementTable({ title, rows }: { title: string; rows: Record<string, u
             <div className="overflow-x-auto [scrollbar-gutter:stable]">
                 <table className="min-w-[520px] w-full border-collapse font-mono text-[13px] tabular-nums">
                     <thead>
-                        <tr className="border-b border-border-soft text-white/40">
+                        <tr className="border-b border-border/50 text-white/50">
                             <th className="py-3 pr-4 text-left font-normal uppercase tracking-[1.4px] text-[11px]">Item</th>
                             {valueHeaders.map((header) => (
                                 <th key={header} className="py-3 pl-4 text-right font-normal uppercase tracking-[1.4px] text-[11px]">
@@ -1434,7 +1434,7 @@ function StatementTable({ title, rows }: { title: string; rows: Record<string, u
                     </thead>
                     <tbody>
                         {rows.map((row, rowIndex) => (
-                            <tr key={rowIndex} className="border-b border-border-soft last:border-b-0">
+                            <tr key={rowIndex} className="border-b border-border/50 last:border-b-0">
                                 <td className="py-3 pr-4 text-left font-sans text-[14px] text-white">{formatStatementValue(row.Item ?? row.item ?? "---")}</td>
                                 {valueHeaders.map((header) => (
                                     <td key={header} className="py-3 pl-4 text-right text-white/70">

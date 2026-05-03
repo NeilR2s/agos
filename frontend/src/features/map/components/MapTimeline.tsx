@@ -63,7 +63,7 @@ export function MapTimeline({ timestamps, activeIndex, playing, windowSize, onIn
           </div>
 
           <div className="flex items-center gap-1 border border-border/40 p-0.5">
-            <span className="mr-2 px-1 font-mono text-[9px] uppercase tracking-[1px] text-muted-foreground/40">Window</span>
+            <span className="mr-2 px-1 font-mono text-[9px] uppercase tracking-[1px] text-muted-foreground/50">Window</span>
             {windowOptions.map((size) => (
               <button
                 key={size}
