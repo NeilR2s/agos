@@ -154,13 +154,6 @@ export function TickerAutocompleteInput({
             }
           }}
         />
-
-        {!readOnly && !disabled ? (
-          <span
-            aria-hidden="true"
-            className="cursor-block pointer-events-none absolute right-3 top-1/2 block h-4 w-2 -translate-y-1/2 bg-white/30"
-          />
-        ) : null}
       </div>
 
       {showHint && !readOnly && !disabled ? (
@@ -177,7 +170,7 @@ export function TickerAutocompleteInput({
       ) : null}
 
       {open && suggestions.length ? (
-        <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border border-border bg-popover/95 shadow-none backdrop-blur-xl">
+        <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-none border border-border-soft bg-surface shadow-2xl">
           {suggestions.map((item, index) => {
             const isActive = index === highlightedIndex;
 
@@ -187,7 +180,7 @@ export function TickerAutocompleteInput({
                 type="button"
                 className={cn(
                   "grid w-full grid-cols-[4.5rem_minmax(0,1fr)_5.5rem] items-center gap-4 px-4 py-3 text-left transition-colors",
-                  isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
+                  isActive ? "bg-white/5 text-foreground" : "text-muted-foreground hover:bg-white/[0.03] hover:text-foreground"
                 )}
                 onMouseEnter={() => setHighlightedIndex(index)}
                 onMouseDown={(event) => {
@@ -196,10 +189,12 @@ export function TickerAutocompleteInput({
                 }}
               >
                 <span className="font-mono text-[12px] uppercase tracking-[1.4px] tabular-nums text-foreground">{item.ticker}</span>
-                <span className="min-w-0 truncate font-sans text-[14px] leading-[1.35] text-muted-foreground">{item.companyName}</span>
-                <span className="flex flex-col items-end gap-0.5 text-right font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/75">
+                <span className="min-w-0 truncate font-sans text-[14px] leading-[1.35] text-white/50">{item.companyName}</span>
+                <span className="flex flex-col items-end gap-0.5 text-right font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
                   <span>{formatCurrency(item.price)}</span>
-                  <span>{formatPercent(item.changePct)}</span>
+                  <span className={cn(item.changePct && item.changePct > 0 ? "text-positive/70" : item.changePct && item.changePct < 0 ? "text-negative/70" : "")}>
+                    {formatPercent(item.changePct)}
+                  </span>
                 </span>
               </button>
             );

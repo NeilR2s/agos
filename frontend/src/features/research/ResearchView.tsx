@@ -4,8 +4,6 @@ import { Link, useSearchParams } from "react-router-dom";
 import {
     Area,
     AreaChart,
-    Bar,
-    BarChart,
     CartesianGrid,
     Line,
     ResponsiveContainer,
@@ -17,8 +15,7 @@ import type { MouseHandlerDataParam } from "recharts";
 
 import { backendClient } from "@/api/backend/client";
 import { engineClient } from "@/api/engine/client";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
@@ -27,13 +24,6 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
 import { TerminalSkeleton } from "@/components/ui/terminal-skeleton";
 import { TickerAutocompleteInput } from "@/components/shared/TickerAutocomplete";
 import { TradeWorkbench } from "@/features/trading/TradeWorkbench";
@@ -246,8 +236,7 @@ export const ResearchView = () => {
     const [showMovingAverage20, setShowMovingAverage20] = useState(true);
     const [showMovingAverage50, setShowMovingAverage50] = useState(false);
     const [showRSI, setShowRSI] = useState(false);
-    const [comparisonTicker, setComparisonTicker] = useState<string | null>(null);
-    const [comparisonInput, setComparisonInput] = useState("");
+    const [comparisonTicker] = useState<string | null>(null);
 
     const selectedTicker = (searchParams.get("ticker") ?? "TEL").toUpperCase();
     const isTradeDrawerOpen = searchParams.get("drawer") === "trade";
@@ -382,7 +371,7 @@ export const ResearchView = () => {
         queryKey: ["news-data", selectedTicker],
         queryFn: async () => {
             const { data, error } = await backendClient.GET("/api/v1/data/news", {
-                params: { query: { ticker: selectedTicker, limit: 6 } },
+                params: { query: { ticker: selectedTicker, limit: 3 } },
             });
 
             if (error) throw error;
@@ -531,7 +520,7 @@ export const ResearchView = () => {
             {
                 label: "News Sentiment",
                 value: signalLabel(avgNews),
-                detail: `${(newsQuery.data ?? []).length} items sampled`,
+                detail: `${(newsQuery.data ?? []).length} sources`,
             },
             {
                 label: "Macro Regime",
@@ -540,8 +529,8 @@ export const ResearchView = () => {
             },
             {
                 label: "Valuation",
-                value: valuation && valuation > 0 ? (valuation < 15 ? "FAIR" : valuation < 25 ? "STRETCHED" : "RICH") : "UNKNOWN",
-                detail: valuation ? `P/E ${formatNumber(valuation, "en-PH", 2)}` : "No valuation ratio available",
+                value: valuation && valuation > 0 ? (valuation < 15 ? "FAIR" : valuation < 25 ? "STRETCHED" : "RICH") : "Unavailable",
+                detail: valuation ? `P/E ${formatNumber(valuation, "en-PH", 2)}` : "No valuation signal available",
             },
         ];
     }, [latestChart?.close, latestForecast, macroQuery.data, newsQuery.data, overview?.price, stockData]);
@@ -563,21 +552,12 @@ export const ResearchView = () => {
             .filter((row) => row.ticker);
     }, [pseQuery.data, selectedTicker]);
 
-    const latestForecastLabel = useMemo(() => {
-        if (latestForecast === null || latestForecast === undefined) return "Awaiting forecast";
-        return formatCurrency(latestForecast);
-    }, [latestForecast]);
-
     const latestHistoricalPoint = useMemo(
         () => [...combinedChartData].reverse().find((point) => point.kind === "historical") ?? null,
         [combinedChartData]
     );
 
     const chartLegendPoint = hoveredChartPoint ?? latestHistoricalPoint;
-    const hasActivityData = useMemo(
-        () => combinedChartData.some((point) => point.kind === "historical" && point.value !== null),
-        [combinedChartData]
-    );
 
     const onChartHover = (state: MouseHandlerDataParam) => {
         const payload = (state as MouseHandlerDataParam & {
@@ -611,45 +591,53 @@ export const ResearchView = () => {
     };
 
     return (
-        <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-8 px-6 py-8 md:px-8 md:py-12">
-            <header className="grid gap-4 border-b border-border pb-6 lg:grid-cols-[minmax(0,1fr)_minmax(560px,640px)] lg:items-start lg:gap-8">
-                <div className="space-y-3">
-                    <Badge variant="outline" className="border-border text-muted-foreground">
-                        [ Market Research ]
-                    </Badge>
-                    <h1 className="font-sans text-[30px] leading-[1.2]">Research Terminal</h1>
-                    <p className="max-w-[760px] font-sans text-[16px] leading-[1.5] text-muted-foreground">
-                        Live market context, engine forecasts, and sentiment feeds synchronized with backend research services.
+        <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-10 px-6 py-8 md:px-8 md:py-12">
+            <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                <div className="space-y-1">
+                    <h1 className="font-sans text-[32px] md:text-[40px] font-medium leading-[1.2] text-white tracking-tight">Research Terminal</h1>
+                    <p className="max-w-[760px] font-sans text-[15px] leading-[1.5] text-muted-foreground">
+                        Market context, forecasts, and signal intelligence.
                     </p>
                 </div>
 
-                <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-start lg:pt-1">
-                    <TickerAutocompleteInput
-                        value={tickerDraft}
-                        onChange={setTickerDraft}
-                        onSelect={(item) => setSelectedTicker(item.ticker)}
-                        className="w-full min-w-0"
-                        inputClassName="text-white"
-                    />
-                    <Link
-                        to={`/agent?ticker=${selectedTicker}&mode=research`}
-                        className={cn(buttonVariants({ variant: "outline" }), "w-full whitespace-nowrap sm:w-auto sm:self-start")}
-                    >
-                        Ask AGOS
-                    </Link>
-                    <Button
-                        variant="outline"
-                        className="w-full whitespace-nowrap sm:w-auto sm:self-start"
-                        onClick={() => {
-                            const nextTicker = tickerDraft.trim().toUpperCase() || selectedTicker;
-                            const next = new URLSearchParams(searchParams);
-                            next.set("ticker", nextTicker);
-                            next.set("drawer", "trade");
-                            setSearchParams(next, { replace: true });
-                        }}
-                    >
-                        Evaluate Trade
-                    </Button>
+                <div className="flex flex-col items-center gap-3 w-full lg:w-[480px]">
+                    <div className="relative w-full">
+                        <TickerAutocompleteInput
+                            value={tickerDraft}
+                            onChange={setTickerDraft}
+                            onSelect={(item) => setSelectedTicker(item.ticker)}
+                            showHint={false}
+                            className="w-full h-12 bg-transparent border-b border-border/30 hover:border-border/60 transition-colors text-[16px] px-2 focus:outline-none"
+                            inputClassName="w-full h-full bg-transparent text-white placeholder:text-white/20 border-none focus-visible:ring-0"
+                            placeholder="Search ticker..."
+                        />
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                             <span className="font-mono text-[10px] text-white/20 tracking-widest border border-white/10 rounded px-1.5 py-0.5">⌘K</span>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-6 text-[13px] font-sans text-muted-foreground">
+                         <Link to={`/agent?ticker=${selectedTicker}&mode=research`} className="hover:text-white transition-colors">
+                            Analyze
+                        </Link>
+                        <span className="text-white/10">·</span>
+                        <button 
+                            type="button" 
+                            className="hover:text-white transition-colors"
+                            onClick={() => {
+                                const nextTicker = tickerDraft.trim().toUpperCase() || selectedTicker;
+                                const next = new URLSearchParams(searchParams);
+                                next.set("ticker", nextTicker);
+                                next.set("drawer", "trade");
+                                setSearchParams(next, { replace: true });
+                            }}
+                        >
+                            Evaluate Trade
+                        </button>
+                        <span className="text-white/10">·</span>
+                         <button type="button" className="hover:text-white transition-colors opacity-50 cursor-not-allowed">
+                            Export Brief
+                        </button>
+                    </div>
                 </div>
             </header>
 
@@ -659,425 +647,344 @@ export const ResearchView = () => {
                 </div>
             ) : null}
 
-            <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,0.65fr)]">
-                <Card className="min-h-[380px]">
-                    <CardHeader>
-                        <CardTitle>{overview?.companyName ?? "Loading company..."}</CardTitle>
-                        <CardDescription>
-                            {overview?.ticker ?? selectedTicker} / {formatDate(overview?.lastUpdated)}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        {overview ? (
-                            <>
-                                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                                    <Metric label="Price" value={formatCurrency(overview?.price)} />
-                                    <Metric label="52W High" value={formatNumber(toNumber(stockData["week_52_high"] ?? stockData["52W High"] ?? pseDataRecord["week_52_high"]))} />
-                                    <Metric label="52W Low" value={formatNumber(toNumber(stockData["week_52_low"] ?? stockData["52W Low"] ?? pseDataRecord["week_52_low"]))} />
-                                    <Metric label="Volume" value={formatNumber(toNumber(stockData["Volume"] ?? stockData["volume"] ?? pseDataRecord["volume"]), "en-PH", 0)} />
-                                </div>
+            <section className="grid gap-10 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,0.65fr)]">
+                <div className="flex flex-col">
+                    {overview ? (
+                        <div className="space-y-8">
+                            <div>
+                                <h2 className="font-sans text-[28px] font-medium text-white tracking-tight">{overview.companyName ?? "Loading company..."}</h2>
+                                <p className="font-mono text-[14px] text-white/50 mt-1">
+                                    {overview.ticker ?? selectedTicker} · {formatDate(overview.lastUpdated)}
+                                </p>
+                            </div>
 
-                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                                    {metricKeys.map(([label, key]) => (
-                                        <div key={label} className="space-y-1 border border-border px-4 py-3">
-                                            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">{label}</p>
-                                            <p className="text-right font-mono text-sm tabular-nums text-white">
-                                                {renderMetricValue(stockData, pseDataRecord, latestChart, overview?.price ?? null, key, label)}
-                                            </p>
-                                        </div>
-                                    ))}
+                            <div className="flex flex-wrap items-end gap-x-12 gap-y-6">
+                                <div>
+                                    <p className="font-sans text-[48px] font-medium leading-none text-white tracking-tight">{formatCurrency(overview?.price)}</p>
+                                    <p className="font-sans text-[14px] text-white/50 mt-2">Last traded price</p>
                                 </div>
-                            </>
-                        ) : (
+                                {latestForecast !== null && latestForecast !== undefined ? (
+                                    <div>
+                                        <p className="font-sans text-[32px] font-medium leading-none text-white tracking-tight">{formatCurrency(latestForecast)}</p>
+                                        <p className="font-sans text-[14px] text-white/50 mt-2">Forecast</p>
+                                    </div>
+                                ) : null}
+                            </div>
+
+                            <div className="grid gap-x-12 gap-y-4 sm:grid-cols-2">
+                                <Metric label="52W High" value={formatNumber(toNumber(stockData["week_52_high"] ?? stockData["52W High"] ?? pseDataRecord["week_52_high"]))} />
+                                <Metric label="52W Low" value={formatNumber(toNumber(stockData["week_52_low"] ?? stockData["52W Low"] ?? pseDataRecord["week_52_low"]))} />
+                                <Metric label="Volume" value={formatNumber(toNumber(stockData["Volume"] ?? stockData["volume"] ?? pseDataRecord["volume"]), "en-PH", 0)} />
+                                {metricKeys.filter(([label]) => !["Last Traded Price", "Volume"].includes(label)).map(([label, key]) => (
+                                    <Metric key={label} label={label} value={renderMetricValue(stockData, pseDataRecord, latestChart, overview?.price ?? null, key, label)} />
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="py-8">
                             <TerminalSkeleton lines={8} label="SYNCING MARKET" />
-                        )}
-                    </CardContent>
-                </Card>
+                        </div>
+                    )}
+                </div>
 
-                <Card className="min-h-[380px]">
-                    <CardHeader>
-                        <CardTitle>Research Signals</CardTitle>
-                        <CardDescription>Synthesized telemetry from forecast, sentiment, macro, and valuation models.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
+                <div className="flex flex-col">
+                    <h3 className="font-sans text-[18px] font-medium text-white tracking-tight mb-4 border-b border-border-soft pb-4">Research Signals</h3>
+                    <div className="space-y-4">
                         {overview ? (
                             <>
                                 {researchSignals.map((signal) => (
-                                    <div key={signal.label} className="space-y-2 border border-border px-4 py-3">
+                                    <div key={signal.label} className="space-y-1 pb-4 border-b border-border-soft last:border-b-0">
                                         <div className="flex items-center justify-between gap-3">
-                                            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">{signal.label}</p>
-                                            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white">{signal.value}</p>
+                                            <p className="font-sans text-[15px] text-white">{signal.label}</p>
+                                            <p className={cn(
+                                                "font-mono text-[11px] uppercase tracking-[1.4px]",
+                                                signal.value === "BULLISH" ? "text-positive" : signal.value === "BEARISH" ? "text-negative" : "text-white"
+                                            )}>{signal.value}</p>
                                         </div>
-                                        <p className="font-sans text-[14px] leading-[1.5] text-white/70">{signal.detail}</p>
+                                        <p className="font-sans text-[14px] leading-[1.5] text-white/50">{signal.detail}</p>
                                     </div>
                                 ))}
 
-                                <div className="space-y-2 border border-border px-4 py-3">
-                                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">Forecast Window</p>
-                                    <p className="font-sans text-[30px] leading-none text-white">{latestForecastLabel}</p>
-                                    <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-3 pt-4 border-t border-border-soft">
+                                    <p className="font-sans text-[15px] text-white">Forecast Window</p>
+                                    <div className="flex gap-12">
                                         <MiniMetric label="Low" value={formatCurrency(latestForecastLow)} />
                                         <MiniMetric label="High" value={formatCurrency(latestForecastHigh)} />
                                     </div>
-                                    <p className="font-sans text-[14px] leading-[1.5] text-white/70">
-                                        {closes.length >= 10 ? `${closes.length} history points available` : "Insufficient history for forecast"}
-                                    </p>
                                 </div>
                             </>
                         ) : (
                             <TerminalSkeleton lines={6} label="SYNCING SIGNALS" />
                         )}
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
             </section>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Price Action</CardTitle>
-                    <CardDescription>
-                        Historical closes, forecast bands, and activity metrics for {selectedTicker}.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex flex-wrap items-start justify-between gap-4 border border-border px-4 py-3">
-                        <div className="space-y-2">
-                            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/60">Window</p>
-                            <div className="flex flex-wrap gap-2">
-                                {chartRangeOptions.map((option) => (
-                                    <Button
-                                        key={option.id}
-                                        type="button"
-                                        variant="outline"
-                                        size="xs"
-                                        onClick={() => setChartRange(option.id)}
-                                        aria-pressed={chartRange === option.id}
-                                        className={cn(
-                                            chartRange === option.id
-                                                ? "border-white/20 bg-white/5 text-white"
-                                                : "text-white/50 hover:text-white"
-                                        )}
-                                    >
-                                        {option.label}
-                                    </Button>
-                                ))}
-                            </div>
+            <section className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_280px] xl:items-start pt-10 border-t border-border-soft">
+                <div className="flex flex-col">
+                    <h3 className="font-sans text-[20px] font-medium text-white tracking-tight mb-2 border-b border-border-soft pb-4">Historical Performance</h3>
+                    <div className="flex flex-wrap items-center gap-6 mb-6 mt-4">
+                        <div className="flex items-center gap-2">
+                            {chartRangeOptions.map((option) => (
+                                <button
+                                    key={option.id}
+                                    type="button"
+                                    onClick={() => setChartRange(option.id)}
+                                    aria-pressed={chartRange === option.id}
+                                    className={cn(
+                                        "font-sans text-[14px] transition-colors",
+                                        chartRange === option.id
+                                            ? "text-white"
+                                            : "text-white/40 hover:text-white/80"
+                                    )}
+                                >
+                                    {option.label}
+                                </button>
+                            ))}
                         </div>
-
-                        <div className="space-y-2">
-                            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/60">Overlays</p>
-                            <div className="flex flex-wrap gap-2">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="xs"
-                                    onClick={() => setShowForecast((value) => !value)}
-                                    aria-pressed={showForecast}
-                                    className={cn(showForecast ? "border-white/20 bg-white/5 text-white" : "text-white/50 hover:text-white")}
-                                >
-                                    Forecast
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="xs"
-                                    onClick={() => setShowMovingAverage20((value) => !value)}
-                                    aria-pressed={showMovingAverage20}
-                                    className={cn(showMovingAverage20 ? "border-chart-2/40 bg-chart-2/10 text-chart-2" : "text-white/50 hover:text-white")}
-                                >
-                                    MA 20
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="xs"
-                                    onClick={() => setShowMovingAverage50((value) => !value)}
-                                    aria-pressed={showMovingAverage50}
-                                    className={cn(showMovingAverage50 ? "border-chart-1/40 bg-chart-1/10 text-chart-1" : "text-white/50 hover:text-white")}
-                                >
-                                    MA 50
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="xs"
-                                    onClick={() => setShowRSI((value) => !value)}
-                                    aria-pressed={showRSI}
-                                    className={cn(showRSI ? "border-white/20 bg-white/5 text-white" : "text-white/50 hover:text-white")}
-                                >
-                                    RSI
-                                </Button>
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label htmlFor="comparison-ticker" className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/60">Compare</label>
-                            <div className="flex gap-2">
-                                <TickerAutocompleteInput
-                                    id="comparison-ticker"
-                                    name="comparison-ticker"
-                                    ariaLabel="Comparison ticker"
-                                    value={comparisonInput}
-                                    onChange={setComparisonInput}
-                                    onSelect={(item) => setComparisonTicker(item.ticker)}
-                                    className="h-7 w-24 min-w-0"
-                                    inputClassName="h-7 text-[10px] text-white"
-                                    showHint={false}
-                                />
-                                {comparisonTicker ? (
-                                    <Button
-                                        variant="ghost"
-                                        size="xs"
-                                        onClick={() => {
-                                            setComparisonTicker(null);
-                                            setComparisonInput("");
-                                        }}
-                                        className="h-7 text-[10px] text-white/50 hover:text-white"
-                                    >
-                                        Clear
-                                    </Button>
-                                ) : null}
-                            </div>
+                        <span className="text-white/10 hidden sm:inline">·</span>
+                        <div className="flex flex-wrap items-center gap-4">
+                            <button
+                                type="button"
+                                onClick={() => setShowForecast((value) => !value)}
+                                aria-pressed={showForecast}
+                                className={cn("font-sans text-[14px] transition-colors", showForecast ? "text-white" : "text-white/40 hover:text-white/80")}
+                            >
+                                Forecast
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setShowMovingAverage20((value) => !value)}
+                                aria-pressed={showMovingAverage20}
+                                className={cn("font-sans text-[14px] transition-colors", showMovingAverage20 ? "text-chart-2" : "text-white/40 hover:text-white/80")}
+                            >
+                                MA20
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setShowMovingAverage50((value) => !value)}
+                                aria-pressed={showMovingAverage50}
+                                className={cn("font-sans text-[14px] transition-colors", showMovingAverage50 ? "text-chart-1" : "text-white/40 hover:text-white/80")}
+                            >
+                                MA50
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setShowRSI((value) => !value)}
+                                aria-pressed={showRSI}
+                                className={cn("font-sans text-[14px] transition-colors", showRSI ? "text-white" : "text-white/40 hover:text-white/80")}
+                            >
+                                RSI
+                            </button>
                         </div>
                     </div>
 
-                    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px] xl:items-start">
-                        <div className="grid gap-3">
-                            <div className="relative h-[420px] min-w-0 overflow-hidden border border-border px-2 py-4">
-                                {combinedChartData.length ? (
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
-                                        <AreaChart
-                                            syncId="research-price-action"
-                                            data={combinedChartData}
-                                            onMouseMove={onChartHover}
-                                            onMouseLeave={() => setHoveredChartPoint(null)}
-                                        >
-                                            <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in oklch, var(--foreground) 8%, transparent)" vertical={false} />
-                                            <XAxis dataKey="index" hide />
-                                            <YAxis
-                                                domain={["auto", "auto"]}
-                                                tick={{ fill: "color-mix(in oklch, var(--foreground) 35%, transparent)", fontSize: 10, fontFamily: "monospace" }}
-                                                axisLine={false}
-                                                tickLine={false}
-                                            />
-                                            <Tooltip
-                                                cursor={{ stroke: "color-mix(in oklch, var(--foreground) 22%, transparent)", strokeWidth: 1 }}
-                                                content={<PriceActionTooltip />}
-                                            />
-                                            {showForecast ? (
-                                                <>
-                                                    <Area type="monotone" dataKey="forecastBandBase" stackId="forecast" stroke="none" fill="var(--card)" connectNulls />
-                                                    <Area type="monotone" dataKey="forecastBandRange" stackId="forecast" stroke="none" fill="color-mix(in oklch, var(--chart-1) 18%, transparent)" connectNulls />
-                                                </>
-                                            ) : null}
-                                            <Line type="monotone" dataKey="price" stroke="var(--foreground)" strokeWidth={1.5} dot={false} activeDot={{ r: 3, fill: "var(--foreground)", strokeWidth: 0 }} connectNulls />
-                                            {showForecast ? (
-                                                <Line type="monotone" dataKey="forecastMedian" stroke="var(--chart-1)" strokeDasharray="5 5" strokeWidth={1} dot={false} activeDot={{ r: 3, fill: "var(--chart-1)", strokeWidth: 0 }} connectNulls />
-                                            ) : null}
-                                            {showMovingAverage20 ? (
-                                                <Line type="monotone" dataKey="movingAverage20" stroke="var(--chart-2)" strokeWidth={1} dot={false} activeDot={{ r: 2, fill: "var(--chart-2)", strokeWidth: 0 }} connectNulls />
-                                            ) : null}
-                                            {showMovingAverage50 ? (
-                                                <Line type="monotone" dataKey="movingAverage50" stroke="var(--chart-1)" strokeWidth={1} dot={false} activeDot={{ r: 2, fill: "var(--chart-1)", strokeWidth: 0 }} connectNulls />
-                                            ) : null}
-                                            {comparisonTicker ? (
-                                                <Line type="monotone" dataKey="comparisonPrice" stroke="color-mix(in oklch, var(--foreground) 50%, transparent)" strokeWidth={1} strokeDasharray="3 3" dot={false} activeDot={{ r: 2, fill: "color-mix(in oklch, var(--foreground) 50%, transparent)", strokeWidth: 0 }} connectNulls />
-                                            ) : null}
-                                        </AreaChart>
-                                    </ResponsiveContainer>
-                                ) : (
-                                    <div className="flex h-full items-center justify-center">
-                                        <TerminalSkeleton lines={5} label="WAITING FOR TELEMETRY" />
-                                    </div>
-                                )}
+                    <div className="w-full relative h-[480px] min-w-0 bg-surface rounded-[8px] p-4">
+                        {combinedChartData.length ? (
+                            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                                <AreaChart
+                                    syncId="research-price-action"
+                                    data={combinedChartData}
+                                    onMouseMove={onChartHover}
+                                    onMouseLeave={() => setHoveredChartPoint(null)}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-soft)" vertical={false} />
+                                    <XAxis dataKey="index" hide />
+                                    <YAxis
+                                        domain={["auto", "auto"]}
+                                        tick={{ fill: "color-mix(in oklch, var(--foreground) 35%, transparent)", fontSize: 10, fontFamily: "monospace" }}
+                                        axisLine={false}
+                                        tickLine={false}
+                                        width={40}
+                                    />
+                                    <Tooltip
+                                        cursor={{ stroke: "color-mix(in oklch, var(--foreground) 22%, transparent)", strokeWidth: 1 }}
+                                        content={<PriceActionTooltip />}
+                                    />
+                                    {showForecast ? (
+                                        <>
+                                            <Area type="monotone" dataKey="forecastBandBase" stackId="forecast" stroke="none" fill="transparent" connectNulls />
+                                            <Area type="monotone" dataKey="forecastBandRange" stackId="forecast" stroke="none" fill="var(--border-soft)" connectNulls />
+                                        </>
+                                    ) : null}
+                                    <Line type="monotone" dataKey="price" stroke="var(--foreground)" strokeWidth={1.5} dot={false} activeDot={{ r: 3, fill: "var(--foreground)", strokeWidth: 0 }} connectNulls />
+                                    {showForecast ? (
+                                        <Line type="monotone" dataKey="forecastMedian" stroke="var(--foreground)" strokeDasharray="5 5" strokeWidth={1} dot={false} activeDot={{ r: 3, fill: "var(--foreground)", strokeWidth: 0 }} connectNulls />
+                                    ) : null}
+                                    {showMovingAverage20 ? (
+                                        <Line type="monotone" dataKey="movingAverage20" stroke="var(--chart-2)" strokeWidth={1} dot={false} activeDot={{ r: 2, fill: "var(--chart-2)", strokeWidth: 0 }} connectNulls />
+                                    ) : null}
+                                    {showMovingAverage50 ? (
+                                        <Line type="monotone" dataKey="movingAverage50" stroke="var(--chart-1)" strokeWidth={1} dot={false} activeDot={{ r: 2, fill: "var(--chart-1)", strokeWidth: 0 }} connectNulls />
+                                    ) : null}
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="flex h-full items-center justify-center">
+                                <TerminalSkeleton lines={5} label="WAITING FOR TELEMETRY" />
                             </div>
+                        )}
+                    </div>
 
-                            {hasActivityData ? (
-                                <div className="relative h-[120px] min-w-0 overflow-hidden border border-border px-2 py-3">
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
-                                        <BarChart
-                                            syncId="research-price-action"
-                                            data={combinedChartData}
-                                            onMouseMove={onChartHover}
-                                            onMouseLeave={() => setHoveredChartPoint(null)}
-                                        >
-                                            <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in oklch, var(--foreground) 7%, transparent)" vertical={false} />
-                                            <XAxis dataKey="index" hide />
-                                            <YAxis hide />
-                                            <Tooltip
-                                                cursor={{ fill: "color-mix(in oklch, var(--foreground) 6%, transparent)" }}
-                                                content={<ActivityTooltip />}
-                                            />
-                                            <Bar dataKey="value" fill="color-mix(in oklch, var(--foreground) 22%, transparent)" radius={4} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            ) : (
-                                <div className="border border-dashed border-white/10 px-4 py-3 font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">
-                                    Activity metrics unavailable for this series.
-                                </div>
-                            )}
+                    {showRSI ? (
+                        <div className="relative h-[120px] min-w-0 mt-4 bg-surface rounded-[8px] p-2">
+                            <div className="absolute left-4 top-2 z-10 font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">
+                                RSI (14)
+                            </div>
+                            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                                <AreaChart
+                                    syncId="research-price-action"
+                                    data={combinedChartData}
+                                    onMouseMove={onChartHover}
+                                    onMouseLeave={() => setHoveredChartPoint(null)}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-soft)" vertical={false} />
+                                    <XAxis dataKey="index" hide />
+                                    <YAxis 
+                                        domain={[0, 100]} 
+                                        ticks={[30, 70]}
+                                        tick={{ fill: "color-mix(in oklch, var(--foreground) 35%, transparent)", fontSize: 10, fontFamily: "monospace" }}
+                                        axisLine={false}
+                                        tickLine={false}
+                                        width={40}
+                                    />
+                                    <Tooltip
+                                        cursor={{ stroke: "color-mix(in oklch, var(--foreground) 22%, transparent)", strokeWidth: 1 }}
+                                        content={<RSITooltip />}
+                                    />
+                                    <Area 
+                                        type="monotone" 
+                                        dataKey="rsi" 
+                                        stroke="var(--foreground)" 
+                                        fill="color-mix(in oklch, var(--foreground) 8%, transparent)" 
+                                        strokeWidth={1} 
+                                        dot={false} 
+                                        connectNulls 
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    ) : null}
+                </div>
 
-                            {showRSI ? (
-                                <div className="relative h-[120px] min-w-0 overflow-hidden border border-border px-2 py-3">
-                                    <div className="absolute left-4 top-2 z-10 font-mono text-[8px] uppercase tracking-[1px] text-white/55">
-                                        Relative Strength Index (14)
-                                    </div>
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
-                                        <AreaChart
-                                            syncId="research-price-action"
-                                            data={combinedChartData}
-                                            onMouseMove={onChartHover}
-                                            onMouseLeave={() => setHoveredChartPoint(null)}
-                                        >
-                                            <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in oklch, var(--foreground) 7%, transparent)" vertical={false} />
-                                            <XAxis dataKey="index" hide />
-                                            <YAxis 
-                                                domain={[0, 100]} 
-                                                ticks={[30, 70]}
-                                                tick={{ fill: "color-mix(in oklch, var(--foreground) 28%, transparent)", fontSize: 8, fontFamily: "monospace" }}
-                                                axisLine={false}
-                                                tickLine={false}
-                                                width={25}
-                                            />
-                                            <Tooltip
-                                                cursor={{ stroke: "color-mix(in oklch, var(--foreground) 22%, transparent)", strokeWidth: 1 }}
-                                                content={<RSITooltip />}
-                                            />
-                                            <Area 
-                                                type="monotone" 
-                                                dataKey="rsi" 
-                                                stroke="var(--foreground)" 
-                                                fill="color-mix(in oklch, var(--foreground) 8%, transparent)" 
-                                                strokeWidth={1} 
-                                                dot={false} 
-                                                connectNulls 
-                                            />
-                                        </AreaChart>
-                                    </ResponsiveContainer>
+                <div className="flex flex-col gap-6 pt-4 border-t border-border-soft mt-8 xl:mt-0 xl:border-0 xl:pt-0">
+                    <div className="rounded-[8px] bg-surface p-4 xl:sticky xl:top-4">
+                        <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-white/40 mb-4 border-b border-border-soft pb-2">
+                            {chartLegendPoint ? (chartLegendPoint.kind === "forecast" ? "FORECAST" : "HISTORICAL") : "HOVER"}
+                        </p>
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between gap-3">
+                                <span className="font-sans text-[14px] text-white/50">Date</span>
+                                <span className="font-mono text-[14px] tabular-nums text-white">{chartLegendPoint?.date ?? "---"}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                                <span className="font-sans text-[14px] text-white/50">Close</span>
+                                <span className="font-mono text-[14px] tabular-nums text-white">{formatCurrency(chartLegendPoint?.price)}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                                <span className="font-sans text-[14px] text-white/50">Forecast</span>
+                                <span className="font-mono text-[14px] tabular-nums text-white">{formatCurrency(chartLegendPoint?.forecastMedian)}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                                <span className="font-sans text-[14px] text-white/50">MA 20</span>
+                                <span className="font-mono text-[14px] tabular-nums text-chart-2">{formatCurrency(chartLegendPoint?.movingAverage20)}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                                <span className="font-sans text-[14px] text-white/50">MA 50</span>
+                                <span className="font-mono text-[14px] tabular-nums text-chart-1">{formatCurrency(chartLegendPoint?.movingAverage50)}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                                <span className="font-sans text-[14px] text-white/50">RSI</span>
+                                <span className="font-mono text-[14px] tabular-nums text-white">
+                                    {chartLegendPoint?.rsi !== null && chartLegendPoint?.rsi !== undefined ? chartLegendPoint.rsi.toFixed(1) : "---"}
+                                </span>
+                            </div>
+                            {comparisonTicker ? (
+                                <div className="flex items-center justify-between gap-3 border-t border-border-soft pt-2 mt-1">
+                                    <span className="font-sans text-[14px] text-white/50">Compare {comparisonTicker}</span>
+                                    <span className="font-mono text-[14px] tabular-nums text-white/70">{formatCurrency(chartLegendPoint?.comparisonPrice)}</span>
                                 </div>
                             ) : null}
-                        </div>
-
-                        <div className="flex flex-col gap-4">
-                            <div className="rounded-2xl border border-border bg-popover/95 p-3 xl:sticky xl:top-4">
-                                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">
-                                    {chartLegendPoint ? (chartLegendPoint.kind === "forecast" ? "FORECAST" : "HISTORICAL") : "HOVER"}
-                                </p>
-                                <div className="mt-2 space-y-1">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">Date</span>
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white">{chartLegendPoint?.date ?? "---"}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">Close</span>
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white">{formatCurrency(chartLegendPoint?.price)}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">Forecast</span>
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white">{formatCurrency(chartLegendPoint?.forecastMedian)}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">MA 20</span>
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-chart-2">{formatCurrency(chartLegendPoint?.movingAverage20)}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">MA 50</span>
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-chart-1">{formatCurrency(chartLegendPoint?.movingAverage50)}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">RSI</span>
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white">
-                                            {chartLegendPoint?.rsi !== null ? chartLegendPoint?.rsi?.toFixed(1) : "---"}
-                                        </span>
-                                    </div>
-                                    {comparisonTicker ? (
-                                        <div className="flex items-center justify-between gap-3 border-t border-white/5 pt-1">
-                                            <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">Compare {comparisonTicker}</span>
-                                            <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/70">{formatCurrency(chartLegendPoint?.comparisonPrice)}</span>
-                                        </div>
-                                    ) : null}
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">High / Low</span>
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white">
-                                            {formatCurrency(chartLegendPoint?.high)} / {formatCurrency(chartLegendPoint?.low)}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">Activity / Value</span>
-                                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white">{formatNumber(chartLegendPoint?.value, "en-PH", 0)}</span>
-                                    </div>
-                                </div>
+                            <div className="flex items-center justify-between gap-3 border-t border-border-soft pt-2 mt-1">
+                                <span className="font-sans text-[14px] text-white/50">High / Low</span>
+                                <span className="font-mono text-[14px] tabular-nums text-white">
+                                    {formatCurrency(chartLegendPoint?.high)} / {formatCurrency(chartLegendPoint?.low)}
+                                </span>
                             </div>
-
-                            <div className="rounded-2xl border border-border bg-popover/95 p-3">
-                                <div className="flex items-start justify-between gap-4">
-                                    <div className="space-y-1">
-                                        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">Market Snapshot</p>
-                                        <p className="font-sans text-[14px] leading-[1.5] text-white/70">
-                                            Technical market tape. Price, movement, and activity metrics.
-                                        </p>
-                                    </div>
-                                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">
-                                        {marketSnapshotRows.length === 1 ? "1 row" : `${marketSnapshotRows.length} rows`}
-                                    </p>
-                                </div>
-
-                                <div className="mt-3 space-y-3">
-                                    {marketSnapshotRows.length ? (
-                                        marketSnapshotRows.map((row, index) => (
-                                            <div key={row.ticker} className="space-y-3 border-t border-white/10 pt-3 first:border-t-0 first:pt-0">
-                                                <div className="flex items-center justify-between gap-3">
-                                                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white">{row.ticker}</p>
-                                                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">#{index + 1}</p>
-                                                </div>
-                                                <div className="grid gap-2 sm:grid-cols-2">
-                                                    <Metric label="Price" value={formatCurrency(row.price)} />
-                                                    <Metric label="Change" value={formatPercent(row.changePct)} />
-                                                    <Metric label="Volume" value={formatNumber(row.volume, "en-PH", 0)} />
-                                                    <Metric
-                                                        label="Rel Vol"
-                                                        value={
-                                                            row.relativeVolume !== null
-                                                                ? `${formatNumber(row.relativeVolume, "en-PH", 2)}x`
-                                                                : "---"
-                                                        }
-                                                    />
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <EmptyState label="No market tape data available." />
-                                    )}
-                                </div>
+                            <div className="flex items-center justify-between gap-3 border-t border-border-soft pt-2 mt-1">
+                                <span className="font-sans text-[14px] text-white/50">Activity / Value</span>
+                                <span className="font-mono text-[14px] tabular-nums text-white">{formatNumber(chartLegendPoint?.value, "en-PH", 0)}</span>
                             </div>
                         </div>
                     </div>
-                </CardContent>
-            </Card>
 
-            <section className="flex flex-col gap-4">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Disclosures</CardTitle>
-                        <CardDescription>Recent financial filings from the market data endpoint.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
+                    <div className="rounded-[8px] bg-surface p-4">
+                        <div className="mb-4 border-b border-border-soft pb-2">
+                            <p className="font-sans text-[15px] font-medium text-white">Market Snapshot</p>
+                            <p className="font-sans text-[13px] text-white/50 mt-1">
+                                Technical market tape. Price, movement, and activity metrics.
+                            </p>
+                        </div>
+
+                        <div className="space-y-4">
+                            {marketSnapshotRows.length ? (
+                                marketSnapshotRows.map((row) => (
+                                    <div key={row.ticker} className="space-y-2 border-b border-border-soft pb-4 last:border-b-0 last:pb-0">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <p className="font-mono text-[13px] text-white">{row.ticker}</p>
+                                            <p className={cn(
+                                                "font-mono text-[13px] tabular-nums",
+                                                row.changePct && row.changePct > 0 ? "text-positive" : row.changePct && row.changePct < 0 ? "text-negative" : "text-white"
+                                            )}>{formatPercent(row.changePct)}</p>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-3">
+                                            <p className="font-sans text-[14px] text-white/50">Price</p>
+                                            <p className="font-mono text-[14px] tabular-nums text-white">{formatCurrency(row.price)}</p>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-3">
+                                            <p className="font-sans text-[14px] text-white/50">Volume</p>
+                                            <p className="font-mono text-[14px] tabular-nums text-white">{formatNumber(row.volume, "en-PH", 0)}</p>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-3">
+                                            <p className="font-sans text-[14px] text-white/50">Rel Vol</p>
+                                            <p className="font-mono text-[14px] tabular-nums text-white">
+                                                {row.relativeVolume !== null ? `${formatNumber(row.relativeVolume, "en-PH", 2)}x` : "---"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <EmptyState label="No market tape data available." />
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section className="flex flex-col gap-10 pt-10 border-t border-border/50">
+                <div className="flex flex-col">
+                    <h3 className="font-sans text-[20px] font-medium text-white tracking-tight mb-2">Disclosures</h3>
+                    <p className="font-sans text-[15px] text-white/50 mb-6">Recent financial filings from the market data endpoint.</p>
+                    
+                    <div className="space-y-4">
                         {financialDataQuery.data?.length ? financialDataQuery.data.map((item, index) => {
                             const disclosureViewer = getDisclosureViewerState(item, overview?.companyName ?? selectedTicker);
                             const externalUrl = typeof item.Link === "string" && item.Link.trim() ? item.Link : disclosureViewer?.externalUrl;
 
                             return (
-                                <div key={index} className="space-y-2 border border-border px-4 py-3">
-                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                        <p className="font-sans text-sm text-white">{String(item["Report Type"] ?? item.report_type ?? "Report")}</p>
-                                        <Badge variant="outline" className="border-border text-white/70">
-                                            {String(item["PSE Form Number"] ?? item.form ?? "Form")}
-                                        </Badge>
+                                <div key={index} className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 pb-4 border-b border-border-soft last:border-b-0">
+                                    <div className="flex flex-col">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <p className="font-sans text-[15px] text-white">{String(item["Report Type"] ?? item.report_type ?? "Report")}</p>
+                                            <span className="font-mono text-[10px] text-white/40 uppercase tracking-widest border border-border-soft px-1.5 py-[1px] rounded">
+                                                {String(item["PSE Form Number"] ?? item.form ?? "Form")}
+                                            </span>
+                                        </div>
+                                        <p className="font-sans text-[14px] text-white/50 mt-1">
+                                            {String(item["Company Name"] ?? item.company_name ?? overview?.companyName ?? selectedTicker)}
+                                        </p>
                                     </div>
-                                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">
-                                        {String(item["Company Name"] ?? item.company_name ?? overview?.companyName ?? selectedTicker)}
-                                    </p>
-                                    <div className="flex flex-wrap gap-4 font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">
+                                    <div className="flex flex-wrap items-center gap-4 font-mono text-[11px] uppercase tracking-[1.4px] text-white/40">
                                         <span>{String(item.Date ?? item.date ?? "---")}</span>
                                         <span>{String(item["Report Number"] ?? item.report_number ?? "---")}</span>
                                         {disclosureViewer ? (
@@ -1098,15 +1005,13 @@ export const ResearchView = () => {
                                 </div>
                             );
                         }) : <EmptyState label="No disclosures available." />}
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Financial Statements</CardTitle>
-                        <CardDescription>Yearly and quarterly snapshots returned by the backend.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
+                <div className="flex flex-col">
+                    <h3 className="font-sans text-[20px] font-medium text-white tracking-tight mb-2">Financial Statements</h3>
+                    <p className="font-sans text-[15px] text-white/50 mb-6">Yearly and quarterly snapshots returned by the backend.</p>
+                    <div className="space-y-8">
                         {financialReportsQuery.data?.yearly ? (
                             <FinancialReportBlock title="Yearly" data={financialReportsQuery.data.yearly} />
                         ) : null}
@@ -1116,82 +1021,73 @@ export const ResearchView = () => {
                         {!financialReportsQuery.data?.yearly && !financialReportsQuery.data?.quarterly ? (
                             <EmptyState label="No financial reports available." />
                         ) : null}
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
             </section>
 
-            <section className="grid gap-4 lg:grid-cols-2">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Macro Indicators</CardTitle>
-                        <CardDescription>Latest macroeconomic indicators from the backend.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
+            <section className="grid gap-10 lg:grid-cols-2 pt-10 border-t border-border/50">
+                <div className="flex flex-col">
+                    <h3 className="font-sans text-[20px] font-medium text-white tracking-tight mb-2">Macro Indicators</h3>
+                    <p className="font-sans text-[15px] text-white/50 mb-6">Latest macroeconomic indicators from the backend.</p>
+                    <div className="space-y-4">
                         {macroQuery.data?.length ? macroQuery.data.map((item, index) => (
-                            <div key={index} className="space-y-1 border-b border-border pb-3 last:border-b-0 last:pb-0">
-                                <div className="flex items-baseline justify-between gap-3">
-                                    <p className="font-sans text-sm text-white">{String(item.indicator ?? item.name ?? "Indicator")}</p>
-                                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">{String(item.date ?? item.period ?? "---")}</p>
+                            <div key={index} className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 pb-4 border-b border-border-soft last:border-b-0">
+                                <div className="flex flex-col">
+                                    <p className="font-sans text-[15px] text-white">{String(item.indicator ?? item.name ?? "Indicator")}</p>
+                                    <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-white/40 mt-1">{String(item.date ?? item.period ?? "---")}</p>
                                 </div>
-                                <p className="text-right font-mono text-[12px] tabular-nums text-white/70">{formatNumber(Number(item.value))}</p>
+                                <p className="font-mono text-[14px] tabular-nums text-white">{formatNumber(Number(item.value))}</p>
                             </div>
                         )) : <EmptyState label="No macro data available." />}
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>News Sentiment</CardTitle>
-                        <CardDescription>Filtered by ticker and limited to the most recent items.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="max-h-[55vh] space-y-3 overflow-y-auto pr-2 [scrollbar-gutter:stable] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex flex-col">
+                    <h3 className="font-sans text-[20px] font-medium text-white tracking-tight mb-2">News Sentiment</h3>
+                    <p className="font-sans text-[15px] text-white/50 mb-6">Filtered by ticker and limited to the most recent items.</p>
+                    <div className="space-y-6">
                         {newsQuery.data?.length ? newsQuery.data.map((item, index) => {
                             const headline = String(item.headline ?? item.title ?? "Untitled");
                             const sourceUrl = getNewsSourceUrl(item);
 
                             return (
-                                <article key={index} className="space-y-2 border-b border-border pb-3 last:border-b-0 last:pb-0">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="min-w-0 space-y-1">
+                                <article key={index} className="flex flex-col pb-6 border-b border-border-soft last:border-b-0">
+                                    <div className="flex items-start justify-between gap-3 mb-2">
+                                        <div className="min-w-0">
                                             {sourceUrl ? (
                                                 <a
                                                     href={sourceUrl}
                                                     target="_blank"
                                                     rel="noreferrer"
-                                                    className="block text-left font-sans text-sm leading-[1.5] text-white underline-offset-4 transition-colors hover:text-white/70 hover:underline"
+                                                    className="font-sans text-[16px] font-medium leading-[1.4] text-white transition-colors hover:text-white/70"
                                                 >
                                                     {headline}
                                                 </a>
                                             ) : (
-                                                <p className="font-sans text-sm leading-[1.5] text-white">{headline}</p>
+                                                <p className="font-sans text-[16px] font-medium leading-[1.4] text-white">{headline}</p>
                                             )}
-                                            {sourceUrl ? (
-                                                <a
-                                                    href={sourceUrl}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[1.4px] text-white/55 transition-colors hover:text-white/70"
-                                                >
-                                                    Open article <ArrowTopRightOnSquareIcon className="size-3" />
-                                                </a>
-                                            ) : null}
                                         </div>
-                                        <Badge variant="outline" className="border-border text-white/70">
+                                        <span className={cn(
+                                            "font-mono text-[10px] uppercase tracking-widest border px-1.5 py-[1px] rounded whitespace-nowrap",
+                                            String(item.sentiment_label).toLowerCase() === "bullish" ? "text-positive border-positive/30" : 
+                                            String(item.sentiment_label).toLowerCase() === "bearish" ? "text-negative border-negative/30" :
+                                            "text-white/50 border-border-soft"
+                                        )}>
                                             {String(item.sentiment_label ?? "Neutral")}
-                                        </Badge>
+                                        </span>
                                     </div>
-                                    <p className="font-sans text-[14px] leading-[1.5] text-white/70">
+                                    <p className="font-sans text-[14px] leading-[1.6] text-white/60 mb-3 line-clamp-3">
                                         {String(item.summary ?? "")}
                                     </p>
-                                    <div className="flex flex-wrap gap-4 font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">
+                                    <div className="flex flex-wrap gap-4 font-mono text-[11px] uppercase tracking-[1.4px] text-white/40">
                                         <span>{String(item.date ?? "---")}</span>
-                                        <span>{formatNumber(Number(item.sentiment_score ?? 0))}</span>
+                                        <span>Score: {formatNumber(Number(item.sentiment_score ?? 0))}</span>
                                     </div>
                                 </article>
                             );
                         }) : <EmptyState label="No news items available." />}
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
             </section>
 
             <Drawer open={isTradeDrawerOpen} onOpenChange={setTradeDrawerOpen}>
@@ -1271,18 +1167,21 @@ export const ResearchView = () => {
 
 function Metric({ label, value }: { label: string; value: string }) {
     return (
-        <div className="space-y-1 border border-border px-4 py-3">
-            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">{label}</p>
-            <p className="text-right font-mono text-sm tabular-nums text-white">{value}</p>
+        <div className="space-y-3">
+            <div className="flex items-center justify-between gap-4">
+                <p className="font-sans text-[14px] text-white/50">{label}</p>
+                <p className="text-right font-mono text-[14px] tabular-nums text-white">{value}</p>
+            </div>
+            <hr className="border-border-soft border-t" />
         </div>
     );
 }
 
 function MiniMetric({ label, value }: { label: string; value: string }) {
     return (
-        <div className="space-y-1 border border-border px-4 py-3">
-            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">{label}</p>
-            <p className="text-right font-mono text-[16px] leading-none tabular-nums text-white">{value}</p>
+        <div className="space-y-1 py-1">
+            <p className="font-sans text-[14px] text-white/50">{label}</p>
+            <p className="font-mono text-[16px] leading-none tabular-nums text-white">{value}</p>
         </div>
     );
 }
@@ -1305,7 +1204,7 @@ function PriceActionTooltip({
     }
 
     return (
-        <div className="space-y-1 rounded-2xl border border-border bg-popover/95 px-3 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
+        <div className="space-y-1 rounded-[8px] border border-border-soft bg-surface px-3 py-2 font-mono text-[11px] uppercase tracking-[1.4px] text-white/50">
             <div className="flex items-center justify-between gap-4 text-white">
                 <span>Date</span>
                 <span>{point.date}</span>
@@ -1320,44 +1219,17 @@ function PriceActionTooltip({
             </div>
             <div className="flex items-center justify-between gap-4">
                 <span>MA 20</span>
-                <span>{formatCurrency(point.movingAverage20)}</span>
+                <span className="text-chart-2">{formatCurrency(point.movingAverage20)}</span>
             </div>
             <div className="flex items-center justify-between gap-4">
                 <span>MA 50</span>
-                <span>{formatCurrency(point.movingAverage50)}</span>
+                <span className="text-chart-1">{formatCurrency(point.movingAverage50)}</span>
             </div>
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center justify-between gap-4 pt-1 border-t border-border-soft mt-1">
                 <span>High / Low</span>
                 <span>{formatCurrency(point.high)} / {formatCurrency(point.low)}</span>
             </div>
-            <div className="flex items-center justify-between gap-4">
-                <span>Activity / Value</span>
-                <span>{formatNumber(point.value, "en-PH", 0)}</span>
-            </div>
-        </div>
-    );
-}
-
-function ActivityTooltip({
-    active,
-    payload,
-}: {
-    active?: boolean;
-    payload?: Array<{ payload: ChartSeriesPoint }>;
-}) {
-    const point = active ? payload?.[0]?.payload : null;
-
-    if (!point) {
-        return null;
-    }
-
-    return (
-        <div className="space-y-1 rounded-2xl border border-border bg-popover/95 px-3 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
-            <div className="flex items-center justify-between gap-4 text-white">
-                <span>Date</span>
-                <span>{point.date}</span>
-            </div>
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center justify-between gap-4 pt-1 border-t border-border-soft mt-1">
                 <span>Activity / Value</span>
                 <span>{formatNumber(point.value, "en-PH", 0)}</span>
             </div>
@@ -1379,20 +1251,20 @@ function RSITooltip({
     }
 
     return (
-        <div className="space-y-1 rounded-2xl border border-border bg-popover/95 px-3 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
+        <div className="space-y-1 rounded-[8px] border border-border-soft bg-surface px-3 py-2 font-mono text-[11px] uppercase tracking-[1.4px] text-white/50">
             <div className="flex items-center justify-between gap-4 text-white">
                 <span>Date</span>
                 <span>{point.date}</span>
             </div>
             <div className="flex items-center justify-between gap-4">
-                <span>Activity / Value</span>
-                <span>{formatNumber(point.value, "en-PH", 0)}</span>
+                <span>RSI</span>
+                <span>{point.rsi !== null ? point.rsi.toFixed(1) : "---"}</span>
             </div>
             {point.comparisonPrice !== null ? (
-                <div className="flex items-center justify-between gap-4 border-t border-white/10 pt-1 text-white/50">
-                    <span>Compare</span>
-                    <span>{formatCurrency(point.comparisonPrice)}</span>
-                </div>
+            <div className="flex items-center justify-between gap-4 border-t border-border-soft pt-1 mt-1">
+                <span>Compare</span>
+                <span>{formatCurrency(point.comparisonPrice)}</span>
+            </div>
             ) : null}
         </div>
     );
@@ -1443,26 +1315,26 @@ function FinancialReportBlock({
 
     return (
         <div className="space-y-4">
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between gap-4 border-b border-border-soft pb-4">
                 <div className="space-y-1">
-                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">{title}</p>
-                    <p className="font-sans text-[16px] leading-[1.5] text-white/70">
-                        {year ? `Year ${String(year)}` : ""}{year && quarter ? " / " : ""}{quarter ? `Quarter ${String(quarter)}` : ""}
+                    <p className="font-sans text-[16px] font-medium text-white">{title}</p>
+                    <p className="font-sans text-[14px] text-white/50">
+                        {year ? `Year ${String(year)}` : ""}{year && quarter ? " · " : ""}{quarter ? `Quarter ${String(quarter)}` : ""}
                     </p>
                 </div>
                 {scaleFactor !== undefined ? (
-                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">
+                    <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-white/40">
                         Scale {formatNumber(Number(scaleFactor), "en-PH", 0)}
                     </p>
                 ) : null}
             </div>
 
             {metaEntries.length ? (
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-x-12 gap-y-4 sm:grid-cols-2">
                     {metaEntries.map(([key, value]) => (
-                        <div key={key} className="space-y-1 border border-border px-4 py-3">
-                            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">{formatLabel(key)}</p>
-                            <p className="text-right font-mono text-sm tabular-nums text-white">{formatStatementValue(value)}</p>
+                        <div key={key} className="flex justify-between items-center py-2 border-b border-border-soft last:border-0">
+                            <p className="font-sans text-[14px] text-white/50">{formatLabel(key)}</p>
+                            <p className="font-mono text-[14px] tabular-nums text-white">{formatStatementValue(value)}</p>
                         </div>
                     ))}
                 </div>
@@ -1473,15 +1345,15 @@ function FinancialReportBlock({
             ))}
 
             {objectEntries.length ? (
-                <div className="space-y-2">
+                <div className="space-y-6 pt-4">
                     {objectEntries.map(([key, value]) => (
-                        <div key={key} className="space-y-2 border border-border px-4 py-3">
-                            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">{formatLabel(key)}</p>
-                            <div className="grid gap-2 sm:grid-cols-2">
+                        <div key={key} className="space-y-3">
+                            <p className="font-sans text-[15px] font-medium text-white border-b border-border-soft pb-2">{formatLabel(key)}</p>
+                            <div className="grid gap-x-12 gap-y-2 sm:grid-cols-2">
                                 {Object.entries(value).map(([nestedKey, nestedValue]) => (
-                                    <div key={nestedKey} className="space-y-1">
-                                        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">{formatLabel(nestedKey)}</p>
-                                        <p className="text-right font-mono text-sm tabular-nums text-white/70">{formatStatementValue(nestedValue)}</p>
+                                    <div key={nestedKey} className="flex justify-between items-center py-2 border-b border-border-soft last:border-0">
+                                        <p className="font-sans text-[14px] text-white/50">{formatLabel(nestedKey)}</p>
+                                        <p className="font-mono text-[14px] tabular-nums text-white">{formatStatementValue(nestedValue)}</p>
                                     </div>
                                 ))}
                             </div>
@@ -1506,15 +1378,15 @@ function StatementTable({ title, rows }: { title: string; rows: Record<string, u
     const valueHeaders = headers.filter((key) => key !== "Item");
 
     return (
-        <div className="space-y-2">
-            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">{title}</p>
+        <div className="space-y-3 pt-4">
+            <p className="font-sans text-[15px] font-medium text-white">{title}</p>
             <div className="overflow-x-auto [scrollbar-gutter:stable]">
-                <table className="min-w-[520px] w-full border-collapse font-mono text-[12px] tabular-nums">
+                <table className="min-w-[520px] w-full border-collapse font-mono text-[13px] tabular-nums">
                     <thead>
-                        <tr className="border-b border-white/10 text-white/60">
-                            <th className="py-2 pr-4 text-left font-normal uppercase tracking-[1.4px]">Item</th>
+                        <tr className="border-b border-border-soft text-white/40">
+                            <th className="py-3 pr-4 text-left font-normal uppercase tracking-[1.4px] text-[11px]">Item</th>
                             {valueHeaders.map((header) => (
-                                <th key={header} className="py-2 pl-4 text-right font-normal uppercase tracking-[1.4px]">
+                                <th key={header} className="py-3 pl-4 text-right font-normal uppercase tracking-[1.4px] text-[11px]">
                                     {formatLabel(header)}
                                 </th>
                             ))}
@@ -1522,10 +1394,10 @@ function StatementTable({ title, rows }: { title: string; rows: Record<string, u
                     </thead>
                     <tbody>
                         {rows.map((row, rowIndex) => (
-                            <tr key={rowIndex} className="border-b border-white/5 last:border-b-0">
-                                <td className="py-2 pr-4 text-left text-white">{formatStatementValue(row.Item ?? row.item ?? "---")}</td>
+                            <tr key={rowIndex} className="border-b border-border-soft last:border-b-0">
+                                <td className="py-3 pr-4 text-left font-sans text-[14px] text-white">{formatStatementValue(row.Item ?? row.item ?? "---")}</td>
                                 {valueHeaders.map((header) => (
-                                    <td key={header} className="py-2 pl-4 text-right text-white/70">
+                                    <td key={header} className="py-3 pl-4 text-right text-white/70">
                                         {formatStatementValue(row[header])}
                                     </td>
                                 ))}

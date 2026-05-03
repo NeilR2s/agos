@@ -34,7 +34,7 @@ export const Shell = ({ children }: { children: ReactNode }) => {
   const hasAuthenticatedSession = Boolean(user || token || isDevBypass);
   const showProtectedShell = !isPublicRoute && !isLoading && hasAuthenticatedSession;
   const canUseCommandPalette = !isLoginRoute && showProtectedShell;
-  const desktopSidebarWidth = showProtectedShell ? (sidebarExpanded ? (isAgentRoute ? 320 : 240) : 72) : 0;
+  const desktopSidebarWidth = showProtectedShell ? (sidebarExpanded ? (isAgentRoute ? 320 : 180) : 72) : 0;
 
   useEffect(() => {
     if (!isLoginRoute) {

@@ -225,7 +225,6 @@ export function Sidebar({
                 <div
                     className={cn("flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/10 transition-[max-width,opacity,padding] duration-200", showLabels ? "px-2 opacity-100" : hiddenRevealClass)}
                 >
-                    <span>Ctrl Shift P Command palette</span>
                 </div>
 
                 <nav className="space-y-1">
