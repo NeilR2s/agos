@@ -18,7 +18,6 @@ import { engineClient } from "@/api/engine/client";
 import { AgentThreadList } from "@/features/agent/components/AgentThreadList";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Kbd } from "@/components/ui/kbd";
 import { TerminalSkeleton } from "@/components/ui/terminal-skeleton";
 import { cn } from "@/lib/utils";
 import { normalizeEngineHealth } from "@/data/normalizeEngine";
@@ -224,12 +223,9 @@ export function Sidebar({
                 </div>
 
                 <div
-                    className={cn("flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/30 transition-[max-width,opacity,padding] duration-200", showLabels ? "px-2 opacity-100" : hiddenRevealClass)}
+                    className={cn("flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/10 transition-[max-width,opacity,padding] duration-200", showLabels ? "px-2 opacity-100" : hiddenRevealClass)}
                 >
-                    <Kbd>Ctrl</Kbd>
-                    <Kbd>Shift</Kbd>
-                    <Kbd>P</Kbd>
-                    <span>Palette</span>
+                    <span>Ctrl Shift P Command palette</span>
                 </div>
 
                 <nav className="space-y-1">
@@ -331,7 +327,7 @@ export function Sidebar({
                                             <span className="font-mono text-[12px] uppercase tracking-[1.4px] text-foreground">{holding.ticker}</span>
                                         <span
                                             className={cn(
-                                                "min-w-0 truncate font-sans text-[12px] text-white/30 transition-[max-width,opacity] duration-200",
+                                                "min-w-0 truncate font-sans text-[12px] text-white/[0.42] transition-[max-width,opacity] duration-200",
                                                 showLabels ? "max-w-full opacity-100" : hiddenRevealClass
                                             )}
                                         >

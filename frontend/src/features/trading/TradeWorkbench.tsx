@@ -6,7 +6,6 @@ import { getUserId } from "@/api/backend/client";
 import { engineClient } from "@/api/engine/client";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Kbd } from "@/components/ui/kbd";
 import {
   Dialog,
   DialogContent,
@@ -99,6 +98,8 @@ export function TradeWorkbench({
   const [evaluationId, setEvaluationId] = useState(0);
   const [activeStageIndex, setActiveStageIndex] = useState(0);
   const [openTraceSteps, setOpenTraceSteps] = useState<Record<number, boolean>>({});
+
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
   useEffect(() => {
     setTickerInput(ticker);
@@ -307,7 +308,7 @@ export function TradeWorkbench({
         <CardContent className="space-y-4 overflow-visible">
           <div className="space-y-2">
             <label htmlFor={tickerInputId} className="font-sans text-[14px] text-white/70">Ticker</label>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end" onFocus={() => setIsInputFocused(true)} onBlur={() => setIsInputFocused(false)}>
               <TickerAutocompleteInput
                 id={tickerInputId}
                 name="ticker"
@@ -321,7 +322,7 @@ export function TradeWorkbench({
               />
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Button
-                  className="w-full whitespace-nowrap sm:w-auto"
+                  className="w-full whitespace-nowrap bg-white/92 font-sans text-[#050505] hover:bg-white sm:w-auto"
                   onClick={() => {
                     const nextTicker = tickerInput.trim().toUpperCase() || ticker;
                     setTickerInput(nextTicker);
@@ -336,7 +337,7 @@ export function TradeWorkbench({
                 {decision ? (
                   <Dialog open={isOverrideOpen} onOpenChange={setIsOverrideOpen}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" className="w-full whitespace-nowrap sm:w-auto">
+                      <Button variant="outline" className="w-full whitespace-nowrap border-white/10 bg-transparent text-white/60 hover:bg-white/5 hover:text-white sm:w-auto">
                         Manual Override
                       </Button>
                     </DialogTrigger>
@@ -414,17 +415,14 @@ export function TradeWorkbench({
               </div>
             </div>
             {!evaluateMutation.isPending ? (
-              <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
-                <span>Use</span>
-                <Kbd>Tab</Kbd>
-                <span>or</span>
-                <Kbd>Enter</Kbd>
-                <span>to accept</span>
-                <Kbd>↑</Kbd>
-                <Kbd>↓</Kbd>
-                <span>to move</span>
+              <div className={cn(
+                "font-mono text-[10px] uppercase tracking-[1.4px] text-white/20 transition-opacity duration-200",
+                isInputFocused ? "opacity-100" : "opacity-0"
+              )}>
+                Tab / Enter to accept · ↑ ↓ to move
               </div>
             ) : null}
+
           </div>
 
         </CardContent>
@@ -436,32 +434,37 @@ export function TradeWorkbench({
             <CardTitle>Signal Decomposition</CardTitle>
             <CardDescription>Streaming reasoning from engine output.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap items-center gap-4 border-b border-border pb-4">
-              <StatusPill label="Action" value={decision?.ai_signal.action ?? "---"} valueClassName={actionTone(decision?.ai_signal.action)} />
-              <StatusPill label="Approved" value={decision ? (decision.is_approved ? "YES" : "NO") : "---"} />
-              <div className="space-y-1 border border-border px-4 py-3">
-                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">Confidence</p>
-                <div className="flex items-center gap-2">
-                  <div className="h-1.5 w-24 border border-white/10 bg-white/[0.03]">
-                    <div 
-                      className="h-full bg-white/40 transition-[width] duration-500" 
-                      style={{ width: `${(decision?.ai_signal.confidence_score ?? 0) * 100}%` }}
-                    />
-                  </div>
-                  <p className="font-mono text-sm tabular-nums text-white">
-                    {decision ? `${(decision.ai_signal.confidence_score * 100).toFixed(1)}%` : "---"}
-                  </p>
+          <CardContent className="space-y-6">
+            {decision ? (
+              <div className="flex flex-col gap-1 border-b border-border pb-6">
+                <div className={cn("font-sans text-[24px] font-medium leading-none", actionTone(decision.ai_signal.action))}>
+                  {decision.ai_signal.action}
+                </div>
+                <div className="flex flex-wrap items-center gap-x-2 font-sans text-[13px] text-white/50">
+                  <span>{decision.is_approved ? "Approved" : "Blocked"}</span>
+                  <span className="text-white/20">·</span>
+                  <span>{(decision.ai_signal.confidence_score * 100).toFixed(1)}% confidence</span>
+                  <span className="text-white/20">·</span>
+                  <span>{formatCurrency(decision.target_price)} target</span>
+                  <span className="text-white/20">·</span>
+                  <span>qty {formatNumber(decision.quantity, "en-PH", 0)}</span>
                 </div>
               </div>
-              <StatusPill label="Target" value={formatCurrency(decision?.target_price ?? null)} />
-              <StatusPill label="Quantity" value={formatNumber(decision?.quantity ?? null, "en-PH", 0)} />
-            </div>
+            ) : (
+              <div className="flex flex-col gap-1 border-b border-border pb-6">
+                <div className="font-sans text-[24px] font-medium leading-none text-white/10">
+                  ---
+                </div>
+                <div className="font-sans text-[13px] text-white/20">
+                  Awaiting signal decomposition...
+                </div>
+              </div>
+            )}
 
             {decision ? (
-              <div className="space-y-2 border border-border p-4">
-                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">Decision Pipeline</p>
-                <div className="flex items-center justify-between gap-1 text-[10px] font-mono uppercase tracking-[1px]">
+              <div className="space-y-4">
+                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Pipeline</p>
+                <div className="flex items-center gap-4 font-mono text-[11px] uppercase tracking-[1px]">
                   <PipelineStep label="Data" active={true} />
                   <PipelineArrow />
                   <PipelineStep label="AI Signal" active={true} />
@@ -532,36 +535,52 @@ export function TradeWorkbench({
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Safety Gate</CardTitle>
-              <CardDescription>Rule-based safety gate result and summary.</CardDescription>
+              <CardTitle>Decision</CardTitle>
+              <CardDescription>Final output and safety gate verification.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Badge variant="outline" className="border-border text-white/70">
-                  {decision ? (decision.is_approved ? "Approved" : "Blocked") : "No decision"}
-                </Badge>
-                <span className="font-sans text-sm text-white/70">{decision?.ticker ?? ticker}</span>
+            <CardContent className="space-y-6">
+              <div className="space-y-1">
+                <div className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Ticker</div>
+                <div className="font-sans text-[20px] font-medium text-white">{decision?.ticker ?? ticker}</div>
               </div>
 
-              <p className="border border-border px-4 py-3 font-sans text-[14px] leading-[1.5] text-white/70">
-                {decision?.rule_gate_reasoning ?? "Execute evaluation to populate safety traces."}
-              </p>
+              <div className="space-y-1">
+                <div className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Action</div>
+                <div className={cn("font-sans text-[20px] font-medium", actionTone(decision?.action))}>
+                  {decision?.action ?? "---"}
+                </div>
+              </div>
+
+              <div className="space-y-2 border-y border-border py-4">
+                <div className="flex items-center gap-2">
+                  <div className={cn("size-1.5 rounded-full", decision?.is_approved ? "bg-chart-2" : "bg-destructive")} />
+                  <span className="font-sans text-[13px] text-white/70">
+                    {decision ? (decision.is_approved ? "Approved by safety gate" : "Blocked by safety gate") : "Awaiting evaluation"}
+                  </span>
+                </div>
+                {decision?.action === "HOLD" && (
+                   <div className="font-sans text-[13px] text-white/40">No order submitted</div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex justify-between font-sans text-[13px]">
+                  <span className="text-white/40">Quantity</span>
+                  <span className="text-white/80">{formatNumber(decision?.quantity ?? null, "en-PH", 0)}</span>
+                </div>
+                <div className="flex justify-between font-sans text-[13px]">
+                  <span className="text-white/40">Target</span>
+                  <span className="text-white/80">{formatCurrency(decision?.target_price ?? null)}</span>
+                </div>
+                <div className="space-y-1.5 pt-2">
+                  <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Reasoning</span>
+                  <p className="font-sans text-[13px] leading-[1.5] text-white/60">
+                    {decision?.rule_gate_reasoning ?? "Execute evaluation to populate safety traces."}
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Decision Vector</CardTitle>
-              <CardDescription>Structured response from the engine.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <KeyValue label="Ticker" value={decision?.ticker ?? ticker} />
-              <KeyValue label="Action" value={decision?.action ?? "---"} valueClassName={actionTone(decision?.action)} />
-              <KeyValue label="Quantity" value={formatNumber(decision?.quantity ?? null, "en-PH", 0)} />
-              <KeyValue label="Target Price" value={formatCurrency(decision?.target_price ?? null)} />
-            </CardContent>
-          </Card>
-
         </div>
       </section>
 
@@ -606,15 +625,11 @@ export function TradeWorkbench({
                         <p className="font-sans text-[14px] leading-[1.5] text-white/70">{step.detail}</p>
 
                         {step.metrics && Object.keys(step.metrics).length ? (
-                          <div className="grid gap-2 sm:grid-cols-2">
+                          <div className="space-y-2 pt-2">
                             {Object.entries(step.metrics).map(([key, value]) => (
-                              <div key={key} className="space-y-1 border border-white/10 px-3 py-2">
-                                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
-                                  {formatTraceMetricLabel(key)}
-                                </p>
-                                <p className="text-right font-mono text-[12px] uppercase tracking-[1.2px] text-white/80">
-                                  {formatTraceMetricValue(key, value)}
-                                </p>
+                              <div key={key} className="flex justify-between font-mono text-[11px] uppercase tracking-[1px]">
+                                <span className="text-white/30">{formatTraceMetricLabel(key)}</span>
+                                <span className="text-white/80">{formatTraceMetricValue(key, value)}</span>
                               </div>
                             ))}
                           </div>
@@ -656,36 +671,23 @@ export function TradeWorkbench({
   );
 }
 
-function StatusPill({ label, value, valueClassName }: { label: string; value: string; valueClassName?: string }) {
-  return (
-    <div className="space-y-1 border border-border px-4 py-3">
-      <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">{label}</p>
-      <p className={cn("text-right font-mono text-sm tabular-nums text-white", valueClassName)}>{value}</p>
-    </div>
-  );
-}
-
-function KeyValue({ label, value, valueClassName }: { label: string; value: string; valueClassName?: string }) {
-  return (
-    <div className="space-y-1 border border-border px-4 py-3">
-      <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">{label}</p>
-      <p className={cn("text-right font-mono text-sm tabular-nums text-white", valueClassName)}>{value}</p>
-    </div>
-  );
-}
-
 function PipelineStep({ label, active, highlight, color }: { label: string; active: boolean; highlight?: boolean; color?: string }) {
   return (
-    <div className={cn(
-      "flex flex-1 items-center justify-center border border-border px-1 py-2 text-center",
-      active ? (highlight ? "bg-white/10 text-white font-bold" : "text-white/80") : "text-white/20",
-      color
-    )}>
-      {label}
+    <div className="relative flex flex-col items-center">
+       <span className={cn(
+        "transition-colors",
+        active ? (highlight ? "text-white font-bold" : "text-white/80") : "text-white/20",
+        color
+      )}>
+        {label}
+      </span>
+      {highlight && active && (
+        <div className="absolute -bottom-2 size-1 rounded-full bg-chart-1" />
+      )}
     </div>
   );
 }
 
 function PipelineArrow() {
-  return <div className="text-white/20">→</div>;
+  return <div className="text-white/10">→</div>;
 }
