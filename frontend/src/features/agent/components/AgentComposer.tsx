@@ -60,8 +60,9 @@ export function AgentComposer({
   return (
     <div className={cn("mx-auto w-full shrink-0", isLanding ? "max-w-[780px]" : "max-w-[900px]")}>
       <div className={cn(
-        "rounded-[30px] border border-input bg-card/85 shadow-[inset_0_1px_0_color-mix(in_oklch,var(--foreground)_6%,transparent)] backdrop-blur-xl transition-colors focus-within:border-ring/70",
-        isLanding ? "p-4" : "p-3"
+        "rounded-[24px] border border-input bg-card/85 shadow-[inset_0_1px_0_color-mix(in_oklch,var(--foreground)_6%,transparent)] backdrop-blur-xl transition-colors focus-within:border-ring/70",
+        isLanding ? "p-4" : "p-3",
+        isStreaming && "py-2"
       )}>
         <textarea
           ref={textareaRef}
@@ -76,14 +77,15 @@ export function AgentComposer({
               onSubmit();
             }
           }}
-          placeholder="Ask AGOS anything"
+          placeholder={isStreaming ? "Agents are working..." : "Ask AGOS anything"}
+          readOnly={isStreaming}
           className={cn(
-            "max-h-[170px] w-full resize-none border-0 bg-transparent font-sans text-[15px] leading-[1.55] text-foreground outline-none placeholder:text-muted-foreground md:text-[16px]",
-            isLanding ? "min-h-[76px] px-1 pb-4 pt-1" : "min-h-12 px-1 pb-3 pt-1"
+            "max-h-[170px] w-full resize-none border-0 bg-transparent font-sans text-[15px] leading-[1.55] text-foreground outline-none placeholder:text-muted-foreground/60 md:text-[16px]",
+            isLanding ? "min-h-[76px] px-1 pb-4 pt-1" : isStreaming ? "min-h-8 px-1 pb-1 pt-1 placeholder:text-muted-foreground/40" : "min-h-[64px] px-1 pb-3 pt-1"
           )}
         />
 
-        <div className="flex flex-col gap-3 border-t border-border/55 pt-3 md:flex-row md:items-center md:justify-between">
+        <div className={cn("flex flex-col border-t border-border/55 md:flex-row md:items-center md:justify-between", isStreaming ? "gap-2 pt-2" : "gap-3 pt-3")}>
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Button
               type="button"
@@ -93,21 +95,21 @@ export function AgentComposer({
               aria-label="Open tools and parameters"
               aria-expanded={activePanel === "controls"}
               className={cn(
-                "size-8 rounded-full border border-border/60 bg-secondary/20 text-muted-foreground hover:bg-accent hover:text-foreground",
+                "size-8 rounded-full border border-transparent bg-transparent text-muted-foreground/70 hover:bg-secondary/40 hover:text-foreground",
                 activePanel === "controls" && "border-ring/60 bg-accent text-foreground"
               )}
             >
               {isLanding ? <PlusIcon className="size-4" /> : <AdjustmentsHorizontalIcon className="size-4" />}
             </Button>
-            <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/75">{isLanding ? "Tools" : selectedModel?.label ?? "AGOS"}</span>
-            {!isLanding ? <span className="hidden font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/65 sm:inline">/ {config.maxAgents} workers</span> : null}
-            {!isLanding ? <span className="hidden font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/65 md:inline">/ {config.thinkingLevel} thinking</span> : null}
+            <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/65">{isLanding ? "Tools" : selectedModel?.label ?? "AGOS"}</span>
+            {!isLanding ? <span className="hidden font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/50 sm:inline">· {config.maxAgents} workers</span> : null}
+            {!isLanding ? <span className="hidden font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/50 md:inline">· {config.thinkingLevel} thinking</span> : null}
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2 md:justify-end">
             <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
-              <span className="rounded-full border border-border/60 bg-secondary/20 px-2.5 py-1">{mode}</span>
-              <span className="hidden rounded-full border border-border/60 bg-secondary/20 px-2.5 py-1 sm:inline-flex">{selectedTicker ?? "no ticker"}</span>
+              <span className="px-1.5 text-muted-foreground/50">{mode}</span>
+              <span className="hidden px-1.5 text-muted-foreground/50 sm:inline-flex">{selectedTicker ?? "no ticker"}</span>
               <Button
                 type="button"
                 variant="outline"
@@ -115,7 +117,7 @@ export function AgentComposer({
                 onClick={onToggleRunPanel}
                 aria-expanded={activePanel === "run"}
                 className={cn(
-                  "h-8 rounded-full border-border/60 bg-secondary/20 px-2.5 text-[10px] text-muted-foreground hover:bg-accent hover:text-foreground",
+                  "h-8 rounded-full border-border/60 bg-secondary/15 px-2.5 text-[10px] text-muted-foreground hover:bg-accent hover:text-foreground",
                   activePanel === "run" && "border-ring/60 bg-accent text-foreground"
                 )}
               >
@@ -129,11 +131,11 @@ export function AgentComposer({
                   onClick={onToggleControlsPanel}
                   aria-expanded={activePanel === "controls"}
                   className={cn(
-                    "h-8 rounded-full border-border/60 bg-secondary/20 px-2.5 text-[10px] text-muted-foreground hover:bg-accent hover:text-foreground",
+                    "h-8 rounded-full border-border/60 bg-secondary/15 px-2.5 text-[10px] text-muted-foreground hover:bg-accent hover:text-foreground",
                     activePanel === "controls" && "border-ring/60 bg-accent text-foreground"
                   )}
                 >
-                  <AdjustmentsHorizontalIcon className="size-4" /> Params
+                  Params
                 </Button>
               ) : null}
             </div>
@@ -146,7 +148,7 @@ export function AgentComposer({
               title={actionLabel}
               className={cn(
                 "size-10 shrink-0 rounded-full p-0 shadow-none",
-                isStreaming && "border-destructive/50 bg-destructive/10 text-destructive hover:bg-destructive/15"
+                isStreaming && "border-destructive/60 bg-destructive/15 text-destructive hover:border-destructive hover:bg-destructive/25 hover:text-destructive"
               )}
               variant={isStreaming ? "outline" : "default"}
             >

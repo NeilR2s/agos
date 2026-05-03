@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { buildAgentTraceBuckets, describeEvent } from "@/features/agent/lib/traces";
+import { buildAgentTraceBuckets, describeEvent, stripMarkdownArtifacts } from "@/features/agent/lib/traces";
 import type { AgentSSEEvent } from "@/features/agent/types";
 
 type AgentWorkingTraceProps = {
@@ -53,51 +53,53 @@ export function AgentWorkingTrace({ events, isStreaming, selectedAgentId, onSele
                                     !isStreaming && !errorCount && "bg-chart-2 shadow-[0_0_18px_color-mix(in_oklch,var(--chart-2)_34%,transparent)]"
                                 )}
                             />
-                            <p className="font-sans text-[15px] font-semibold tracking-[-0.01em] text-foreground">{title}</p>
-                            <div className="flex min-w-0 flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
-                                <span>AGOS</span>
-                                <span>/</span>
-                                <span>{countBuckets.length} agents</span>
-                                {duration ? <><span>/</span><span>{duration}</span></> : null}
+                            <p className="font-sans text-[15px] font-medium tracking-[-0.015em] text-foreground">{title}</p>
+                            <div className="flex min-w-0 flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/75">
+                                <span>{resolvedCount}/{countBuckets.length} complete</span>
                             </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1.35px] text-muted-foreground/75">
-                            <span className="rounded-full border border-border/50 bg-secondary/20 px-2 py-0.5">{isStreaming ? `${activeCount || countBuckets.length} live` : `${completedCount} complete`}</span>
-                            <span className="rounded-full border border-border/50 bg-secondary/20 px-2 py-0.5">{errorCount} errors</span>
-                            <span className="rounded-full border border-border/50 bg-secondary/20 px-2 py-0.5">{toolTotal} tools</span>
-                            <span className="rounded-full border border-border/50 bg-secondary/20 px-2 py-0.5">{sourceTotal} sources</span>
+                        <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/65">
+                            <span>AGOS</span>
+                            <span>·</span>
+                            <span>{countBuckets.length} agents</span>
+                            {duration ? <><span>·</span><span>{duration}</span></> : null}
+                            <span>·</span>
+                            <span>{isStreaming ? `${activeCount || countBuckets.length} live` : `${completedCount} complete`}</span>
+                            {errorCount ? <><span>·</span><span className="text-destructive/80">{errorCount} errors</span></> : null}
+                            <span>·</span>
+                            <span>{toolTotal} tools</span>
+                            <span>·</span>
+                            <span>{sourceTotal} sources</span>
                         </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-3 self-end md:self-auto">
-                        <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
-                            {resolvedCount}/{countBuckets.length} done
-                        </span>
                         {expanded ? <ChevronDown className="size-4 text-muted-foreground" /> : <ChevronRight className="size-4 text-muted-foreground" />}
                     </div>
                 </div>
 
-                <div className="mt-3 space-y-2.5">
-                    <div className="space-y-2">
+                <div className="mt-4 space-y-3">
+                    <div className="space-y-1">
                         {workerProgress.slice(0, 4).map((item, index) => (
                             <AgentProgressRow key={item.bucket.agentId} item={item} index={index} />
                         ))}
                     </div>
-                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/65">
-                        {isStreaming ? "Live operations trace" : "Completed operations trace"} / expand for worker detail
+                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/55">
+                        {isStreaming ? "Live operations trace · expand for worker detail" : "Completed operations trace · expand for worker detail"}
                     </p>
                 </div>
             </button>
 
             {expanded ? (
-                <div className="divide-y divide-border/55 border-t border-border/70 bg-background/10">
+                <div className="divide-y divide-border/45 border-t border-border/70 bg-background/5">
                     {buckets.map((bucket, index) => {
                         const latest = bucket.events[bucket.events.length - 1];
                         const isSelected = bucket.agentId === selectedAgentId;
                         const highlights = bucket.events
                             .filter((event) => event.type !== "message.delta")
                             .slice(-2)
-                            .map((event) => describeEvent(event));
+                            .map((event) => stripMarkdownArtifacts(describeEvent(event)));
                         const bucketProgress = getBucketProgress(bucket);
+                        const isRunning = bucket.status === "running";
 
                         return (
                             <button
@@ -105,34 +107,41 @@ export function AgentWorkingTrace({ events, isStreaming, selectedAgentId, onSele
                                 type="button"
                                 onClick={() => onSelectAgent(bucket.agentId)}
                                 className={cn(
-                                    "grid w-full gap-3 px-4 py-3 text-left transition-colors md:grid-cols-[150px_minmax(0,1fr)_auto] md:items-start md:px-5",
+                                    "grid w-full gap-3 py-3 pl-4 pr-3 text-left transition-colors md:grid-cols-[140px_minmax(0,1fr)_auto] md:items-start md:pl-5 md:pr-4",
                                     getBucketRowTone(bucket.status, isSelected)
                                 )}
                             >
                                 <div className="min-w-0">
-                                    <p className="truncate font-mono text-[11px] uppercase tracking-[1.4px] text-foreground/90">Agent {String(index + 1).padStart(2, "0")}</p>
-                                    <p className="mt-1 truncate font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{bucket.role.replace(/-/g, " ")}</p>
+                                    <p className="truncate font-sans text-[13px] leading-[1.35] text-foreground/86">{bucket.role.replace(/-/g, " ")}</p>
+                                    <p className="mt-1 truncate font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/65">Agent {String(index + 1).padStart(2, "0")}</p>
                                 </div>
                                 <div className="min-w-0 space-y-2">
                                     <div className="flex items-center gap-3">
-                                        <DotMatrixProgress progress={bucketProgress.value} compact tone={bucket.status === "error" ? "error" : bucket.status === "completed" ? "complete" : "active"} />
-                                        <span className="shrink-0 font-mono text-[10px] uppercase tracking-[1.3px] text-muted-foreground/75">{bucketProgress.stage}</span>
+                                        {isRunning ? (
+                                            <DotMatrixProgress progress={bucketProgress.value} compact tone="active" />
+                                        ) : (
+                                            <span className="font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/60">{bucket.status}</span>
+                                        )}
+                                        <span className="shrink-0 font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/60">{bucketProgress.stage}</span>
                                     </div>
-                                    <p className="line-clamp-2 font-sans text-[13px] leading-[1.55] text-foreground/80">
-                                        {bucket.summary ?? (latest ? describeEvent(latest) : "Awaiting trace output.")}
+                                    <p className="line-clamp-2 break-words font-sans text-[13px] leading-[1.55] text-foreground/80">
+                                        {stripMarkdownArtifacts(bucket.summary) ?? (latest ? stripMarkdownArtifacts(describeEvent(latest)) : "Awaiting trace output.")}
                                     </p>
                                     {highlights.length ? (
-                                        <div className="space-y-1 border-l border-border/70 pl-3">
+                                        <div className="space-y-1">
                                             {highlights.map((highlight, index) => (
-                                                <p key={`${bucket.agentId}-${index}`} className="line-clamp-1 font-sans text-[12px] leading-[1.45] text-muted-foreground">
-                                                    {highlight}
-                                                </p>
+                                                <div key={`${bucket.agentId}-${index}`} className="flex items-start gap-2">
+                                                    <span className="mt-[5px] size-1 shrink-0 rounded-full bg-border/80" />
+                                                    <p className="line-clamp-1 break-words font-sans text-[12px] leading-[1.5] text-muted-foreground">
+                                                        {highlight}
+                                                    </p>
+                                                </div>
                                             ))}
                                         </div>
                                     ) : null}
                                 </div>
-                                <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground md:justify-end">
-                                    <span className={cn("rounded-full border px-2 py-0.5", getStatusBadgeTone(bucket.status))}>{bucket.status}</span>
+                                <div className="flex flex-wrap items-center gap-2 font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/65 md:justify-end">
+                                    <span className={cn(getStatusBadgeTone(bucket.status))}>{bucket.status}</span>
                                     <span>{Math.round(bucketProgress.value)}%</span>
                                     <span>{bucket.toolCount} tools</span>
                                     <span>{bucket.citationCount} sources</span>
@@ -149,35 +158,35 @@ export function AgentWorkingTrace({ events, isStreaming, selectedAgentId, onSele
 function getBucketRowTone(status: "idle" | "running" | "completed" | "error", isSelected: boolean) {
     if (status === "error") {
         return isSelected
-            ? "bg-destructive/[0.07]"
-            : "hover:bg-destructive/[0.045]";
+            ? "bg-destructive/[0.04] border-l-2 border-l-destructive/50 pl-[14px] md:pl-[18px]"
+            : "hover:bg-destructive/[0.025]";
     }
 
     if (status === "running") {
         return isSelected
-            ? "bg-chart-1/[0.045]"
-            : "hover:bg-chart-1/[0.03]";
+            ? "bg-chart-1/[0.03] border-l-2 border-l-chart-1 pl-[14px] md:pl-[18px]"
+            : "hover:bg-accent/15";
     }
 
     if (status === "completed") {
         return isSelected
-            ? "bg-chart-2/[0.04]"
-            : "hover:bg-chart-2/[0.025]";
+            ? "bg-chart-2/[0.02] border-l-2 border-l-chart-2/50 pl-[14px] md:pl-[18px]"
+            : "hover:bg-accent/15";
     }
 
-    return isSelected ? "bg-accent/35" : "hover:bg-accent/25";
+    return isSelected ? "bg-accent/20 border-l-2 border-l-border/50 pl-[14px] md:pl-[18px]" : "hover:bg-accent/15";
 }
 
 function getStatusBadgeTone(status: "idle" | "running" | "completed" | "error") {
     switch (status) {
         case "error":
-            return "border-destructive/40 bg-destructive/10 text-destructive";
+            return "text-destructive";
         case "running":
-            return "border-chart-1/35 bg-chart-1/[0.06] text-chart-1";
+            return "text-chart-1";
         case "completed":
-            return "border-chart-2/35 bg-chart-2/[0.06] text-chart-2";
+            return "text-chart-2";
         default:
-            return "border-border/60 bg-secondary/20 text-muted-foreground";
+            return "text-muted-foreground";
     }
 }
 
@@ -202,18 +211,37 @@ type BucketProgress = {
     stage: string;
 };
 
-function AgentProgressRow({ item, index }: { item: BucketProgress; index: number }) {
+function AgentProgressRow({ item }: { item: BucketProgress; index: number }) {
     const tone = item.bucket.status === "error" ? "error" : item.bucket.status === "completed" ? "complete" : "active";
+    const isRunning = tone === "active";
+    const isError = tone === "error";
+
     return (
-        <div className="grid items-center gap-2 md:grid-cols-[108px_minmax(0,1fr)_118px]">
-            <div className="flex min-w-0 items-center justify-between gap-2 md:block">
-                <p className="font-mono text-[9px] uppercase tracking-[1.2px] text-foreground/75">Agent {String(index + 1).padStart(2, "0")}</p>
-                <p className="truncate font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/65 md:mt-0.5">{item.bucket.role.replace(/-/g, " ")}</p>
+        <div className="grid min-h-6 items-center gap-3 md:grid-cols-[140px_minmax(0,1fr)_100px]">
+            <div className="flex min-w-0 items-center justify-between gap-3 md:block">
+                <p className="truncate font-sans text-[13px] leading-[1.35] text-foreground/80">{item.bucket.role.replace(/-/g, " ")}</p>
             </div>
-            <DotMatrixProgress progress={item.value} compact tone={tone} />
-            <div className="flex items-center justify-between gap-2 font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/70 md:justify-end">
-                <span>{Math.round(item.value)}%</span>
-                <span>{item.stage}</span>
+            
+            <div className="flex min-w-0 items-center gap-3">
+                {isRunning ? (
+                    <DotMatrixProgress progress={item.value} compact tone={tone} />
+                ) : (
+                    <p className="truncate font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/60">
+                        {isError ? "execution failed" : item.bucket.status}
+                    </p>
+                )}
+            </div>
+
+            <div className="flex items-center justify-between gap-2 font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/60 md:justify-end">
+                {isError ? (
+                    <span className="text-destructive">failed</span>
+                ) : (
+                    <>
+                        <span>{Math.round(item.value)}%</span>
+                        {isRunning ? <span>{item.stage}</span> : null}
+                        {!isRunning && !isError ? <span className="size-1.5 rounded-full bg-chart-2" /> : null}
+                    </>
+                )}
             </div>
         </div>
     );

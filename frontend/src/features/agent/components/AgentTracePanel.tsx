@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 
+import { buildAgentTraceBuckets, describeEvent, humanizeEventType, stripMarkdownArtifacts } from "@/features/agent/lib/traces";
+import type { AgentRun, AgentSSEEvent } from "@/features/agent/types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { buildAgentTraceBuckets, describeEvent, humanizeEventType } from "@/features/agent/lib/traces";
-import type { AgentRun, AgentSSEEvent } from "@/features/agent/types";
 
 type AgentTracePanelProps = {
   events: AgentSSEEvent[];
@@ -36,10 +36,10 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
     return Array.isArray(candidate) ? candidate : [];
   }, [run?.usage]);
 
-  const activeEvents = useMemo(() => {
-    const sourceEvents = activeBucket?.events.filter((event) => event.type !== "message.delta") ?? [];
+  const visibleEvents = useMemo(() => {
+    const sourceEvents = events.filter((event) => event.type !== "message.delta");
     return sourceEvents.filter((event) => matchesTraceFilter(event, filter));
-  }, [activeBucket?.events, filter]);
+  }, [events, filter]);
 
   const eventTotal = events.filter((event) => event.type !== "message.delta").length;
   const toolTotal = buckets.reduce((sum, bucket) => sum + bucket.toolCount, 0);
@@ -49,64 +49,56 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
   const progress = countBuckets.length
     ? countBuckets.reduce((sum, bucket) => sum + getTraceProgress(bucket).value, 0) / countBuckets.length
     : 0;
+  const runStart = events[0]?.timestamp ?? run?.startedAt ?? null;
 
   return (
-    <section className="space-y-5">
-      <div className="flex flex-col gap-4 border-b border-border/60 pb-4 xl:flex-row xl:items-start xl:justify-between">
-        <div className="min-w-0">
-          <p className="font-mono text-[10px] uppercase tracking-[1.45px] text-muted-foreground">Agent Trace</p>
-          <h3 className="mt-2 truncate font-sans text-[24px] leading-[1.15] tracking-[-0.035em] text-foreground">
-            {activeBucket?.label ?? "No worker selected"}
-          </h3>
-          <p className="mt-2 max-w-[680px] font-sans text-[13px] leading-[1.6] text-muted-foreground">
-            Inspect worker progress, filtered events, tool activity, and captured sources for this run.
-          </p>
+    <section className="space-y-6">
+      <div className="border-b border-border/60 pb-4">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div className="min-w-0">
+            <p className="font-mono text-[10px] uppercase tracking-[1.45px] text-muted-foreground">Agent Trace</p>
+            <h3 className="mt-2 truncate font-sans text-[21px] font-medium leading-[1.15] tracking-[-0.03em] text-foreground">
+              {activeBucket?.label ?? "No worker selected"}
+            </h3>
+            <p className="mt-2 font-mono text-[10px] uppercase tracking-[1.25px] text-muted-foreground/70">
+              {countBuckets.length} agents · {completedWorkers + erroredWorkers}/{countBuckets.length || 0} resolved · {eventTotal} events · {toolTotal} tools · {sourceTotal} sources · {Math.round(progress)}%
+            </p>
+          </div>
+
+          <div className="flex w-full max-w-[440px] flex-col gap-2 xl:items-end">
+            <div className="h-px w-full bg-secondary/70">
+              <div className="h-px bg-chart-1" style={{ width: `${Math.min(100, Math.max(0, progress))}%` }} />
+            </div>
+            <div className="inline-flex w-fit overflow-hidden rounded-full border border-border/70 bg-secondary/20 p-0.5">
+              {traceFilters.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setFilter(item.value)}
+                  className={cn(
+                    "rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.2px] transition-colors",
+                    filter === item.value ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-1.5 font-mono text-[10px] uppercase tracking-[1.25px] text-muted-foreground">
-          <MetricPill label="Agents" value={String(countBuckets.length)} />
-          <MetricPill label="Done" value={`${completedWorkers + erroredWorkers}/${countBuckets.length}`} />
-          <MetricPill label="Events" value={String(eventTotal)} />
-          <MetricPill label="Tools" value={String(toolTotal)} />
-          <MetricPill label="Sources" value={String(sourceTotal)} />
-          <MetricPill label="Progress" value={`${Math.round(progress)}%`} />
-        </div>
+        {streamNotice ? (
+          <div className="mt-4 border-l border-chart-3/50 px-3 py-1.5">
+            <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-chart-3">Stream Notice</p>
+            <p className="mt-1 font-sans text-[13px] leading-[1.6] text-foreground/78">{streamNotice}</p>
+          </div>
+        ) : null}
       </div>
 
-      {streamNotice ? (
-        <div className="border-l border-chart-3/50 bg-chart-3/[0.04] px-4 py-3">
-          <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-chart-3">Stream Notice</p>
-          <p className="mt-2 font-sans text-[13px] leading-[1.6] text-foreground/80">{streamNotice}</p>
-        </div>
-      ) : null}
-
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="h-[5px] flex-1 overflow-hidden rounded-full bg-secondary/55">
-          <div className="h-full bg-chart-1/80" style={{ width: `${Math.min(100, Math.max(0, progress))}%` }} />
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {traceFilters.map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              onClick={() => setFilter(item.value)}
-              className={cn(
-                "rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.2px] transition-colors",
-                filter === item.value
-                  ? "border-ring/60 bg-accent text-foreground"
-                  : "border-border/70 text-muted-foreground hover:border-ring/60 hover:text-foreground"
-              )}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid gap-5 xl:grid-cols-[270px_minmax(0,1fr)]">
-        <section className="min-w-0 space-y-2">
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Workers</p>
-          <div className="overflow-hidden rounded-[18px] border border-border/70 bg-background/20">
+      <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)]">
+        <section className="min-w-0">
+          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Agents</p>
+          <div className="mt-2 border-y border-border/60">
             {buckets.length ? (
               buckets.map((bucket, index) => {
                 const isActive = bucket.agentId === activeBucket?.agentId;
@@ -117,86 +109,104 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
                     type="button"
                     onClick={() => onSelectAgent(bucket.agentId)}
                     className={cn(
-                      "w-full border-b border-border/55 px-3 py-3 text-left transition-colors last:border-b-0 hover:bg-accent/35",
-                      isActive && "bg-accent/45"
+                      "grid w-full grid-cols-[26px_minmax(0,1fr)_auto] items-start gap-3 border-b border-border/50 py-3 pr-2 text-left transition-colors last:border-b-0 hover:bg-accent/25",
+                      isActive && "bg-accent/35"
                     )}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-mono text-[10px] uppercase tracking-[1.3px] text-foreground/85">Agent {String(index + 1).padStart(2, "0")}</p>
-                        <p className="mt-1 truncate font-sans text-[13px] leading-[1.3] text-foreground/80">{bucket.label}</p>
-                      </div>
-                      <span className={cn("shrink-0 font-mono text-[9px] uppercase tracking-[1.2px]", getStatusLabelTone(bucket.status))}>{bucket.status}</span>
-                    </div>
-                    <div className="mt-3 h-[3px] overflow-hidden rounded-full bg-secondary/65">
-                      <div className={cn("h-full", getProgressTone(bucket.status))} style={{ width: `${progress.value}%` }} />
-                    </div>
-                    <div className="mt-2 flex items-center justify-between gap-2 font-mono text-[9px] uppercase tracking-[1.15px] text-muted-foreground/75">
-                      <span className="truncate">{bucket.role.replace(/-/g, " ")}</span>
-                      <span>{progress.stage}</span>
-                    </div>
+                    <span className={cn("mt-0.5 h-full min-h-8 border-l", isActive ? "border-chart-1" : "border-border/70")} />
+                    <span className="min-w-0">
+                      <span className="block font-mono text-[10px] uppercase tracking-[1.3px] text-muted-foreground/75">{String(index + 1).padStart(2, "0")}</span>
+                      <span className="mt-1 block truncate font-sans text-[13px] leading-[1.35] text-foreground/86">{bucket.label}</span>
+                      <span className="mt-1 block truncate font-mono text-[9px] uppercase tracking-[1.15px] text-muted-foreground/65">
+                        {bucket.role.replace(/-/g, " ")} · {progress.stage} · {bucket.toolCount} tools
+                      </span>
+                    </span>
+                    <span className={cn("shrink-0 font-mono text-[9px] uppercase tracking-[1.2px]", getStatusLabelTone(bucket.status))}>{bucket.status}</span>
                   </button>
                 );
               })
             ) : (
-              <p className="px-3 py-3 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/70">No trace emitted yet</p>
+              <p className="py-3 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/70">No trace emitted yet</p>
             )}
           </div>
         </section>
 
-        <section className="min-w-0 space-y-2">
+        <section className="min-w-0">
           <div className="flex items-center justify-between gap-3">
-            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Timeline</p>
-            <p className="truncate font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/70">{activeBucket?.label ?? "No agent selected"}</p>
+            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Event Trace</p>
+            <p className="truncate font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/65">All agents · selected {activeBucket?.label ?? "none"}</p>
           </div>
-          <div className="overflow-hidden rounded-[18px] border border-border/70 bg-background/20">
-            {activeBucket ? (
-              activeEvents.length ? (
-                activeEvents.map((event) => (
-                  <div key={`${event.sequence}-${event.type}`} className="grid gap-3 border-b border-border/55 px-4 py-3 last:border-b-0 md:grid-cols-[112px_minmax(0,1fr)]">
-                    <div className="font-mono text-[10px] uppercase tracking-[1.3px] text-muted-foreground">
-                      <p>{String(event.sequence).padStart(2, "0")}</p>
-                      <p className={cn("mt-1", getEventLabelTone(event))}>{humanizeEventType(event.type)}</p>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-sans text-[13px] leading-[1.6] text-foreground/82">{describeEvent(event)}</p>
-                      <p className="mt-1 font-mono text-[9px] uppercase tracking-[1.25px] text-muted-foreground/55">{formatDate(event.timestamp)}</p>
-                    </div>
-                  </div>
-                ))
+          <div className="mt-2 overflow-hidden border-y border-border/60">
+            {events.length ? (
+              visibleEvents.length ? (
+                <table className="w-full table-fixed border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-border/60">
+                      {[
+                        ["Time", "w-[72px] text-right sm:w-[90px]"],
+                        ["Agent", "w-[120px] sm:w-[170px]"],
+                        ["Event", "w-[118px] sm:w-[148px]"],
+                        ["Detail", ""],
+                      ].map(([label, className]) => (
+                        <th key={label} className={cn("break-words px-2 py-2 font-mono text-[10px] uppercase tracking-[1.25px] text-muted-foreground/70 sm:px-3", className)}>
+                          {label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleEvents.map((event) => {
+                      const eventAgentId = event.agentId ?? "agos-runtime";
+                      const isSelectedAgent = eventAgentId === activeBucket?.agentId;
+                      const detail = stripMarkdownArtifacts(describeEvent(event));
+                      return (
+                        <tr key={`${event.sequence}-${event.type}`} className={cn("border-b border-border/45 last:border-b-0 hover:bg-accent/20", isSelectedAgent && "bg-accent/15")}>
+                          <td className="px-2 py-3 text-right font-mono text-[10px] uppercase tracking-[1.15px] text-muted-foreground/70 sm:px-3" title={formatDate(event.timestamp)}>
+                            {formatElapsed(runStart, event.timestamp, event.sequence)}
+                          </td>
+                          <td className="px-2 py-3 font-sans text-[13px] leading-[1.45] text-foreground/82 sm:px-3">
+                            <span className="line-clamp-2 break-words">{stripMarkdownArtifacts(event.agentLabel ?? eventAgentId)}</span>
+                          </td>
+                          <td className={cn("break-words px-2 py-3 font-mono text-[10px] uppercase tracking-[1.2px] sm:px-3", getEventLabelTone(event))}>{humanizeEventType(event.type)}</td>
+                          <td className="break-words px-2 py-3 font-sans text-[13px] leading-[1.55] text-foreground/78 sm:px-3">{detail}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               ) : (
-                <p className="px-4 py-4 font-sans text-[14px] text-muted-foreground">No events match the current filter for this agent.</p>
+                <p className="px-3 py-4 font-sans text-[14px] text-muted-foreground">No events match the current filter.</p>
               )
             ) : (
-              <p className="px-4 py-4 font-sans text-[14px] text-muted-foreground">Select a run to inspect its persisted timeline.</p>
+              <p className="px-3 py-4 font-sans text-[14px] text-muted-foreground">Select a run to inspect its persisted timeline.</p>
             )}
           </div>
         </section>
       </div>
 
       {workerSummaries.length ? (
-        <section className="space-y-2 border-t border-border/60 pt-4">
+        <section className="border-t border-border/60 pt-4">
           <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Worker Summaries</p>
-          <div className="grid gap-2 lg:grid-cols-2">
+          <div className="mt-2 divide-y divide-border/55 border-y border-border/60">
             {workerSummaries.map((summary, index) => {
               const agentId = typeof summary?.agentId === "string" ? summary.agentId : `summary-${index}`;
               const label = typeof summary?.label === "string" ? summary.label : agentId;
               const role = typeof summary?.role === "string" ? summary.role : "worker";
-              const content = typeof summary?.summary === "string" ? summary.summary : "No summary emitted.";
+              const content = typeof summary?.summary === "string" ? stripMarkdownArtifacts(summary.summary) : "No summary emitted.";
               const toolCount = typeof summary?.toolCount === "number" ? summary.toolCount : 0;
               return (
                 <button
                   key={agentId}
                   type="button"
                   onClick={() => onSelectAgent(agentId)}
-                  className="border-l border-border/70 px-3 py-2 text-left transition-colors hover:border-ring/60 hover:bg-accent/25"
+                  className="grid w-full gap-2 py-3 text-left transition-colors hover:bg-accent/20 md:grid-cols-[210px_minmax(0,1fr)_90px] md:items-start"
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="truncate font-mono text-[10px] uppercase tracking-[1.3px] text-foreground/80">{label}</p>
-                    <span className="shrink-0 font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground">{toolCount} tools</span>
+                  <div className="min-w-0 px-3">
+                    <p className="truncate font-sans text-[13px] leading-[1.35] text-foreground/86">{stripMarkdownArtifacts(label)}</p>
+                    <p className="mt-1 font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/65">{role.replace(/-/g, " ")}</p>
                   </div>
-                  <p className="mt-1 font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/70">{role.replace(/-/g, " ")}</p>
-                  <p className="mt-2 line-clamp-2 font-sans text-[12px] leading-[1.55] text-foreground/70">{content}</p>
+                  <p className="line-clamp-2 break-words px-3 font-sans text-[12px] leading-[1.55] text-foreground/68">{content}</p>
+                  <p className="px-3 font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/70 md:text-right">{toolCount} tools</p>
                 </button>
               );
             })}
@@ -204,37 +214,31 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
         </section>
       ) : null}
 
-      <section className="space-y-2 border-t border-border/60 pt-4">
+      <section className="border-t border-border/60 pt-4">
         <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Sources</p>
         {activeBucket?.citations.length ? (
-          <div className="grid gap-2 lg:grid-cols-2">
+          <div className="mt-2 divide-y divide-border/55 border-y border-border/60">
             {activeBucket.citations.map((citation, index) => (
               <a
                 key={`${citation.source}-${citation.label}-${index}`}
                 href={citation.href ?? undefined}
                 target={citation.href ? "_blank" : undefined}
                 rel={citation.href ? "noreferrer" : undefined}
-                className="border-l border-border/70 px-3 py-2 transition-colors hover:border-ring/60 hover:bg-accent/25"
+                className="grid gap-2 px-3 py-3 transition-colors hover:bg-accent/20 md:grid-cols-[minmax(0,1fr)_160px]"
               >
-                <p className="font-sans text-[13px] leading-[1.5] text-foreground/82">{citation.label}</p>
-                <p className="mt-1 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{citation.source}</p>
-                {citation.excerpt ? <p className="mt-2 line-clamp-2 font-sans text-[12px] leading-[1.5] text-muted-foreground">{citation.excerpt}</p> : null}
+                <span className="min-w-0">
+                  <span className="block break-words font-sans text-[13px] leading-[1.5] text-foreground/82">{stripMarkdownArtifacts(citation.label)}</span>
+                  {citation.excerpt ? <span className="mt-1 line-clamp-2 block break-words font-sans text-[12px] leading-[1.5] text-muted-foreground">{stripMarkdownArtifacts(citation.excerpt)}</span> : null}
+                </span>
+                <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground md:text-right">{citation.source}</span>
               </a>
             ))}
           </div>
         ) : (
-          <p className="font-sans text-[14px] text-muted-foreground">No captured sources for this agent yet.</p>
+          <p className="mt-2 font-sans text-[14px] text-muted-foreground">No captured sources for this agent yet.</p>
         )}
       </section>
     </section>
-  );
-}
-
-function MetricPill({ label, value }: { label: string; value: string }) {
-  return (
-    <span className="rounded-full border border-border/70 bg-secondary/20 px-2.5 py-1">
-      {label} {value}
-    </span>
   );
 }
 
@@ -282,17 +286,18 @@ function getTraceProgress(bucket: ReturnType<typeof buildAgentTraceBuckets>[numb
   return { value, stage: started ? "starting" : "queued" };
 }
 
-function getProgressTone(status: "idle" | "running" | "completed" | "error") {
-  switch (status) {
-    case "error":
-      return "bg-destructive/80";
-    case "completed":
-      return "bg-chart-2/80";
-    case "running":
-      return "bg-chart-1/80";
-    default:
-      return "bg-foreground/35";
+function formatElapsed(startedAt: string | null, timestamp: string, sequence: number) {
+  const start = new Date(startedAt ?? "");
+  const current = new Date(timestamp);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(current.getTime())) {
+    return String(sequence).padStart(2, "0");
   }
+
+  const totalSeconds = Math.max(0, Math.round((current.getTime() - start.getTime()) / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 function getStatusLabelTone(status: "idle" | "running" | "completed" | "error") {
