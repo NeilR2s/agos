@@ -4,8 +4,7 @@ import { Link } from "react-router-dom";
 
 import { getUserId } from "@/api/backend/client";
 import { engineClient } from "@/api/engine/client";
-import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -15,8 +14,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { TerminalSkeleton } from "@/components/ui/terminal-skeleton";
 import { TickerAutocompleteInput } from "@/components/shared/TickerAutocomplete";
 import { extractErrorMessage, formatCurrency, formatNumber } from "@/lib/format";
 import { normalizeEngineHealth, normalizeTradeDecision, type TradeDecision } from "@/data/normalizeEngine";
@@ -215,7 +212,7 @@ export function TradeWorkbench({
     setActiveStageIndex(0);
     const timer = window.setInterval(() => {
       setActiveStageIndex((index) => Math.min(index + 1, evaluationStages.length - 1));
-    }, 850);
+    }, 250);
 
     return () => window.clearInterval(timer);
   }, [evaluateMutation.isPending]);
@@ -224,9 +221,9 @@ export function TradeWorkbench({
     if (!text) return text;
     
     const keywords = [
-      { regex: /(bullish)/gi, className: "text-chart-2 font-bold" },
-      { regex: /(bearish)/gi, className: "text-destructive font-bold" },
-      { regex: /(volatility|momentum|oversold|overbought)/gi, className: "text-chart-1 font-bold" },
+      { regex: /(bullish)/gi, className: "text-chart-2 font-medium" },
+      { regex: /(bearish)/gi, className: "text-destructive font-medium" },
+      { regex: /(volatility|momentum|oversold|overbought)/gi, className: "text-chart-1 font-medium" },
     ];
 
     let segments: (string | React.ReactNode)[] = [text];
@@ -271,385 +268,348 @@ export function TradeWorkbench({
   const hasPortfolioImpact = Boolean(portfolioImpact);
 
   return (
-    <div className={cn("space-y-6", className)}>
+    <div className={cn("space-y-12", className)}>
       {showHeader ? (
-        <header className="flex flex-col gap-4 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-3">
-            <Badge variant="outline" className="border-border text-muted-foreground">
-              [ Trading Terminal ]
-            </Badge>
-            <h1 className="font-sans text-[30px] leading-[1.2]">Decision Matrix</h1>
-            <p className="max-w-[760px] font-sans text-[16px] leading-[1.5] text-muted-foreground">
-              Evaluate a ticker, inspect the rule gate, and submit manual overrides when required.
+        <header className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-1">
+            <h1 className="font-sans text-[26px] font-medium tracking-tight text-foreground">Decision Matrix</h1>
+            <p className="max-w-[700px] font-sans text-[15px] leading-relaxed text-muted-foreground/60">
+              Evaluate ticker, inspect model reasoning, and confirm safety gates.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
-            <Badge variant="outline" className="border-border text-muted-foreground">
-              {engineStatus.status}
-            </Badge>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/50">
+            <div className="flex items-center gap-2">
+              <div className={cn("size-1 rounded-full", healthQuery.isError ? "bg-destructive" : "bg-chart-2")} />
+              <span>{engineStatus.status}</span>
+            </div>
             <span>v{engineStatus.version}</span>
+            <span className="text-muted-foreground/50">|</span>
             <span>{engineStatus.model}</span>
             {decision?.latency_ms ? (
               <span className="text-chart-2">{decision.latency_ms.toFixed(0)}ms</span>
             ) : null}
-            <Link to={`/agent?ticker=${ticker}&mode=trading`} className={buttonVariants({ variant: "outline", size: "sm" })}>
-              Open in Copilot
+            <Link to={`/agent?ticker=${ticker}&mode=trading`} className="text-muted-foreground/60 hover:text-primary transition-colors">
+              [ Open in Copilot ]
             </Link>
           </div>
         </header>
       ) : null}
 
-      <Card className="overflow-visible">
-        <CardHeader>
-          <CardTitle>Action Controller</CardTitle>
-          <CardDescription>Select ticker, run evaluation, or submit manual override.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 overflow-visible">
-          <div className="space-y-2">
-            <label htmlFor={tickerInputId} className="font-sans text-[14px] text-white/70">Ticker</label>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end" onFocus={() => setIsInputFocused(true)} onBlur={() => setIsInputFocused(false)}>
-              <TickerAutocompleteInput
-                id={tickerInputId}
-                name="ticker"
-                ariaLabel="Trading ticker"
-                value={tickerInput}
-                onChange={setTickerInput}
-                onSelect={(item) => onTickerChange(item.ticker)}
-                className="w-full min-w-0 sm:flex-1"
-                inputClassName="text-white"
-                showHint={false}
-              />
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Button
-                  className="w-full whitespace-nowrap bg-white/92 font-sans text-[#050505] hover:bg-white sm:w-auto"
-                  onClick={() => {
-                    const nextTicker = tickerInput.trim().toUpperCase() || ticker;
-                    setTickerInput(nextTicker);
-                    onTickerChange(nextTicker);
-                    evaluateMutation.mutate(nextTicker);
-                  }}
-                  disabled={evaluateMutation.isPending}
-                >
-                  {evaluateMutation.isPending ? "Evaluating..." : "Run Analysis"}
-                </Button>
-
-                {decision ? (
-                  <Dialog open={isOverrideOpen} onOpenChange={setIsOverrideOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" className="w-full whitespace-nowrap border-white/10 bg-transparent text-white/60 hover:bg-white/5 hover:text-white sm:w-auto">
-                        Manual Override
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="border-border bg-background text-foreground shadow-none sm:max-w-[480px]">
-                      <DialogHeader>
-                        <DialogTitle>Manual Override</DialogTitle>
-                        <DialogDescription>
-                          All overrides are logged for {signedInUser.primary}{signedInUser.secondary ? ` / ${signedInUser.secondary}` : ""} and the current ticker context.
-                        </DialogDescription>
-                      </DialogHeader>
-
-                      <form
-                        className="space-y-4"
-                        onSubmit={(event) => {
-                          event.preventDefault();
-                          const formData = new FormData(event.currentTarget);
-                          overrideMutation.mutate({
-                            action: formData.get("action") as TradeDecision["action"],
-                            quantity: Number(formData.get("quantity") ?? 0),
-                            reason: String(formData.get("reason") ?? ""),
-                          });
-                        }}
-                      >
-                        <div className="space-y-2">
-                          <label htmlFor={actionInputId} className="font-sans text-[14px] text-white/70">Action</label>
-                          <select
-                            id={actionInputId}
-                            name="action"
-                            defaultValue={decision.action}
-                            className="flex h-10 w-full border border-border bg-transparent px-3 py-2 font-sans text-sm text-white outline-none focus:ring-2 focus:ring-ring"
-                          >
-                            <option value="BUY">BUY</option>
-                            <option value="SELL">SELL</option>
-                            <option value="HOLD">HOLD</option>
-                          </select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label htmlFor={quantityInputId} className="font-sans text-[14px] text-white/70">Quantity</label>
-                          <input
-                            id={quantityInputId}
-                            name="quantity"
-                            type="number"
-                            min="0"
-                            step="1"
-                            defaultValue={decision.quantity}
-                            required
-                            className="flex h-10 w-full border border-border bg-transparent px-3 py-2 font-sans text-sm text-white outline-none placeholder:text-white/30 focus:ring-2 focus:ring-ring"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label htmlFor={reasonInputId} className="font-sans text-[14px] text-white/70">Reason</label>
-                          <textarea
-                            id={reasonInputId}
-                            name="reason"
-                            required
-                            placeholder="Provide technical justification for the override..."
-                            className="min-h-24 w-full border border-border bg-transparent px-3 py-2 font-sans text-sm text-white outline-none placeholder:text-white/30 focus:ring-2 focus:ring-ring"
-                          />
-                        </div>
-
-                        <DialogFooter className="gap-3">
-                          <Button type="button" variant="outline" onClick={() => setIsOverrideOpen(false)}>
-                            Cancel
-                          </Button>
-                          <Button type="submit" disabled={overrideMutation.isPending}>
-                            {overrideMutation.isPending ? "Submitting..." : "Confirm Override"}
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                ) : null}
-              </div>
+      <section className="flex flex-col gap-8 border-t border-border/30 pt-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="relative flex-1 max-w-md" onFocus={() => setIsInputFocused(true)} onBlur={() => setIsInputFocused(false)}>
+            <TickerAutocompleteInput
+              id={tickerInputId}
+              name="ticker"
+              ariaLabel="Trading ticker"
+              value={tickerInput}
+              onChange={setTickerInput}
+              onSelect={(item) => onTickerChange(item.ticker)}
+              className="w-full"
+              inputClassName="bg-transparent border-x-0 border-t-0 border-b border-border/60 rounded-none px-0 h-10 font-sans text-[18px] focus-visible:ring-0 focus-visible:border-primary/50 transition-colors"
+              showHint={false}
+              placeholder="Enter ticker..."
+            />
+            <div className={cn(
+              "absolute -bottom-5 left-0 font-mono text-[9px] uppercase tracking-[1.2px] text-white/50 transition-opacity duration-200",
+              isInputFocused ? "opacity-100" : "opacity-0"
+            )}>
+              Tab to accept · Enter to evaluate
             </div>
-            {!evaluateMutation.isPending ? (
-              <div className={cn(
-                "font-mono text-[10px] uppercase tracking-[1.4px] text-white/20 transition-opacity duration-200",
-                isInputFocused ? "opacity-100" : "opacity-0"
-              )}>
-                Tab / Enter to accept · ↑ ↓ to move
-              </div>
-            ) : null}
-
           </div>
+          
+          <div className="flex items-center gap-3 mt-2 sm:mt-0">
+            <Button
+              className="h-10 px-8 bg-foreground text-background hover:bg-foreground/90 font-sans font-medium rounded-none transition-all"
+              onClick={() => {
+                const nextTicker = tickerInput.trim().toUpperCase() || ticker;
+                setTickerInput(nextTicker);
+                onTickerChange(nextTicker);
+                evaluateMutation.mutate(nextTicker);
+              }}
+              disabled={evaluateMutation.isPending}
+            >
+              {evaluateMutation.isPending ? "Evaluating..." : "Evaluate"}
+            </Button>
 
-        </CardContent>
-      </Card>
+            {decision && (
+              <Dialog open={isOverrideOpen} onOpenChange={setIsOverrideOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="h-10 border-border/40 bg-transparent text-muted-foreground hover:bg-foreground/5 hover:text-foreground rounded-none transition-colors">
+                    Override
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="border-border/40 bg-[#080808] text-foreground shadow-none sm:max-w-[480px]">
+                  <DialogHeader>
+                    <DialogTitle className="font-sans text-[20px] font-medium">Manual Override</DialogTitle>
+                    <DialogDescription className="font-sans text-[14px] text-muted-foreground/60">
+                      All overrides are logged for {signedInUser.primary} and the current ticker context.
+                    </DialogDescription>
+                  </DialogHeader>
 
-      <section className={cn("grid gap-4", compact ? "xl:grid-cols-1" : "xl:grid-cols-[minmax(0,1.5fr)_minmax(0,0.9fr)]")}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Signal Decomposition</CardTitle>
-            <CardDescription>Streaming reasoning from engine output.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
+                  <form
+                    className="space-y-6 pt-4"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const formData = new FormData(event.currentTarget);
+                      overrideMutation.mutate({
+                        action: formData.get("action") as TradeDecision["action"],
+                        quantity: Number(formData.get("quantity") ?? 0),
+                        reason: String(formData.get("reason") ?? ""),
+                      });
+                    }}
+                  >
+                    <div className="space-y-2">
+                      <label htmlFor={actionInputId} className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/50">Action</label>
+                      <select
+                        id={actionInputId}
+                        name="action"
+                        defaultValue={decision.action}
+                        className="flex h-10 w-full border border-border/40 bg-transparent px-3 py-2 font-sans text-sm text-white outline-none focus:border-primary/50 transition-colors"
+                      >
+                        <option value="BUY">BUY</option>
+                        <option value="SELL">SELL</option>
+                        <option value="HOLD">HOLD</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor={quantityInputId} className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/50">Quantity</label>
+                      <input
+                        id={quantityInputId}
+                        name="quantity"
+                        type="number"
+                        min="0"
+                        step="1"
+                        defaultValue={decision.quantity}
+                        required
+                        className="flex h-10 w-full border border-border/40 bg-transparent px-3 py-2 font-sans text-sm text-white outline-none placeholder:text-white/50 focus:border-primary/50 transition-colors"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor={reasonInputId} className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/50">Justification</label>
+                      <textarea
+                        id={reasonInputId}
+                        name="reason"
+                        required
+                        placeholder="Provide technical justification..."
+                        className="min-h-24 w-full border border-border/40 bg-transparent px-3 py-2 font-sans text-sm text-white outline-none placeholder:text-white/50 focus:border-primary/50 transition-colors"
+                      />
+                    </div>
+
+                    <DialogFooter className="gap-3">
+                      <Button type="button" variant="ghost" onClick={() => setIsOverrideOpen(false)} className="text-muted-foreground/60">
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={overrideMutation.isPending} className="bg-foreground text-background hover:bg-foreground/90">
+                        {overrideMutation.isPending ? "Submitting..." : "Confirm Override"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className={cn("grid gap-12", compact ? "xl:grid-cols-1" : "xl:grid-cols-[minmax(0,1.5fr)_minmax(0,0.9fr)]")}>
+        <div className="space-y-12">
+          <section className="space-y-8">
+            <div className="flex flex-col gap-1">
+              <h3 className="font-mono text-[10px] uppercase tracking-[2px] text-muted-foreground/50">Reasoning</h3>
+              <p className="font-sans text-[13px] text-muted-foreground/50">Signal decomposition from model output.</p>
+            </div>
+
             {decision ? (
-              <div className="flex flex-col gap-1 border-b border-border pb-6">
-                <div className={cn("font-sans text-[24px] font-medium leading-none", actionTone(decision.ai_signal.action))}>
-                  {decision.ai_signal.action}
+              <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-2">
+                  <div className={cn("font-sans text-[42px] font-medium leading-none tracking-tight", actionTone(decision.ai_signal.action))}>
+                    {decision.ai_signal.action}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-3 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground/60 tabular-nums">
+                    <span className={cn(decision.is_approved ? "text-chart-2" : "text-destructive")}>
+                      {decision.is_approved ? "Gate Approved" : "Gate Blocked"}
+                    </span>
+                    <span className="text-muted-foreground/50">·</span>
+                    <span>{(decision.ai_signal.confidence_score * 100).toFixed(1)}% confidence</span>
+                    <span className="text-muted-foreground/50">·</span>
+                    <span>{formatCurrency(decision.target_price)} target</span>
+                    <span className="text-muted-foreground/50">·</span>
+                    <span>qty {formatNumber(decision.quantity, "en-PH", 0)}</span>
+                  </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-x-2 font-sans text-[13px] text-white/50">
-                  <span>{decision.is_approved ? "Approved" : "Blocked"}</span>
-                  <span className="text-white/20">·</span>
-                  <span>{(decision.ai_signal.confidence_score * 100).toFixed(1)}% confidence</span>
-                  <span className="text-white/20">·</span>
-                  <span>{formatCurrency(decision.target_price)} target</span>
-                  <span className="text-white/20">·</span>
-                  <span>qty {formatNumber(decision.quantity, "en-PH", 0)}</span>
+
+                <div className="space-y-4">
+                  <p className="font-mono text-[10px] uppercase tracking-[2px] text-muted-foreground/50">Pipeline</p>
+                  <div className="flex items-center gap-4 font-mono text-[10px] uppercase tracking-[1px] text-muted-foreground/50">
+                    <PipelineStep label="Data" active={true} />
+                    <PipelineArrow />
+                    <PipelineStep label="AI Signal" active={true} />
+                    <PipelineArrow />
+                    <PipelineStep label="Rule Gate" active={decision.is_approved} color={decision.is_approved ? "text-chart-2" : "text-destructive"} />
+                    <PipelineArrow />
+                    <PipelineStep label="Portfolio" active={true} />
+                    <PipelineArrow />
+                    <PipelineStep label="Action" active={true} highlight={true} />
+                  </div>
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-1 border-b border-border pb-6">
-                <div className="font-sans text-[24px] font-medium leading-none text-white/10">
-                  ---
-                </div>
-                <div className="font-sans text-[13px] text-white/20">
-                  Awaiting signal decomposition...
+              <div className="flex flex-col gap-3 py-4 border-y border-border/50 px-6">
+                <div className="font-sans text-[20px] font-medium text-white/5 italic">
+                  Awaiting evaluation trigger...
                 </div>
               </div>
             )}
 
-            {decision ? (
-              <div className="space-y-4">
-                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Pipeline</p>
-                <div className="flex items-center gap-4 font-mono text-[11px] uppercase tracking-[1px]">
-                  <PipelineStep label="Data" active={true} />
-                  <PipelineArrow />
-                  <PipelineStep label="AI Signal" active={true} />
-                  <PipelineArrow />
-                  <PipelineStep label="Rule Gate" active={decision.is_approved} color={decision.is_approved ? "text-chart-2" : "text-destructive"} />
-                  <PipelineArrow />
-                  <PipelineStep label="Portfolio" active={true} />
-                  <PipelineArrow />
-                  <PipelineStep label="Action" active={true} highlight={true} />
-                </div>
-              </div>
-            ) : null}
-
-            <div className="min-h-[144px] border border-border bg-white/[0.02] p-6">
-              {!evaluateMutation.isPending && !decision ? (
-                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Awaiting evaluation trigger.</p>
-              ) : null}
-
-              {evaluateMutation.isPending ? (
+            <div className="relative min-h-[120px] pt-4">
+              {evaluateMutation.isPending && (
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="h-2 overflow-hidden border border-border/70 bg-white/[0.03]">
-                      <div
-                        className="h-full bg-white/20 transition-[width] duration-500"
-                        style={{ width: `${((activeStageIndex + 1) / evaluationStages.length) * 100}%` }}
-                      />
-                    </div>
-                    <div className="space-y-2 font-mono text-[10px] uppercase tracking-[1.4px]">
-                      {evaluationStages.map((stage, index) => {
-                        const isVisible = index <= Math.min(activeStageIndex + 1, evaluationStages.length - 1);
-                        if (!isVisible) {
-                          return null;
-                        }
+                  <div className="space-y-3 font-mono text-[11px] uppercase tracking-[1.5px]">
+                    {evaluationStages.map((stage, index) => {
+                      const isVisible = index <= Math.min(activeStageIndex + 1, evaluationStages.length - 1);
+                      if (!isVisible) return null;
 
-                        const isComplete = index < activeStageIndex;
-                        const isActive = index === activeStageIndex;
+                      const isComplete = index < activeStageIndex;
+                      const isActive = index === activeStageIndex;
 
-                        return (
-                          <div
-                            key={stage}
-                            className={cn(
-                              "flex items-center justify-between gap-3 border border-white/10 px-3 py-2",
-                              isActive ? "text-white" : isComplete ? "text-white/50" : "text-white/30"
-                            )}
-                          >
-                            <span>{isComplete ? "[x]" : isActive ? "[>]" : "[ ]"} {stage}</span>
-                            <span className={cn(isActive ? "animate-pulse text-white/50" : "text-white/20")}>{isComplete ? "done" : isActive ? "running" : "queued"}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                      return (
+                        <div
+                          key={stage}
+                          className={cn(
+                            "flex items-center justify-between gap-3 transition-colors duration-300",
+                            isActive ? "text-foreground" : isComplete ? "text-muted-foreground/60" : "text-muted-foreground/50"
+                          )}
+                        >
+                          <span>{isComplete ? "✓" : isActive ? "→" : "○"} {stage}</span>
+                          <span className={cn("text-[9px] tabular-nums", isActive ? "animate-pulse text-primary/60" : "text-muted-foreground/50")}>
+                            {isComplete ? "done" : isActive ? "running" : "queued"}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <TerminalSkeleton lines={4} label="ENGINE PIPELINE" />
                 </div>
-              ) : null}
+              )}
 
-              {displayedReasoning ? (
-                <p className="whitespace-pre-wrap font-mono text-[13px] leading-[1.6] text-white/90">
-                  <span className="mr-2 text-white/50">$</span>
+              {displayedReasoning && (
+                <p className="whitespace-pre-wrap font-sans text-[15px] leading-relaxed text-foreground/80 max-w-[640px]">
                   {highlightReasoning(displayedReasoning)}
-                  <span className="ml-1 inline-block h-4 w-2 align-middle bg-white/50 cursor-block" />
+                  <span className="ml-1 inline-block h-4 w-1 align-middle bg-primary/60 animate-pulse" />
                 </p>
-              ) : null}
+              )}
             </div>
-          </CardContent>
-        </Card>
+          </section>
+        </div>
 
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Decision</CardTitle>
-              <CardDescription>Final output and safety gate verification.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-1">
-                <div className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Ticker</div>
-                <div className="font-sans text-[20px] font-medium text-white">{decision?.ticker ?? ticker}</div>
+        <div className="space-y-12">
+          <section className="space-y-6">
+            <h3 className="font-mono text-[10px] uppercase tracking-[2px] text-muted-foreground/50">Decision Facts</h3>
+            
+            <div className="space-y-4 font-sans text-[14px]">
+              <div className="flex justify-between border-b border-border/50 pb-3">
+                <span className="text-muted-foreground/50 font-mono text-[10px] uppercase tracking-[1px]">Ticker</span>
+                <span className="text-foreground font-medium">{decision?.ticker ?? ticker}</span>
               </div>
-
-              <div className="space-y-1">
-                <div className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Action</div>
-                <div className={cn("font-sans text-[20px] font-medium", actionTone(decision?.action))}>
-                  {decision?.action ?? "---"}
-                </div>
+              <div className="flex justify-between border-b border-border/50 pb-3">
+                <span className="text-muted-foreground/50 font-mono text-[10px] uppercase tracking-[1px]">Action</span>
+                <span className={cn("font-medium", actionTone(decision?.action))}>{decision?.action ?? "---"}</span>
               </div>
-
-              <div className="space-y-2 border-y border-border py-4">
-                <div className="flex items-center gap-2">
-                  <div className={cn("size-1.5 rounded-full", decision?.is_approved ? "bg-chart-2" : "bg-destructive")} />
-                  <span className="font-sans text-[13px] text-white/70">
-                    {decision ? (decision.is_approved ? "Approved by safety gate" : "Blocked by safety gate") : "Awaiting evaluation"}
-                  </span>
-                </div>
-                {decision?.action === "HOLD" && (
-                   <div className="font-sans text-[13px] text-white/40">No order submitted</div>
-                )}
+              <div className="flex justify-between border-b border-border/50 pb-3">
+                <span className="text-muted-foreground/50 font-mono text-[10px] uppercase tracking-[1px]">Quantity</span>
+                <span className="text-foreground tabular-nums">{formatNumber(decision?.quantity ?? null, "en-PH", 0)}</span>
               </div>
-
-              <div className="space-y-3">
-                <div className="flex justify-between font-sans text-[13px]">
-                  <span className="text-white/40">Quantity</span>
-                  <span className="text-white/80">{formatNumber(decision?.quantity ?? null, "en-PH", 0)}</span>
-                </div>
-                <div className="flex justify-between font-sans text-[13px]">
-                  <span className="text-white/40">Target</span>
-                  <span className="text-white/80">{formatCurrency(decision?.target_price ?? null)}</span>
-                </div>
-                <div className="space-y-1.5 pt-2">
-                  <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">Reasoning</span>
-                  <p className="font-sans text-[13px] leading-[1.5] text-white/60">
-                    {decision?.rule_gate_reasoning ?? "Execute evaluation to populate safety traces."}
-                  </p>
-                </div>
+              <div className="flex justify-between border-b border-border/50 pb-3">
+                <span className="text-muted-foreground/50 font-mono text-[10px] uppercase tracking-[1px]">Target</span>
+                <span className="text-foreground tabular-nums">{formatCurrency(decision?.target_price ?? null)}</span>
               </div>
-            </CardContent>
-          </Card>
+              
+              <div className="space-y-2 pt-2">
+                <span className="font-mono text-[10px] uppercase tracking-[1px] text-muted-foreground/50">Safety Protocol</span>
+                <p className="text-[13px] leading-relaxed text-muted-foreground/70 italic">
+                  {decision?.rule_gate_reasoning ?? "Run evaluation to populate decision trace."}
+                </p>
+              </div>
+            </div>
+          </section>
         </div>
       </section>
 
-      <section className="space-y-4">
+      <section className="space-y-12 border-t border-border/30 pt-12">
         {hasTrace ? (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="space-y-1">
-                <CardTitle>Execution Trace</CardTitle>
-                <CardDescription>Structured audit trail returned with the decision.</CardDescription>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-1">
+                <h3 className="font-mono text-[10px] uppercase tracking-[2px] text-muted-foreground/50">Execution Trace</h3>
+                <p className="font-sans text-[13px] text-muted-foreground/50">Audit trail of the decision pipeline.</p>
               </div>
-              <Button variant="outline" size="sm" onClick={handleExportTrace} className="font-mono text-[10px] uppercase tracking-[1px]">
-                Export JSON
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-3">
+              <button
+                onClick={handleExportTrace}
+                className="font-mono text-[10px] uppercase tracking-[1px] text-muted-foreground/50 hover:text-foreground transition-colors"
+              >
+                [ Export JSON ]
+              </button>
+            </div>
+
+            <div className="flex flex-col border-t border-border/50">
               {decision?.trace?.map((step, index) => {
                 const isOpen = openTraceSteps[index] ?? false;
 
                 return (
-                  <div key={`${step.title}-${index}`} className="border border-border">
+                  <div key={`${step.title}-${index}`} className="border-b border-border/50">
                     <button
                       type="button"
                       onClick={() =>
                         setOpenTraceSteps((s) => ({ ...s, [index]: !isOpen }))
                       }
-                      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                      className="flex w-full items-center justify-between gap-4 py-4 text-left group"
                     >
-                      <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">
-                        {String(index + 1).padStart(2, "0")} / {step.title}
-                      </p>
-                      <div className="flex items-center gap-3">
-                        <span className={cn("font-mono text-[10px] uppercase tracking-[1.4px]", traceTone(step.status))}>
+                      <div className="flex items-baseline gap-6">
+                        <span className="font-mono text-[10px] text-muted-foreground/50">{String(index + 1).padStart(2, "0")}</span>
+                        <span className="font-mono text-[11px] uppercase tracking-[1.2px] text-muted-foreground group-hover:text-foreground transition-colors">{step.title}</span>
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <span className={cn("font-mono text-[10px] uppercase tracking-[1.5px] tabular-nums", traceTone(step.status))}>
                           {step.status}
                         </span>
-                        <span className="font-mono text-[10px] text-white/30">{isOpen ? "-" : "+"}</span>
+                        <span className="font-mono text-[12px] text-muted-foreground/50 group-hover:text-muted-foreground/50 transition-colors w-4 text-center">{isOpen ? "−" : "+"}</span>
                       </div>
                     </button>
 
-                    {isOpen ? (
-                      <div className="space-y-3 border-t border-border px-4 py-3">
-                        <p className="font-sans text-[14px] leading-[1.5] text-white/70">{step.detail}</p>
+                    {isOpen && (
+                      <div className="pb-6 pl-16 pr-4 space-y-4">
+                        <p className="font-sans text-[14px] leading-relaxed text-muted-foreground/80 max-w-3xl">{step.detail}</p>
 
                         {step.metrics && Object.keys(step.metrics).length ? (
-                          <div className="space-y-2 pt-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-3 pt-2">
                             {Object.entries(step.metrics).map(([key, value]) => (
-                              <div key={key} className="flex justify-between font-mono text-[11px] uppercase tracking-[1px]">
-                                <span className="text-white/30">{formatTraceMetricLabel(key)}</span>
-                                <span className="text-white/80">{formatTraceMetricValue(key, value)}</span>
+                              <div key={key} className="flex justify-between items-baseline border-b border-border/50 pb-1">
+                                <span className="font-mono text-[9px] uppercase tracking-[1px] text-muted-foreground/50">{formatTraceMetricLabel(key)}</span>
+                                <span className="font-mono text-[11px] tabular-nums text-muted-foreground/70">{formatTraceMetricValue(key, value)}</span>
                               </div>
                             ))}
                           </div>
                         ) : null}
                       </div>
-                    ) : null}
+                    )}
                   </div>
                 );
               })}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ) : null}
 
         {hasPortfolioImpact ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Risk Context</CardTitle>
-              <CardDescription>Impact on portfolio allocation and risk.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <div className="space-y-6 max-w-2xl">
+            <div className="flex flex-col gap-1">
+              <h3 className="font-mono text-[10px] uppercase tracking-[2px] text-muted-foreground/50">Risk Context</h3>
+              <p className="font-sans text-[13px] text-muted-foreground/50">Portfolio impact and allocation delta.</p>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-6">
               {Object.entries(portfolioImpact ?? {}).map(([key, value]) => {
                 const label = key.replace(/_/g, " ");
                 const formattedValue = typeof value === "number"
@@ -657,14 +617,14 @@ export function TradeWorkbench({
                   : String(value);
 
                 return (
-                  <div key={key} className="flex items-center justify-between border border-border px-4 py-3">
-                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">{label}</p>
-                    <p className="font-sans text-sm font-medium text-white/90">{formattedValue}</p>
+                  <div key={key} className="flex flex-col gap-1 border-b border-border/50 pb-4">
+                    <span className="font-mono text-[9px] uppercase tracking-[1.5px] text-muted-foreground/50">{label}</span>
+                    <span className="font-sans text-[15px] text-muted-foreground/90 font-medium">{formattedValue}</span>
                   </div>
                 );
               })}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ) : null}
       </section>
     </div>
@@ -676,7 +636,7 @@ function PipelineStep({ label, active, highlight, color }: { label: string; acti
     <div className="relative flex flex-col items-center">
        <span className={cn(
         "transition-colors",
-        active ? (highlight ? "text-white font-bold" : "text-white/80") : "text-white/20",
+        active ? (highlight ? "text-white font-medium" : "text-white/80") : "text-white/50",
         color
       )}>
         {label}
@@ -689,5 +649,5 @@ function PipelineStep({ label, active, highlight, color }: { label: string; acti
 }
 
 function PipelineArrow() {
-  return <div className="text-white/10">→</div>;
+  return <div className="text-white/50">→</div>;
 }
