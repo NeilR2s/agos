@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { buildAgentTraceBuckets, describeEvent, humanizeEventType, stripMarkdownArtifacts } from "@/features/agent/lib/traces";
+import { buildAgentTraceBuckets, describeEvent, stripMarkdownArtifacts } from "@/features/agent/lib/traces";
 import type { AgentRun, AgentSSEEvent } from "@/features/agent/types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -113,15 +113,22 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
                       isActive && "bg-accent/35"
                     )}
                   >
-                    <span className={cn("mt-0.5 h-full min-h-8 border-l", isActive ? "border-chart-1" : "border-border/70")} />
+                    <span className={cn("mt-0.5 h-full min-h-8 border-l", isActive ? "border-[#ff5f1f]" : "border-border/50")} />
                     <span className="min-w-0">
-                      <span className="block font-mono text-[10px] uppercase tracking-[1.3px] text-muted-foreground/75">{String(index + 1).padStart(2, "0")}</span>
-                      <span className="mt-1 block truncate font-sans text-[13px] leading-[1.35] text-foreground/86">{bucket.label}</span>
-                      <span className="mt-1 block truncate font-mono text-[9px] uppercase tracking-[1.15px] text-muted-foreground/65">
-                        {bucket.role.replace(/-/g, " ")} · {progress.stage} · {bucket.toolCount} tools
-                      </span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-[10px] uppercase tracking-[1.3px] text-muted-foreground/60">{String(index + 1).padStart(2, "0")}</span>
+                        <span className={cn("shrink-0 font-mono text-[9px] uppercase tracking-[1.2px]", getStatusLabelTone(bucket.status))}>{bucket.status}</span>
+                      </div>
+                      <span className={cn(
+                        "mt-1 block truncate font-sans text-[13px] leading-none",
+                        isActive ? "text-foreground" : "text-muted-foreground/80"
+                      )}>{bucket.label}</span>
+                      {isActive && (
+                        <span className="mt-2 block truncate font-mono text-[9px] uppercase tracking-[1.15px] text-muted-foreground/60">
+                          {bucket.role.replace(/-/g, " ")} · {progress.stage} · {bucket.toolCount} tools
+                        </span>
+                      )}
                     </span>
-                    <span className={cn("shrink-0 font-mono text-[9px] uppercase tracking-[1.2px]", getStatusLabelTone(bucket.status))}>{bucket.status}</span>
                   </button>
                 );
               })
@@ -161,13 +168,15 @@ export function AgentTracePanel({ events, run, selectedAgentId, onSelectAgent, s
                       const detail = stripMarkdownArtifacts(describeEvent(event));
                       return (
                         <tr key={`${event.sequence}-${event.type}`} className={cn("border-b border-border/45 last:border-b-0 hover:bg-accent/20", isSelectedAgent && "bg-accent/15")}>
-                          <td className="px-2 py-3 text-right font-mono text-[10px] uppercase tracking-[1.15px] text-muted-foreground/70 sm:px-3" title={formatDate(event.timestamp)}>
+                          <td className="px-2 py-3 text-right font-mono text-[10px] tracking-[1.15px] text-muted-foreground/50 sm:px-3" title={formatDate(event.timestamp)}>
                             {formatElapsed(runStart, event.timestamp, event.sequence)}
                           </td>
                           <td className="px-2 py-3 font-sans text-[13px] leading-[1.45] text-foreground/82 sm:px-3">
                             <span className="line-clamp-2 break-words">{stripMarkdownArtifacts(event.agentLabel ?? eventAgentId)}</span>
                           </td>
-                          <td className={cn("break-words px-2 py-3 font-mono text-[10px] uppercase tracking-[1.2px] sm:px-3", getEventLabelTone(event))}>{humanizeEventType(event.type)}</td>
+                          <td className="px-2 py-3 font-mono text-[10px] uppercase tracking-[1.2px] sm:px-3">
+                            <span className={getEventLabelTone(event)}>{event.type.replace(/_/g, ".")}</span>
+                          </td>
                           <td className="break-words px-2 py-3 font-sans text-[13px] leading-[1.55] text-foreground/78 sm:px-3">{detail}</td>
                         </tr>
                       );
@@ -318,13 +327,9 @@ function getEventLabelTone(event: AgentSSEEvent) {
     return "text-destructive";
   }
 
-  if (event.type === "agent.started" || event.type === "reasoning.step" || event.type === "tool.started") {
-    return "text-chart-1";
+  if (event.type === "agent.started" || event.type === "tool.started") {
+    return "text-[#ff5f1f]";
   }
 
-  if (event.type === "agent.completed" || event.type === "tool.completed") {
-    return "text-chart-2";
-  }
-
-  return "text-muted-foreground/75";
+  return "text-muted-foreground/50";
 }

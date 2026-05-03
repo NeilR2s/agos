@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
+import { toPng } from 'html-to-image';
 import {
     Area,
     AreaChart,
@@ -27,6 +28,7 @@ import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/compone
 import { TerminalSkeleton } from "@/components/ui/terminal-skeleton";
 import { TickerAutocompleteInput } from "@/components/shared/TickerAutocomplete";
 import { TradeWorkbench } from "@/features/trading/TradeWorkbench";
+import { exportResearchBrief } from "./lib/exportBrief";
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 import {
     extractErrorMessage,
@@ -237,6 +239,8 @@ export const ResearchView = () => {
     const [showMovingAverage50, setShowMovingAverage50] = useState(false);
     const [showRSI, setShowRSI] = useState(false);
     const [comparisonTicker] = useState<string | null>(null);
+    const [isExporting, setIsExporting] = useState(false);
+    const chartRef = useRef<HTMLDivElement>(null);
 
     const selectedTicker = (searchParams.get("ticker") ?? "TEL").toUpperCase();
     const isTradeDrawerOpen = searchParams.get("drawer") === "trade";
@@ -261,6 +265,37 @@ export const ResearchView = () => {
         const next = new URLSearchParams(searchParams);
         next.set("ticker", ticker.toUpperCase());
         setSearchParams(next, { replace: true });
+    };
+
+    const handleExport = async () => {
+        if (!overview) return;
+        setIsExporting(true);
+        
+        let chartImage = null;
+        if (chartRef.current) {
+            try {
+                chartImage = await toPng(chartRef.current, { cacheBust: true, backgroundColor: '#030303' });
+            } catch (err) {
+                console.error("Failed to capture chart image", err);
+            }
+        }
+
+        try {
+            await exportResearchBrief({
+                overview,
+                signals: researchSignals,
+                news: newsQuery.data ?? [],
+                macro: macroQuery.data ?? [],
+                financials: financialReportsQuery.data,
+                ticker: selectedTicker,
+                timestamp: formatDate(overview.lastUpdated),
+                chartImage
+            });
+        } catch (error) {
+            console.error("Export failed", error);
+        } finally {
+            setIsExporting(false);
+        }
     };
 
     const setTradeDrawerOpen = (open: boolean) => {
@@ -634,8 +669,13 @@ export const ResearchView = () => {
                             Evaluate Trade
                         </button>
                         <span className="text-white/10">·</span>
-                         <button type="button" className="hover:text-white transition-colors opacity-50 cursor-not-allowed">
-                            Export Brief
+                         <button 
+                            type="button" 
+                            className={cn("hover:text-white transition-colors", isExporting && "opacity-50 cursor-wait")}
+                            onClick={handleExport}
+                            disabled={isExporting || !overview}
+                        >
+                            {isExporting ? "Exporting..." : "Export Brief"}
                         </button>
                     </div>
                 </div>
@@ -779,7 +819,7 @@ export const ResearchView = () => {
                         </div>
                     </div>
 
-                    <div className="w-full relative h-[480px] min-w-0 bg-surface rounded-[8px] p-4">
+                    <div ref={chartRef} className="w-full relative h-[480px] min-w-0 bg-surface rounded-[8px] p-4">
                         {combinedChartData.length ? (
                             <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                                 <AreaChart
