@@ -1,10 +1,9 @@
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useMemo, useState } from "react";
-import { ClipboardDocumentIcon } from "@heroicons/react/24/outline";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 
-import { Button } from "@/components/ui/button";
+import { stripMarkdownArtifacts } from "@/features/agent/lib/traces";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { AgentSourceReference, AgentStructuredOutput } from "@/features/agent/types";
@@ -49,7 +48,6 @@ export function AgentOutputTabs({ output, markdown, traceNode }: AgentOutputTabs
   const tabBaseId = useId();
   const [activeTab, setActiveTab] = useState<OutputTab>("summary");
   const [highlightedSourceId, setHighlightedSourceId] = useState<string | null>(null);
-  const [copyStatus, setCopyStatus] = useState<{ kind: "memo" | "evidence"; ok: boolean } | null>(null);
   const sourceById = useMemo(() => new Map(output.sources.map((source) => [source.id, source])), [output.sources]);
   const tabItems = useMemo<TabItem[]>(() => {
     const items: TabItem[] = [
@@ -84,16 +82,6 @@ export function AgentOutputTabs({ output, markdown, traceNode }: AgentOutputTabs
     setActiveTab("sources");
   };
 
-  const copyText = async (kind: "memo" | "evidence", value: string) => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopyStatus({ kind, ok: true });
-    } catch {
-      setCopyStatus({ kind, ok: false });
-    }
-    window.setTimeout(() => setCopyStatus(null), 1800);
-  };
-
   const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, tab: TabItem) => {
     if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
       return;
@@ -117,13 +105,13 @@ export function AgentOutputTabs({ output, markdown, traceNode }: AgentOutputTabs
   const panelId = `${tabBaseId}-${resolvedActiveTab}-panel`;
 
   return (
-    <div className="w-full overflow-hidden rounded-[26px] border border-border/70 bg-card/55 shadow-[inset_0_1px_0_color-mix(in_oklch,var(--foreground)_5%,transparent)] backdrop-blur-xl">
-      <div className="flex flex-col gap-3 border-b border-border/70 bg-gradient-to-b from-foreground/[0.035] to-background/20 px-4 py-3 xl:flex-row xl:items-center xl:justify-between">
+    <div className="w-full">
+      <div className="flex flex-col gap-4 border-b border-border/60 pb-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="min-w-0">
-          <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-foreground/80">Run Information</p>
-          <p className="mt-1 font-sans text-[13px] leading-[1.45] text-muted-foreground/80">Structured synthesis, evidence, actions, and citations for the selected run.</p>
+          <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground">Run Information</p>
+          <p className="mt-1 font-sans text-[13px] leading-[1.45] text-muted-foreground/78">Structured synthesis, evidence, actions, and citations for the selected run.</p>
         </div>
-        <div role="tablist" aria-label="Agent output sections" className="flex flex-wrap gap-1.5 xl:justify-end">
+        <div role="tablist" aria-label="Agent output sections" className="flex max-w-full flex-wrap border-b border-border/60 xl:justify-end">
           {tabItems.map((tab) => {
             return (
               <button
@@ -138,11 +126,11 @@ export function AgentOutputTabs({ output, markdown, traceNode }: AgentOutputTabs
                 onClick={() => setActiveTab(tab.id)}
                 onKeyDown={(event) => handleTabKeyDown(event, tab)}
                 className={cn(
-                  "inline-flex items-center gap-2 rounded-full border px-3 py-2 font-mono text-[10px] uppercase tracking-[1.2px] transition-colors",
+                  "inline-flex shrink-0 items-center gap-2 border-b px-3 py-2 font-mono text-[10px] uppercase tracking-[1.2px] transition-colors",
                   resolvedActiveTab === tab.id
-                    ? "border-chart-2/35 bg-chart-2/[0.06] text-foreground"
-                    : "border-border/70 bg-secondary/20 text-muted-foreground hover:border-ring/50 hover:bg-accent/45 hover:text-foreground",
-                  tab.disabled && "cursor-not-allowed opacity-40 hover:border-border hover:text-muted-foreground"
+                    ? "border-chart-1 text-foreground"
+                    : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
+                  tab.disabled && "cursor-not-allowed opacity-40 hover:border-transparent hover:text-muted-foreground"
                 )}
               >
                 <span>{tab.label}</span>
@@ -151,17 +139,9 @@ export function AgentOutputTabs({ output, markdown, traceNode }: AgentOutputTabs
             );
           })}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => void copyText("memo", markdown)} className="rounded-full border-border/70 bg-secondary/20 text-foreground/70 hover:border-ring/50 hover:bg-accent/45">
-            <ClipboardDocumentIcon className="size-4" /> {copyStatus?.kind === "memo" ? (copyStatus.ok ? "Transcript Copied" : "Copy Failed") : "Copy Transcript"}
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => void copyText("evidence", JSON.stringify(output, null, 2))} className="rounded-full border-border/70 bg-secondary/20 text-foreground/70 hover:border-ring/50 hover:bg-accent/45">
-            <ClipboardDocumentIcon className="size-4" /> {copyStatus?.kind === "evidence" ? (copyStatus.ok ? "Audit Copied" : "Copy Failed") : "Copy Audit JSON"}
-          </Button>
-        </div>
       </div>
 
-      <div id={panelId} role="tabpanel" aria-labelledby={`${tabBaseId}-${resolvedActiveTab}`} className="px-3 py-4 md:p-5">
+      <div id={panelId} role="tabpanel" aria-labelledby={`${tabBaseId}-${resolvedActiveTab}`} className="py-5">
         {resolvedActiveTab === "summary" ? <SummaryTab output={output} onSourceClick={showSource} /> : null}
         {resolvedActiveTab === "evidence" ? <EvidenceTab output={output} sourceById={sourceById} onSourceClick={showSource} /> : null}
         {resolvedActiveTab === "recommendations" ? <RecommendationsTab output={output} sourceById={sourceById} onSourceClick={showSource} /> : null}
@@ -177,20 +157,20 @@ function SummaryTab({ output, onSourceClick }: { output: AgentStructuredOutput; 
   const firstSources = output.sources.slice(0, 4);
   const reliabilityWarnings = output.reliabilityWarnings ?? [];
   return (
-    <div className="space-y-5">
-      <section className="rounded-[22px] border border-border/70 bg-background/35 px-5 py-5 shadow-[inset_0_1px_0_color-mix(in_oklch,var(--foreground)_4%,transparent)]">
+    <div className="space-y-6">
+      <section className="border-b border-border/60 pb-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-foreground/75">Main Finding</p>
+          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Overview</p>
           <span
             className={cn(
-              "rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.2px]",
-              output.executionReady ? "border-chart-2/40 bg-chart-2/[0.06] text-chart-2" : "border-border/70 bg-secondary/20 text-muted-foreground"
+              "font-mono text-[10px] uppercase tracking-[1.2px]",
+              output.executionReady ? "text-chart-2" : "text-muted-foreground"
             )}
           >
             {output.executionReady ? "execution-ready" : "advisory only"}
           </span>
         </div>
-        <p className="mt-3 max-w-[960px] font-sans text-[18px] leading-[1.5] tracking-[-0.01em] text-foreground/95 md:text-[21px]">{plainText(output.summary)}</p>
+        <p className="mt-3 max-w-[960px] font-sans text-[18px] leading-[1.5] tracking-[-0.01em] text-foreground/95 md:text-[20px]">{plainText(output.summary)}</p>
         {firstSources.length ? (
           <div className="mt-4 flex flex-wrap gap-2">
             {firstSources.map((source) => (
@@ -202,7 +182,7 @@ function SummaryTab({ output, onSourceClick }: { output: AgentStructuredOutput; 
 
       {reliabilityWarnings.length ? <ReliabilityWarnings warnings={reliabilityWarnings} /> : null}
 
-      <div className="grid gap-3 lg:grid-cols-3">
+      <div className="grid gap-5 lg:grid-cols-3">
         <ListBlock title="Assumptions" items={output.assumptions} />
         <ListBlock title="Risks" items={output.risks} tone="risk" />
         <ListBlock title="Next Steps" items={output.nextSteps} />
@@ -236,21 +216,21 @@ function EvidenceTab({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-[18px] border border-border/70 bg-background/20 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 border-b border-border/60 pb-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Audit Logs</p>
           <p className="mt-1 font-sans text-[12px] leading-[1.5] text-muted-foreground">Filter claims, inspect support, and resolve citations.</p>
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="inline-flex w-fit overflow-hidden rounded-full border border-border/70 bg-secondary/20 p-0.5">
           {evidenceFilters.map((item) => (
             <button
               key={item.value}
               type="button"
               onClick={() => setFilter(item.value)}
               className={cn(
-                "rounded-full border px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[1.2px] transition-colors",
-                filter === item.value ? "border-ring/60 bg-accent text-foreground" : "border-border text-muted-foreground hover:border-ring/60 hover:text-foreground"
+                "rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.2px] transition-colors",
+                filter === item.value ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"
               )}
             >
               {item.label}
@@ -260,8 +240,8 @@ function EvidenceTab({
       </div>
 
       {visibleEvidence.length ? (
-          <div className="grid gap-3 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
-          <div className="space-y-2">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <div className="divide-y divide-border/55 border-y border-border/60">
             {visibleEvidence.map((item) => {
               const hasSources = item.sourceIds.length > 0;
               const isActive = item.id === activeEvidence?.id;
@@ -272,37 +252,40 @@ function EvidenceTab({
                   aria-expanded={isActive}
                   onClick={() => setActiveEvidenceId(item.id)}
                   className={cn(
-                    "w-full rounded-[18px] border px-4 py-3.5 text-left transition-colors",
+                    "grid w-full grid-cols-[4px_minmax(0,1fr)] gap-3 py-3 pr-3 text-left transition-colors",
                     !hasSources
                       ? isActive
-                        ? "border-destructive/45 bg-destructive/5"
-                        : "border-destructive/30 bg-transparent hover:bg-destructive/5"
+                        ? "bg-destructive/5"
+                        : "hover:bg-destructive/5"
                       : isActive
-                        ? "border-ring/60 bg-accent"
-                        : "border-border/80 bg-background/20 hover:border-ring/60 hover:bg-accent/60"
+                        ? "bg-accent/35"
+                        : "hover:bg-accent/20"
                   )}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
-                      <span>{item.id}</span>
-                      <span>{hasSources ? `${item.sourceIds.length} sources` : "no source link"}</span>
-                    </div>
-                    <ConfidenceBadge value={item.confidence} />
-                  </div>
-                  <h3 className="mt-3 line-clamp-2 font-sans text-[15px] leading-[1.35] text-foreground">{plainText(item.claim)}</h3>
-                  <p className="mt-2 line-clamp-2 font-sans text-[12px] leading-[1.55] text-foreground/55">{plainText(item.detail)}</p>
+                  <span className={cn("h-full min-h-16 border-l", isActive ? "border-chart-1" : hasSources ? "border-border/70" : "border-destructive/60")} />
+                  <span className="min-w-0">
+                    <span className="flex flex-wrap items-center justify-between gap-3">
+                      <span className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
+                        <span>{item.id}</span>
+                        <span>{hasSources ? `${item.sourceIds.length} sources` : "no source link"}</span>
+                      </span>
+                      <ConfidenceBadge value={item.confidence} />
+                    </span>
+                    <span className="mt-2 block line-clamp-2 font-sans text-[15px] leading-[1.35] text-foreground">{plainText(item.claim)}</span>
+                    <span className="mt-2 block line-clamp-2 font-sans text-[12px] leading-[1.55] text-foreground/55">{plainText(item.detail)}</span>
+                  </span>
                 </button>
               );
             })}
           </div>
 
-          <section className="min-h-[320px] rounded-[18px] border border-border/70 bg-background/20 px-5 py-5">
+          <section className="min-h-[320px] border-y border-border/60 py-4">
             {activeEvidence ? (
               <div className="space-y-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Selected Evidence / {activeEvidence.id}</p>
-                    <h3 className="mt-3 font-sans text-[22px] leading-[1.25] text-foreground">{plainText(activeEvidence.claim)}</h3>
+                    <h3 className="mt-3 font-sans text-[21px] font-medium leading-[1.25] tracking-[-0.02em] text-foreground">{plainText(activeEvidence.claim)}</h3>
                   </div>
                   <ConfidenceBadge value={activeEvidence.confidence} />
                 </div>
@@ -325,11 +308,9 @@ function EvidenceTab({
                 {(activeEvidence.agentIds ?? []).length ? (
                   <div>
                     <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Contributing Agents</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/75">
                       {(activeEvidence.agentIds ?? []).map((agentId) => (
-                        <span key={agentId} className="rounded-full border border-border px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
-                          {agentId.replace(/-/g, " ")}
-                        </span>
+                        <span key={agentId}>{agentId.replace(/-/g, " ")}</span>
                       ))}
                     </div>
                   </div>
@@ -357,31 +338,31 @@ function RecommendationsTab({
   onSourceClick: (sourceId: string) => void;
 }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {output.recommendations.length ? (
-        <div className={cn("grid gap-3", output.recommendations.length > 1 ? "xl:grid-cols-2" : "max-w-[980px]")}>
+        <div className="divide-y divide-border/55 border-y border-border/60">
           {output.recommendations.map((item) => {
             const supportStatus = item.supportStatus ?? (item.sourceIds.length ? "supported" : "unsupported");
             return (
               <article
                 key={item.id}
-                className={cn("rounded-[18px] border bg-background/20 px-4 py-4", supportStatus === "unsupported" ? "border-destructive/35" : "border-border/80")}
+                className={cn("grid gap-4 px-3 py-4 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]", supportStatus === "unsupported" && "border-l border-l-destructive/50")}
               >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-3">
                     <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{item.id}</p>
                     <SupportBadge value={supportStatus} />
+                    <ConfidenceBadge value={item.confidence} />
                   </div>
-                  <ConfidenceBadge value={item.confidence} />
+                  <h3 className="mt-3 font-sans text-[18px] font-medium leading-[1.35] tracking-[-0.015em] text-foreground">{plainText(item.title)}</h3>
+                  <p className="mt-2 font-sans text-[13px] leading-[1.65] text-foreground/70">{plainText(item.rationale)}</p>
                 </div>
-                <h3 className="mt-3 font-sans text-[18px] leading-[1.35] text-foreground">{plainText(item.title)}</h3>
-                <p className="mt-2 font-sans text-[13px] leading-[1.65] text-foreground/70">{plainText(item.rationale)}</p>
-                <div className="mt-4 grid gap-2">
+                <div className="grid content-start gap-2">
                   {item.supportReason ? <Callout label="Evidence Status" value={item.supportReason} tone={supportStatus === "supported" ? undefined : "risk"} /> : null}
                   <Callout label="Risk" value={item.risk} tone="risk" />
                   <Callout label="Next Action" value={item.nextAction} />
+                  <SourceChipList sourceIds={item.sourceIds} sourceById={sourceById} onSourceClick={onSourceClick} />
                 </div>
-                <SourceChipList sourceIds={item.sourceIds} sourceById={sourceById} onSourceClick={onSourceClick} />
               </article>
             );
           })}
@@ -405,16 +386,16 @@ function DecisionTable({
   onSourceClick: (sourceId: string) => void;
 }) {
   return (
-    <section className="overflow-hidden rounded-[18px] border border-border/70 bg-background/20">
-      <div className="border-b border-border px-4 py-3">
+    <section>
+      <div className="border-b border-border/60 pb-3">
         <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Decision Table</p>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse text-left">
-          <thead className="bg-muted/30">
+      <div className="border-y border-border/60">
+        <table className="w-full table-fixed border-collapse text-left">
+          <thead>
             <tr>
               {["Holding", "Status", "Finding", "Suggested Action", "Confidence", "Sources"].map((header) => (
-                <th key={header} className="border-b border-border px-4 py-3 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
+                <th key={header} className="break-words border-b border-border/60 px-3 py-3 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/75">
                   {header}
                 </th>
               ))}
@@ -422,13 +403,13 @@ function DecisionTable({
           </thead>
           <tbody>
             {rows.map((row, index) => (
-              <tr key={`${row.holding}-${index}`}>
-                <td className="border-b border-border px-4 py-3 font-sans text-[13px] text-foreground">{plainText(row.holding)}</td>
-                <td className="border-b border-border px-4 py-3 font-sans text-[13px] text-foreground/70">{plainText(row.status)}</td>
-                <td className="border-b border-border px-4 py-3 font-sans text-[13px] text-foreground/70">{plainText(row.finding)}</td>
-                <td className="border-b border-border px-4 py-3 font-sans text-[13px] text-foreground/70">{plainText(row.suggestedAction)}</td>
-                <td className="border-b border-border px-4 py-3"><ConfidenceBadge value={row.confidence} /></td>
-                <td className="border-b border-border px-4 py-3">
+              <tr key={`${row.holding}-${index}`} className="hover:bg-accent/20">
+                <td className="break-words border-b border-border/45 px-3 py-3 font-sans text-[13px] text-foreground">{plainText(row.holding)}</td>
+                <td className="break-words border-b border-border/45 px-3 py-3 font-sans text-[13px] text-foreground/70">{plainText(row.status)}</td>
+                <td className="break-words border-b border-border/45 px-3 py-3 font-sans text-[13px] text-foreground/70">{plainText(row.finding)}</td>
+                <td className="break-words border-b border-border/45 px-3 py-3 font-sans text-[13px] text-foreground/70">{plainText(row.suggestedAction)}</td>
+                <td className="border-b border-border/45 px-3 py-3"><ConfidenceBadge value={row.confidence} /></td>
+                <td className="border-b border-border/45 px-3 py-3">
                   <SourceChipList sourceIds={row.sourceIds} sourceById={sourceById} onSourceClick={onSourceClick} compact />
                 </td>
               </tr>
@@ -446,7 +427,7 @@ function SourcesTab({ sources, highlightedSourceId }: { sources: AgentSourceRefe
   }
 
   return (
-    <div className="grid gap-3 xl:grid-cols-2">
+    <div className="divide-y divide-border/55 border-y border-border/60">
       {sources.map((source) => (
         <a
           id={`agent-source-${source.id}`}
@@ -455,23 +436,25 @@ function SourcesTab({ sources, highlightedSourceId }: { sources: AgentSourceRefe
           target={source.href ? "_blank" : undefined}
           rel={source.href ? "noreferrer" : undefined}
           className={cn(
-            "block rounded-[18px] border px-4 py-4 transition-colors hover:border-ring/60 hover:bg-accent/60",
-            highlightedSourceId === source.id ? "border-ring/60 bg-accent" : "border-border/80 bg-background/20"
+            "grid gap-3 px-3 py-4 transition-colors hover:bg-accent/20 md:grid-cols-[minmax(0,1fr)_230px]",
+            highlightedSourceId === source.id && "bg-accent/35"
           )}
         >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{source.id}</p>
-            <FreshnessBadge value={source.freshness} />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{source.id}</p>
+              <FreshnessBadge value={source.freshness} />
+            </div>
+            <h3 className="mt-2 font-sans text-[15px] leading-[1.45] text-foreground">{plainText(source.label)}</h3>
+            <p className="mt-1 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{source.source} / {source.kind}</p>
+            {source.excerpt ? <p className="mt-2 font-sans text-[12px] leading-[1.55] text-foreground/55">{plainText(source.excerpt)}</p> : null}
+            {sourceFreshnessNeedsReview(source) ? (
+              <p className="mt-3 border-l border-destructive/50 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-destructive">
+                Freshness requires verification
+              </p>
+            ) : null}
           </div>
-          <h3 className="mt-3 font-sans text-[15px] leading-[1.45] text-foreground">{plainText(source.label)}</h3>
-          <p className="mt-1 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{source.source} / {source.kind}</p>
-          {source.excerpt ? <p className="mt-3 font-sans text-[12px] leading-[1.55] text-foreground/55">{plainText(source.excerpt)}</p> : null}
-          {sourceFreshnessNeedsReview(source) ? (
-            <p className="mt-3 border-l border-destructive/50 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-destructive">
-              Freshness requires verification
-            </p>
-          ) : null}
-          <div className="mt-4 grid gap-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
+          <div className="grid content-start gap-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground md:text-right">
             <span>Published: {formatDate(source.publishedAt)}</span>
             <span>Retrieved: {formatDate(source.retrievedAt)}</span>
             <span>Origin: {source.agentLabel ?? source.agentId ?? "AGOS"}</span>
@@ -496,7 +479,7 @@ function MemoTab({ markdown }: { markdown: string }) {
 
 function ReliabilityWarnings({ warnings }: { warnings: string[] }) {
   return (
-    <section className="rounded-[18px] border border-border/70 bg-background/20 px-5 py-4">
+    <section className="border-l border-destructive/50 px-4 py-1">
       <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-destructive">Evidence Audit</p>
       <ul className="mt-3 space-y-2">
         {warnings.map((warning, index) => (
@@ -511,7 +494,7 @@ function ReliabilityWarnings({ warnings }: { warnings: string[] }) {
 
 function ListBlock({ title, items, tone }: { title: string; items: string[]; tone?: "risk" }) {
   return (
-    <section className={cn("rounded-[18px] border px-4 py-4", tone === "risk" ? "border-border/70 border-l-2 border-l-destructive/50 bg-background/20" : "border-border/70 bg-background/20")}>
+    <section className={cn("border-t border-border/60 pt-4", tone === "risk" && "border-l border-l-destructive/50 pl-4")}>
       <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{title}</p>
       <ul className="mt-3 space-y-2">
         {items.map((item, index) => (
@@ -526,7 +509,7 @@ function ListBlock({ title, items, tone }: { title: string; items: string[]; ton
 
 function Callout({ label, value, tone }: { label: string; value: string; tone?: "risk" }) {
   return (
-    <div className={cn("rounded-[16px] border px-3 py-3", tone === "risk" ? "border-border/70 border-l-2 border-l-destructive/50 bg-background/20" : "border-border/70 bg-background/20")}>
+    <div className={cn("border-l border-border/70 px-3 py-1", tone === "risk" && "border-l-destructive/50")}>
       <p className="font-mono text-[10px] uppercase tracking-[1.3px] text-muted-foreground">{label}</p>
       <p className="mt-1 font-sans text-[12px] leading-[1.55] text-foreground/70">{plainText(value)}</p>
     </div>
@@ -573,16 +556,7 @@ function SourceChip({ source, onClick }: { source: AgentSourceReference; onClick
 }
 
 function plainText(value: string) {
-  return value
-    .replace(/^#{1,6}\s+/gm, "")
-    .replace(/\[([^\]]+)]\([^)]+\)/g, "$1")
-    .replace(/`([^`]+)`/g, "$1")
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/__([^_]+)__/g, "$1")
-    .replace(/\*([^*]+)\*/g, "$1")
-    .replace(/_([^_]+)_/g, "$1")
-    .replace(/\s+/g, " ")
-    .trim();
+  return stripMarkdownArtifacts(value);
 }
 
 function matchesEvidenceFilter(item: AgentStructuredOutput["evidence"][number], filter: EvidenceFilter) {
@@ -616,7 +590,7 @@ function FreshnessBadge({ value }: { value: AgentSourceReference["freshness"] })
 }
 
 function EmptyPanel({ label }: { label: string }) {
-  return <div className="rounded-[18px] border border-border/70 bg-background/20 px-5 py-5 font-sans text-[14px] leading-[1.6] text-muted-foreground">{label}</div>;
+  return <div className="border-y border-border/60 px-3 py-5 font-sans text-[14px] leading-[1.6] text-muted-foreground">{label}</div>;
 }
 
 function getConfidenceTone(value: "low" | "medium" | "high") {

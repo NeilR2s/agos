@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import { agentApi } from "@/api/backend/client";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DEFAULT_AGENT_RUN_CONFIG, AGENT_CONFIG_STORAGE_KEY } from "@/features/agent/config";
 import { AgentComposer } from "@/features/agent/components/AgentComposer";
 import { AgentOutputTabs } from "@/features/agent/components/AgentOutputTabs";
@@ -14,9 +14,9 @@ import { AgentTracePanel } from "@/features/agent/components/AgentTracePanel";
 import { AgentTranscript } from "@/features/agent/components/AgentTranscript";
 import { useAgentStream } from "@/features/agent/hooks/useAgentStream";
 import { humanizeAgentError } from "@/features/agent/lib/errors";
-import { pickDefaultAgentId } from "@/features/agent/lib/traces";
+import { pickDefaultAgentId, stripMarkdownArtifacts } from "@/features/agent/lib/traces";
 import type { AgentMessage, AgentMode, AgentRun, AgentRunConfig, AgentRunRequest, AgentSSEEvent, AgentThread, Citation } from "@/features/agent/types";
-import { formatDurationMs, formatNumber, formatShortDate } from "@/lib/format";
+import { formatDurationMs, formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const allowedModes: AgentMode[] = ["general", "research", "trading"];
@@ -486,6 +486,25 @@ export function AgentPage() {
     return ids.size;
   }, [activeRun?.usage, mergedEvents]);
 
+  const toolCount = useMemo(
+    () => mergedEvents.filter((event) => event.type === "tool.completed").length,
+    [mergedEvents]
+  );
+
+  const copyAuditArtifact = useCallback(async (label: string, value: string) => {
+    if (!value.trim()) {
+      toast.error(`${label} is not available for this run.`);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} copied.`);
+    } catch {
+      toast.error(`${label} copy failed.`);
+    }
+  }, []);
+
   const threadErrorMessage = threadId ? resolveQueryError(activeThreadQuery.error, "Thread resolution failed") : null;
   const messageErrorMessage = threadId ? resolveQueryError(messagesQuery.error, "Message retrieval failed") : null;
   const runErrorMessage = threadId ? resolveQueryError(runsQuery.error, "Run history retrieval failed") : null;
@@ -621,34 +640,57 @@ export function AgentPage() {
         }}
       >
         <DialogContent
-          className="overflow-hidden rounded-[28px] border-border bg-popover/95 p-0 shadow-none"
+          className="gap-0 overflow-hidden rounded-[18px] border-border bg-popover/95 p-0 shadow-none"
           style={{ width: activePanel === "run" ? "min(94vw, 1180px)" : "min(94vw, 1040px)", maxWidth: "none" }}
         >
-          <DialogHeader className="border-b border-border bg-background/25 px-5 py-4 pr-16 text-left">
-            <div>
-              <DialogTitle className="font-mono text-[11px] uppercase tracking-[1.4px] text-foreground">
-                {activePanel === "run" ? "Run Audit" : "Controls"}
-              </DialogTitle>
-              <DialogDescription className="mt-1 max-w-[720px] font-sans text-[13px] normal-case leading-[1.5] text-muted-foreground">
-                {activePanel === "run"
-                  ? "Audit run telemetry, worker summaries, and the event trail."
-                  : "Configure model parameters and tool capabilities."}
-              </DialogDescription>
+          <DialogHeader className="border-b border-border/70 bg-background/20 px-5 py-4 pr-16 text-left">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <DialogTitle className="font-mono text-[11px] uppercase tracking-[1.4px] text-foreground">
+                  {activePanel === "run" ? "Run Audit" : "Controls"}
+                </DialogTitle>
+                <DialogDescription className="mt-1 max-w-[720px] font-sans text-[13px] normal-case leading-[1.5] text-muted-foreground">
+                  {activePanel === "run"
+                    ? "Audit trail, worker summaries, evidence, and event trace."
+                    : "Configure model parameters and tool capabilities."}
+                </DialogDescription>
+              </div>
+
+              {activePanel === "run" ? (
+                <div className="flex flex-wrap gap-2 font-mono text-[10px] uppercase tracking-[1.25px]">
+                  <button
+                    type="button"
+                    onClick={() => void copyAuditArtifact("Transcript", activeRunAssistantMessage?.content ?? "")}
+                    className="rounded-full border border-border/70 px-3 py-1.5 text-muted-foreground transition-colors hover:border-ring/60 hover:text-foreground"
+                  >
+                    Transcript
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void copyAuditArtifact("Audit JSON", activeRunAssistantMessage?.structuredOutput ? JSON.stringify(activeRunAssistantMessage.structuredOutput, null, 2) : "")}
+                    className="rounded-full border border-border/70 px-3 py-1.5 text-muted-foreground transition-colors hover:border-ring/60 hover:text-foreground"
+                  >
+                    Audit JSON
+                  </button>
+                  <DialogClose className="rounded-full border border-border/70 px-3 py-1.5 text-muted-foreground transition-colors hover:border-ring/60 hover:text-foreground">
+                    Close
+                  </DialogClose>
+                </div>
+              ) : null}
             </div>
           </DialogHeader>
 
-          <div className={cn("scrollbar-hidden max-h-[min(82vh,900px)] overflow-y-auto", activePanel === "run" ? "p-0" : "p-5")}>
+          <div className={cn("min-h-0", activePanel === "run" ? "h-[min(82vh,780px)] overflow-hidden" : "scrollbar-hidden max-h-[min(82vh,900px)] overflow-y-auto p-5")}>
             {activePanel === "run" ? (
-              <div className="grid xl:grid-cols-[260px_minmax(0,1fr)]">
-                <aside className="border-b border-border/60 p-4 xl:border-b-0 xl:border-r xl:p-5">
+              <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] xl:grid-cols-[248px_minmax(0,1fr)] xl:grid-rows-1">
+                <aside className="flex min-h-0 flex-col border-b border-border/60 bg-background/10 p-4 xl:border-b-0 xl:border-r xl:p-5">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Run History</p>
-                      <p className="mt-1 font-sans text-[12px] leading-[1.45] text-muted-foreground/70">Select a persisted run.</p>
                     </div>
                     {runsQuery.isFetching ? <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/70">Sync</span> : null}
                   </div>
-                  <div className="agent-scrollbar mt-4 max-h-[min(64vh,620px)] space-y-1.5 overflow-y-auto pr-1">
+                  <div className="scrollbar-hidden mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
                     {availableRuns.length ? (
                       availableRuns.map((run, index) => {
                         const isActive = run.id === activeRunId;
@@ -658,16 +700,21 @@ export function AgentPage() {
                             type="button"
                             onClick={() => handleSelectRun(run.id)}
                             className={cn(
-                              "w-full rounded-[16px] border px-3 py-3 text-left transition-colors",
-                              isActive ? "border-ring/50 bg-accent/45" : "border-transparent hover:border-border/70 hover:bg-accent/25"
+                              "grid w-full grid-cols-[26px_minmax(0,1fr)] gap-3 border-b border-border/45 py-3 pr-2 text-left transition-colors last:border-b-0 hover:bg-accent/20",
+                              isActive && "bg-accent/30"
                             )}
                           >
-                            <div className="flex items-center justify-between gap-3">
-                              <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{formatRunLabel(run, index)}</p>
-                              <span className="font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/70">{run.status}</span>
-                            </div>
-                            <p className="mt-2 line-clamp-2 font-sans text-[13px] leading-[1.45] text-foreground/80">{run.summary ?? "Inspect run trace"}</p>
-                            <p className="mt-2 font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/65">{run.mode}</p>
+                            <span className={cn("h-full min-h-11 border-l", isActive ? "border-chart-1" : "border-border/70")}>
+                              <span className="sr-only">{isActive ? "Selected" : "Run"}</span>
+                            </span>
+                            <span className="min-w-0">
+                              <span className="flex items-center justify-between gap-3">
+                                <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{String(index + 1).padStart(2, "0")}</span>
+                                <span className={cn("font-mono text-[9px] uppercase tracking-[1.2px]", getRunStatusTone(run.status))}>{run.status}</span>
+                              </span>
+                              <span className="mt-2 block line-clamp-2 break-words font-sans text-[13px] leading-[1.45] text-foreground/82">{stripMarkdownArtifacts(run.summary) || "AGOS Synthesis"}</span>
+                              <span className="mt-1 block font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/65">{run.mode} · {formatDurationMs(run.latencyMs)}</span>
+                            </span>
                           </button>
                         );
                       })
@@ -677,7 +724,7 @@ export function AgentPage() {
                   </div>
                 </aside>
 
-                <div className="min-w-0 space-y-4 p-4 md:p-5">
+                <div className="scrollbar-hidden min-h-0 min-w-0 space-y-5 overflow-y-auto p-4 md:p-5">
                   <RunTelemetryStrip
                     run={activeRun}
                     isStreaming={stream.isStreaming && stream.run?.id === activeRunId}
@@ -685,6 +732,7 @@ export function AgentPage() {
                     citationCount={citations.length}
                     selectedTicker={activeRun?.selectedTicker ?? selectedTicker}
                     agentCount={agentCount}
+                    toolCount={toolCount}
                   />
 
                   {activeRunAssistantMessage?.structuredOutput ? (
@@ -734,6 +782,7 @@ function RunTelemetryStrip({
   citationCount,
   selectedTicker,
   agentCount,
+  toolCount,
 }: {
   run: AgentRun | null;
   isStreaming: boolean;
@@ -741,50 +790,42 @@ function RunTelemetryStrip({
   citationCount: number;
   selectedTicker?: string | null;
   agentCount: number;
+  toolCount: number;
 }) {
   const config = run?.config ?? {};
   const modelLabel = typeof config.modelLabel === "string" ? config.modelLabel : run?.model ?? "---";
   const thinkingLevel = typeof config.thinkingLevel === "string" ? config.thinkingLevel : "---";
   const statusLabel = error ? "error" : isStreaming ? "streaming" : run?.status ?? "idle";
-  const ttft = typeof run?.ttftMs === "number" ? `${formatNumber(run.ttftMs, "en-PH", 0)} ms` : "---";
+  const started = formatShortDate(run?.startedAt);
 
   return (
-    <section className="space-y-3 border-y border-border/60 py-3">
-      <div className="flex flex-wrap gap-1.5 font-mono text-[10px] uppercase tracking-[1.25px] text-muted-foreground">
-        <TelemetryPill label="Status" value={statusLabel} tone={error ? "error" : isStreaming ? "active" : undefined} />
-        <TelemetryPill label="Mode" value={run?.mode ?? "---"} />
-        <TelemetryPill label="Ticker" value={selectedTicker ?? run?.selectedTicker ?? "---"} />
-        <TelemetryPill label="Model" value={modelLabel} />
-        <TelemetryPill label="Agents" value={String(agentCount)} />
-        <TelemetryPill label="Thinking" value={thinkingLevel} />
-        <TelemetryPill label="Latency" value={formatDurationMs(run?.latencyMs)} />
-        <TelemetryPill label="TTFT" value={ttft} />
-        <TelemetryPill label="Sources" value={String(citationCount)} />
-        <TelemetryPill label="Started" value={formatShortDate(run?.startedAt)} />
+    <section className="space-y-3 border-b border-border/60 pb-5">
+      <div className="min-w-0">
+        <h2 className="line-clamp-2 break-words font-sans text-[22px] font-medium leading-[1.15] tracking-[-0.03em] text-foreground">
+          {stripMarkdownArtifacts(run?.summary) || "AGOS Synthesis"}
+        </h2>
+        <p className="mt-2 font-mono text-[10px] uppercase tracking-[1.25px] text-muted-foreground/75">
+          AGOS Synthesis · {run?.mode ?? "---"} · <span className={getRunStatusTone(statusLabel)}>{statusLabel}</span> · {formatDurationMs(run?.latencyMs)} · {agentCount} agents · {toolCount} tools · {citationCount} sources
+        </p>
+        <p className="mt-1 font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/55">
+          {selectedTicker ?? run?.selectedTicker ?? "No ticker"} · {modelLabel} · {thinkingLevel} thinking · Started {started}
+        </p>
       </div>
       {error ? <p className="border-l border-destructive/50 px-3 py-1.5 font-sans text-[13px] leading-[1.6] text-destructive">{error}</p> : null}
     </section>
   );
 }
 
-function TelemetryPill({ label, value, tone }: { label: string; value: string; tone?: "active" | "error" }) {
-  return (
-    <span
-      className={cn(
-        "rounded-full border px-2.5 py-1",
-        tone === "active" && "border-chart-1/40 bg-chart-1/[0.06] text-chart-1",
-        tone === "error" && "border-destructive/45 bg-destructive/10 text-destructive",
-        !tone && "border-border/70 bg-secondary/20 text-muted-foreground"
-      )}
-    >
-      {label} {value}
-    </span>
-  );
+function getRunStatusTone(status: string) {
+  if (status === "error" || status === "failed") return "text-destructive";
+  if (status === "streaming" || status === "running") return "text-chart-1";
+  if (status === "completed") return "text-chart-2";
+  return "text-muted-foreground";
 }
 
 function RunMessagePanel({ message }: { message: AgentMessage | null }) {
   return (
-    <section className="rounded-[24px] border border-border bg-card/80 px-4 py-4 md:px-5">
+    <section className="border-y border-border/60 py-4">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground">Run Information</p>
@@ -795,7 +836,7 @@ function RunMessagePanel({ message }: { message: AgentMessage | null }) {
       </div>
 
       {message?.content ? (
-        <div className="mt-4 whitespace-pre-wrap font-sans text-[14px] leading-[1.7] text-foreground/85">{message.content}</div>
+        <div className="mt-4 whitespace-pre-wrap break-words font-sans text-[14px] leading-[1.7] text-foreground/85">{stripMarkdownArtifacts(message.content)}</div>
       ) : (
         <p className="mt-4 font-sans text-[14px] leading-[1.7] text-muted-foreground">Select another run or wait for the stream to finish syncing.</p>
       )}
