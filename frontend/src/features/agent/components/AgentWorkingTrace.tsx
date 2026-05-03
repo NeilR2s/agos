@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -190,7 +190,60 @@ function getStatusBadgeTone(status: "idle" | "running" | "completed" | "error") 
     }
 }
 
+function useSmoothedProgress(targetProgress: number) {
+    const [displayProgress, setDisplayProgress] = useState(() => clampProgress(targetProgress));
+    const currentRef = useRef(displayProgress);
+    const targetRef = useRef(displayProgress);
+    const frameRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        const nextTarget = clampProgress(targetProgress);
+        targetRef.current = nextTarget;
+
+        if (frameRef.current !== null) {
+            cancelAnimationFrame(frameRef.current);
+        }
+
+        const tick = () => {
+            const current = currentRef.current;
+            const delta = targetRef.current - current;
+
+            if (Math.abs(delta) < 0.08) {
+                currentRef.current = targetRef.current;
+                setDisplayProgress(targetRef.current);
+                frameRef.current = null;
+                return;
+            }
+
+            // Ease out in tiny steps so coarse bucket updates feel continuous.
+            const next = current + delta * 0.12;
+            currentRef.current = next;
+            setDisplayProgress(next);
+            frameRef.current = requestAnimationFrame(tick);
+        };
+
+        if (Math.abs(targetRef.current - currentRef.current) < 0.08) {
+            currentRef.current = targetRef.current;
+            setDisplayProgress(targetRef.current);
+            frameRef.current = null;
+            return;
+        }
+
+        frameRef.current = requestAnimationFrame(tick);
+
+        return () => {
+            if (frameRef.current !== null) {
+                cancelAnimationFrame(frameRef.current);
+                frameRef.current = null;
+            }
+        };
+    }, [targetProgress]);
+
+    return displayProgress;
+}
+
 function DotMatrixProgress({ progress, tone, compact = false }: { progress: number; tone: "active" | "complete" | "error"; compact?: boolean }) {
+    const displayProgress = useSmoothedProgress(progress);
     const color = tone === "error" ? "var(--destructive)" : tone === "complete" ? "var(--chart-2)" : "var(--chart-1)";
     const basePattern = "radial-gradient(circle, color-mix(in oklch, var(--foreground) 13%, transparent) 0 1px, transparent 1.75px)";
     const activePattern = `radial-gradient(circle, color-mix(in oklch, ${color} 62%, transparent) 0 1px, transparent 1.75px)`;
@@ -198,7 +251,7 @@ function DotMatrixProgress({ progress, tone, compact = false }: { progress: numb
     return (
         <div className={cn("relative w-full overflow-hidden rounded-sm", compact ? "h-[11px]" : "h-[16px]")} aria-hidden="true">
             <div className="absolute inset-0 opacity-75" style={{ backgroundImage: basePattern, backgroundSize: "7px 7px" }} />
-            <div className="absolute inset-y-0 left-0 overflow-hidden" style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}>
+            <div className="absolute inset-y-0 left-0 overflow-hidden" style={{ width: `${displayProgress}%` }}>
                 <div className="h-full w-full" style={{ backgroundImage: activePattern, backgroundSize: "7px 7px" }} />
             </div>
         </div>
@@ -245,6 +298,10 @@ function AgentProgressRow({ item }: { item: BucketProgress; index: number }) {
             </div>
         </div>
     );
+}
+
+function clampProgress(value: number) {
+    return Math.min(100, Math.max(0, value));
 }
 
 function getBucketProgress(bucket: ReturnType<typeof buildAgentTraceBuckets>[number]): BucketProgress {

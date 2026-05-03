@@ -77,7 +77,7 @@ export function AgentTranscript({
         )}
       >
         {messages.length ? (
-          <div className="mx-auto w-full max-w-[920px] space-y-10 pb-8">
+          <div className="mx-auto w-full max-w-[920px] space-y-6 pb-6">
             {messages.map((message) => {
               const isAssistant = message.role === "assistant";
               const isLiveRunMessage = Boolean(isAssistant && isStreaming && message.id.startsWith("live-") && message.runId === activeRunId);
@@ -138,18 +138,21 @@ export function AgentTranscript({
                   ) : null}
 
                   {isAssistant && !message.structuredOutput && msgCitations.length > 0 ? (
-                    <div className="flex max-w-[820px] flex-wrap gap-2">
-                      {msgCitations.map((citation, index) => (
-                        <a
-                          key={`${message.id}-${citation.source}-${index}`}
-                          href={citation.href ?? undefined}
-                          target={citation.href ? "_blank" : undefined}
-                          rel={citation.href ? "noreferrer" : undefined}
-                          className="rounded-full border border-border bg-secondary/45 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground transition-colors hover:border-ring/60 hover:bg-accent hover:text-foreground"
-                        >
-                          {citation.label}
-                        </a>
-                      ))}
+                    <div className="max-w-[820px] rounded-[18px] border border-border/60 bg-background/20 px-4 py-3">
+                      <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Sources</p>
+                      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/80">
+                        {msgCitations.map((citation, index) => (
+                          <a
+                            key={`${message.id}-${citation.source}-${index}`}
+                            href={citation.href ?? undefined}
+                            target={citation.href ? "_blank" : undefined}
+                            rel={citation.href ? "noreferrer" : undefined}
+                            className="transition-colors hover:text-foreground"
+                          >
+                            {citation.label}
+                          </a>
+                        ))}
+                      </div>
                     </div>
                   ) : null}
                 </article>
