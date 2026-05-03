@@ -1,10 +1,8 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
-import { formatCurrency, formatPercent } from "@/lib/format";
 import { APP_OVERLAY_EVENT, type AppOverlayState } from "@/lib/overlay";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { Kbd } from "@/components/ui/kbd";
 import { useTickerCatalog, type TickerCatalogItem } from "@/hooks/useTickerCatalog";
 
 type TickerAutocompleteProps = {
@@ -157,20 +155,13 @@ export function TickerAutocompleteInput({
       </div>
 
       {showHint && !readOnly && !disabled ? (
-        <div className="mt-2 flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-white/55">
-          <span>Use</span>
-          <Kbd>Tab</Kbd>
-          <span>or</span>
-          <Kbd>Enter</Kbd>
-          <span>to accept</span>
-          <Kbd>↑</Kbd>
-          <Kbd>↓</Kbd>
-          <span>to move</span>
+        <div className="mt-1 flex flex-wrap items-center gap-2 font-sans text-[11px] text-white/40">
+          <span>Press Enter to select a ticker.</span>
         </div>
       ) : null}
 
       {open && suggestions.length ? (
-        <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-none border border-border-soft bg-surface shadow-2xl">
+        <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-none border border-border/50 bg-background shadow-2xl">
           {suggestions.map((item, index) => {
             const isActive = index === highlightedIndex;
 
@@ -179,8 +170,8 @@ export function TickerAutocompleteInput({
                 key={item.ticker}
                 type="button"
                 className={cn(
-                  "grid w-full grid-cols-[4.5rem_minmax(0,1fr)_5.5rem] items-center gap-4 px-4 py-3 text-left transition-colors",
-                  isActive ? "bg-white/5 text-foreground" : "text-muted-foreground hover:bg-white/[0.03] hover:text-foreground"
+                  "flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors",
+                  isActive ? "bg-white/[0.05] text-foreground" : "text-muted-foreground hover:bg-white/[0.02] hover:text-foreground"
                 )}
                 onMouseEnter={() => setHighlightedIndex(index)}
                 onMouseDown={(event) => {
@@ -188,14 +179,16 @@ export function TickerAutocompleteInput({
                   commit(item);
                 }}
               >
-                <span className="font-mono text-[12px] uppercase tracking-[1.4px] tabular-nums text-foreground">{item.ticker}</span>
-                <span className="min-w-0 truncate font-sans text-[14px] leading-[1.35] text-white/50">{item.companyName}</span>
-                <span className="flex flex-col items-end gap-0.5 text-right font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
+                <div className="flex items-center gap-3 min-w-0">
+                    <span className="font-mono text-sm uppercase tracking-[1.4px] tabular-nums text-foreground shrink-0 w-[4.5rem]">{item.ticker}</span>
+                    <span className="min-w-0 truncate font-sans text-[13px] text-white/50">{item.companyName}</span>
+                </div>
+                {/* <span className="flex flex-col items-end gap-0.5 text-right font-mono text-[10px] uppercase tracking-[1.4px] text-white/30 shrink-0">
                   <span>{formatCurrency(item.price)}</span>
-                  <span className={cn(item.changePct && item.changePct > 0 ? "text-positive/70" : item.changePct && item.changePct < 0 ? "text-negative/70" : "")}>
+                  <span className={cn(item.changePct && item.changePct > 0 ? "text-chart-2/70" : item.changePct && item.changePct < 0 ? "text-destructive/70" : "")}>
                     {formatPercent(item.changePct)}
                   </span>
-                </span>
+                </span> */}
               </button>
             );
           })}

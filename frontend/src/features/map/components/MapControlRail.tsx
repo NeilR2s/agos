@@ -13,10 +13,8 @@ type MapControlRailProps = {
   isPolygonDirty: boolean;
   objectSearchQuery: string;
   placeSearchQuery: string;
-  focusedPlaceLabel: string | null;
   searchResults: MapPlaceSearchResult[];
   searchResultsLoading: boolean;
-  searchResultsError: string | null;
   onLayerToggle: (key: keyof MapLayerState) => void;
   onQueryModeChange: (mode: QueryMode) => void;
   onObjectSearchQueryChange: (value: string) => void;
@@ -45,10 +43,8 @@ export function MapControlRail({
   isPolygonDirty,
   objectSearchQuery,
   placeSearchQuery,
-  focusedPlaceLabel,
   searchResults,
   searchResultsLoading,
-  searchResultsError,
   onLayerToggle,
   onQueryModeChange,
   onObjectSearchQueryChange,
@@ -62,160 +58,153 @@ export function MapControlRail({
   const [legendExpanded, setLegendExpanded] = useState(false);
 
   return (
-    <aside className="scrollbar-hidden flex min-h-0 flex-col gap-2 xl:h-full xl:overflow-y-auto">
-      <section className="rounded-2xl border border-border bg-card/70 p-2.5">
-        <label htmlFor="map-object-filter" className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
-          Search
-        </label>
-        <Input
-          id="map-object-filter"
-          name="map-object-filter"
-          value={objectSearchQuery}
-          onChange={(event) => onObjectSearchQueryChange(event.target.value)}
-          placeholder="FILTER OBJECTS"
-          className="mt-2 h-8 font-mono text-[10px] uppercase tracking-[1.1px]"
-        />
-        <Input
-          id="map-place-search"
-          name="map-place-search"
-          value={placeSearchQuery}
-          onChange={(event) => onPlaceSearchQueryChange(event.target.value)}
-          placeholder="RESOLVE GEOMETRY"
-          className="mt-2 h-8 font-mono text-[10px] uppercase tracking-[1.1px]"
-        />
-        {focusedPlaceLabel ? (
-          <p className="mt-2 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">Focused place: {focusedPlaceLabel}</p>
-        ) : null}
-        <div className="mt-2 space-y-1.5 border-t border-border pt-2">
-          <div className="flex items-center justify-between gap-3">
-            <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Place Matches</p>
-            {searchResultsLoading ? <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">Resolving</span> : null}
+    <aside className="agent-scrollbar flex h-full flex-col gap-8 overflow-y-auto pr-2">
+      <div className="flex flex-col gap-6">
+        <section className="flex flex-col gap-3">
+          <h3 className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/60">Search</h3>
+          <div className="space-y-2">
+            <Input
+              id="map-object-filter"
+              name="map-object-filter"
+              value={objectSearchQuery}
+              onChange={(event) => onObjectSearchQueryChange(event.target.value)}
+              placeholder="Filter objects..."
+              className="h-8 border-x-0 border-t-0 border-b border-border/40 bg-transparent px-0 font-sans text-[13px] tracking-normal focus-visible:ring-0 focus-visible:border-primary/50"
+            />
+            <Input
+              id="map-place-search"
+              name="map-place-search"
+              value={placeSearchQuery}
+              onChange={(event) => onPlaceSearchQueryChange(event.target.value)}
+              placeholder="Resolve geometry..."
+              className="h-8 border-x-0 border-t-0 border-b border-border/40 bg-transparent px-0 font-sans text-[13px] tracking-normal focus-visible:ring-0 focus-visible:border-primary/50"
+            />
           </div>
-          {searchResultsError ? <p className="font-sans text-[13px] leading-[1.5] text-muted-foreground">{searchResultsError}</p> : null}
-          <div className="scrollbar-hidden max-h-[112px] space-y-1.5 overflow-y-auto xl:max-h-[124px]">
-            {searchResults.length ? (
-              searchResults.map((result) => (
-                <button
-                  key={result.id}
-                  type="button"
-                  onClick={() => onSelectSearchResult(result)}
-                  className="w-full rounded-xl border border-border px-2.5 py-2 text-left transition-colors hover:border-ring/60 hover:bg-accent/70"
-                >
-                  <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{result.region ?? result.country ?? "PH"}</p>
-                  <p className="mt-1 font-sans text-[13px] text-foreground">{result.label}</p>
-                </button>
-              ))
-            ) : placeSearchQuery.trim().length >= 2 && !searchResultsLoading && !searchResultsError ? (
-              <p className="font-sans text-[13px] leading-[1.5] text-muted-foreground">Zero place matches returned.</p>
-            ) : (
-              <p className="font-sans text-[12px] leading-[1.5] text-muted-foreground">Buffer: 2 chars to resolve.</p>
-            )}
+          
+          <div className="mt-1 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/40">Matches</span>
+              {searchResultsLoading && <span className="animate-pulse font-mono text-[9px] uppercase tracking-[1px] text-primary/60">Resolving</span>}
+            </div>
+            
+            <div className="space-y-1">
+              {searchResults.length ? (
+                searchResults.map((result) => (
+                  <button
+                    key={result.id}
+                    type="button"
+                    onClick={() => onSelectSearchResult(result)}
+                    className="group flex w-full flex-col py-1.5 text-left transition-colors hover:text-primary"
+                  >
+                    <span className="font-mono text-[9px] uppercase tracking-[1px] text-muted-foreground/50 group-hover:text-primary/60">{result.region ?? result.country ?? "PH"}</span>
+                    <span className="font-sans text-[13px] text-foreground/80 group-hover:text-foreground">{result.label}</span>
+                  </button>
+                ))
+              ) : placeSearchQuery.trim().length >= 2 && !searchResultsLoading ? (
+                <p className="font-sans text-[12px] text-muted-foreground/40 italic">Zero results.</p>
+              ) : (
+                <p className="font-sans text-[12px] text-muted-foreground/30">Buffer: 2 chars</p>
+              )}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="rounded-2xl border border-border bg-card/70 p-2.5">
-        <div className="flex items-center justify-between gap-3">
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Layers</p>
-          <Button type="button" variant="outline" size="xs" onClick={onResetView}>
-            Home
-          </Button>
-        </div>
-        <div className="mt-2 grid gap-1">
-          {layerLabels.map((layer) => (
-            <button
-              key={layer.key}
-              type="button"
-              onClick={() => onLayerToggle(layer.key)}
-              className={[
-                "flex items-center justify-between rounded-xl border px-2.5 py-2 text-left transition-colors",
-                layerState[layer.key] ? "border-ring/60 bg-accent text-foreground" : "border-border text-muted-foreground hover:text-foreground",
-              ].join(" ")}
-            >
-              <span className="font-mono text-[11px] uppercase tracking-[1.2px]">{layer.label}</span>
-              <span className="font-sans text-[12px]">{layerState[layer.key] ? "ON" : "OFF"}</span>
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/60">Layers</h3>
+            <button onClick={onResetView} className="font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/40 hover:text-primary transition-colors">
+              [ Reset View ]
             </button>
-          ))}
-        </div>
-      </section>
+          </div>
+          <div className="flex flex-col">
+            {layerLabels.map((layer) => (
+              <button
+                key={layer.key}
+                type="button"
+                onClick={() => onLayerToggle(layer.key)}
+                className="flex items-center justify-between py-2 text-left group"
+              >
+                <span className={layerState[layer.key] ? "font-mono text-[11px] uppercase tracking-[1.5px] text-foreground" : "font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground/40 group-hover:text-muted-foreground/70"}>
+                  {layer.label}
+                </span>
+                <div className={`h-1.5 w-1.5 rounded-full ${layerState[layer.key] ? "bg-primary shadow-[0_0_8px_rgba(var(--primary),0.6)]" : "bg-muted-foreground/20"}`} />
+              </button>
+            ))}
+          </div>
+        </section>
 
-      <section className="rounded-2xl border border-border bg-card/70 p-2.5">
-        <div className="flex items-center justify-between gap-3">
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Query Mode</p>
-          <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/75">{queryLabel}</span>
-        </div>
-        <div className="mt-2 grid grid-cols-2 gap-1.5">
-          {(["bbox", "polygon"] as const).map((mode) => (
-            <Button
-              key={mode}
-              type="button"
-              variant={queryMode === mode ? "default" : "outline"}
-              size="sm"
-              onClick={() => onQueryModeChange(mode)}
-            >
-              {mode.toUpperCase()}
-            </Button>
-          ))}
-        </div>
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/60">Query Mode</h3>
+            <span className="font-mono text-[9px] text-muted-foreground/40 tabular-nums">{queryLabel}</span>
+          </div>
+          <div className="flex gap-1 border border-border/40 p-0.5">
+            {(["bbox", "polygon"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => onQueryModeChange(mode)}
+                className={`flex-1 py-1 font-mono text-[10px] uppercase tracking-[1.2px] transition-colors ${
+                  queryMode === mode ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted/10"
+                }`}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
 
-        <div className="mt-2 space-y-1.5 border-t border-border pt-2 text-muted-foreground">
-          <p className="font-sans text-[12px] leading-[1.5]">{queryMode === "bbox" ? "Viewport drives query." : "Draft geometry on-map, then apply it to refresh results."}</p>
-
-          {queryMode === "polygon" ? (
-            <div className="grid gap-2 pt-2">
-              <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">Draft vertices: {polygonDraftCount}</span>
-              {isPolygonCommitted ? (
-                <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">Committed query: {isPolygonDirty ? "Draft changed" : "In sync"}</span>
-              ) : null}
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={onUndoPolygonVertex} disabled={polygonDraftCount === 0}>
+          {queryMode === "polygon" && (
+            <div className="mt-1 space-y-3">
+              <div className="flex justify-between font-mono text-[9px] uppercase tracking-[1px] text-muted-foreground/50">
+                <span>Vertices: {polygonDraftCount}</span>
+                {isPolygonCommitted && <span>{isPolygonDirty ? "Modified" : "Synced"}</span>}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" size="xs" onClick={onUndoPolygonVertex} disabled={polygonDraftCount === 0} className="h-7 text-[10px] tracking-tighter">
                   Undo Vertex
                 </Button>
+                <Button variant="outline" size="xs" onClick={onClearPolygon} disabled={polygonDraftCount === 0 && !isPolygonCommitted} className="h-7 text-[10px] tracking-tighter">
+                  Clear
+                </Button>
                 <Button
-                  type="button"
                   variant="default"
-                  size="sm"
+                  size="xs"
                   onClick={onCompletePolygon}
                   disabled={polygonDraftCount < 3}
+                  className="col-span-2 h-7 text-[10px] tracking-wider"
                 >
-                  {isPolygonCommitted ? (isPolygonDirty ? "Apply Draft" : "Refresh Query") : "Commit Polygon"}
-                </Button>
-                <Button type="button" variant="outline" size="sm" onClick={onClearPolygon} disabled={polygonDraftCount === 0 && !isPolygonCommitted}>
-                  Clear
+                  {isPolygonCommitted ? (isPolygonDirty ? "Apply Changes" : "Refresh Query") : "Commit Geometry"}
                 </Button>
               </div>
             </div>
-          ) : null}
-        </div>
-      </section>
+          )}
+        </section>
 
-      <section className="rounded-2xl border border-border bg-card/70 p-2.5">
-        <div className="flex items-center justify-between gap-3">
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Legend</p>
-          <Button type="button" variant="outline" size="xs" onClick={() => setLegendExpanded((current) => !current)}>
-            {legendExpanded ? "Hide" : "Show"}
-          </Button>
-        </div>
-        {legendExpanded ? (
-          <div className="mt-2 grid gap-1.5 text-muted-foreground">
-            {[
-              ["Solid nodes", "Operational assets"],
-              ["Hollow nodes", "Contextual events"],
-              ["Solid lines", "Topology and network links"],
-              ["Dashed lines", "Temporal movement tracks"],
-              ["Polygon overlay", "Active spatial query geometry"],
-              ["Handle vertices", "Editable draft vertices"],
-            ].map(([label, detail]) => (
-            <div key={label} className="rounded-xl border border-border px-2.5 py-2">
-                <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{label}</p>
-                <p className="mt-1 font-sans text-[13px] leading-[1.5] text-muted-foreground">{detail}</p>
-              </div>
-            ))}
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/60">Legend</h3>
+            <button onClick={() => setLegendExpanded(!legendExpanded)} className="font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/40 hover:text-primary transition-colors">
+              {legendExpanded ? "[ Hide ]" : "[ Show ]"}
+            </button>
           </div>
-        ) : (
-          <p className="mt-2 font-sans text-[12px] leading-[1.5] text-muted-foreground">Toggle semantics.</p>
-        )}
-      </section>
+          {legendExpanded && (
+            <div className="space-y-4 pt-1">
+              {[
+                ["●", "Operational assets"],
+                ["○", "Contextual events"],
+                ["—", "Topology links"],
+                ["--", "Movement tracks"],
+                ["■", "Active spatial query"],
+              ].map(([symbol, detail]) => (
+                <div key={detail} className="flex items-start gap-3">
+                  <span className="w-4 font-mono text-[11px] text-primary/80">{symbol}</span>
+                  <span className="font-sans text-[12px] leading-tight text-muted-foreground/70">{detail}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </aside>
   );
 }

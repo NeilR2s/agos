@@ -63,30 +63,30 @@ const calibrateBaseMapStyle = (map: maplibregl.Map) => {
     const id = layer.id.toLowerCase();
 
     if (layer.type === "background") {
-      map.setPaintProperty(layer.id, "background-color", "#050505");
+      map.setPaintProperty(layer.id, "background-color", "#030303");
       return;
     }
 
     if (layer.type === "fill") {
       if (id.includes("water")) {
-        map.setPaintProperty(layer.id, "fill-color", "#080b0d");
+        map.setPaintProperty(layer.id, "fill-color", "#080a0c");
         return;
       }
 
-      map.setPaintProperty(layer.id, "fill-color", "#181a1c");
-      map.setPaintProperty(layer.id, "fill-opacity", id.includes("landcover") || id.includes("landuse") ? 0.42 : 0.72);
+      map.setPaintProperty(layer.id, "fill-color", "#0e1012");
+      map.setPaintProperty(layer.id, "fill-opacity", id.includes("landcover") || id.includes("landuse") ? 0.35 : 0.65);
       return;
     }
 
     if (layer.type === "line") {
-      map.setPaintProperty(layer.id, "line-color", id.includes("road") || id.includes("boundary") ? "#4e545a" : "#32373c");
-      map.setPaintProperty(layer.id, "line-opacity", 0.55);
+      map.setPaintProperty(layer.id, "line-color", id.includes("road") || id.includes("boundary") ? "#2a2e32" : "#1a1e22");
+      map.setPaintProperty(layer.id, "line-opacity", 0.4);
       return;
     }
 
     if (layer.type === "symbol") {
-      map.setPaintProperty(layer.id, "text-color", "#929aa4");
-      map.setPaintProperty(layer.id, "text-halo-color", "#050505");
+      map.setPaintProperty(layer.id, "text-color", "#525a64");
+      map.setPaintProperty(layer.id, "text-halo-color", "#030303");
       map.setPaintProperty(layer.id, "text-halo-width", 1);
     }
   });
@@ -516,23 +516,28 @@ export function MapCanvas({
   }, [focusTarget]);
 
   return (
-    <div className="relative min-h-[420px] flex-1 overflow-hidden bg-card md:min-h-[520px] xl:min-h-0">
-      <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(180deg,var(--background)_0%,transparent_16%,transparent_78%,color-mix(in_oklch,var(--background)_82%,transparent)_100%)]" aria-hidden="true" />
-      <div className="absolute left-3 top-3 z-20 rounded-2xl border border-border bg-background/90 px-3 py-2 backdrop-blur-xl">
-        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Map Surface</p>
-        <p className="mt-1 font-sans text-[13px] text-muted-foreground">
-          {queryMode === "bbox" ? "Viewport query active" : "Polygon drawing active"}
-        </p>
+    <div className="relative min-h-[420px] flex-1 overflow-hidden bg-[#030303] md:min-h-[520px] xl:min-h-0">
+      <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(180deg,rgba(3,3,3,1)_0%,transparent_12%,transparent_85%,rgba(3,3,3,0.8)_100%)]" aria-hidden="true" />
+      
+      <div className="absolute left-6 top-6 z-20 flex flex-col gap-1">
+        <span className="font-mono text-[9px] uppercase tracking-[2px] text-muted-foreground/30">
+          Geospatial Surface
+        </span>
+        <span className="font-sans text-[12px] text-muted-foreground/50">
+          {queryMode === "bbox" ? "Active Viewport Filter" : "Spatial Geometry Definition"}
+        </span>
       </div>
+
       {hoverState ? (
         <div
-          className="pointer-events-none absolute z-30 rounded-2xl border border-border bg-popover/95 px-3 py-2 backdrop-blur-xl"
-          style={{ left: Math.min(hoverState.x + 18, Math.max(24, tooltipWidth - 180)), top: Math.max(16, hoverState.y + 18) }}
+          className="pointer-events-none absolute z-50 flex flex-col gap-0.5 border border-white/10 bg-[#080808]/90 px-2 py-1.5 backdrop-blur-md"
+          style={{ left: Math.min(hoverState.x + 16, Math.max(16, tooltipWidth - 160)), top: Math.max(16, hoverState.y + 16) }}
         >
-          <p className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{hoverState.kind}</p>
-          <p className="mt-1 font-sans text-[13px] text-foreground">{hoverState.label}</p>
+          <span className="font-mono text-[8px] uppercase tracking-[1px] text-primary/60">{hoverState.kind}</span>
+          <span className="font-sans text-[12px] text-foreground/90 whitespace-nowrap">{hoverState.label}</span>
         </div>
       ) : null}
+      
       <div ref={containerRef} className={cn("h-[420px] w-full md:h-[520px] xl:h-full", queryMode === "polygon" && "cursor-crosshair")} />
     </div>
   );

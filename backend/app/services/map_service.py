@@ -273,3 +273,90 @@ async def filter_map_features(*, db: CosmosDB, search: str, bounds: BBox | None 
         "events": filtered_events,
         "timeline": load_timeline(filtered_tracks, filtered_events),
     }
+
+
+async def get_object_detail(db: CosmosDB, object_type: str, object_id: str) -> dict[str, Any] | None:
+    state = await load_map_state(db)
+    assets = state["assets"]
+    zones = state["zones"]
+    connections = expand_connections(assets, state["connections"])
+    tracks = state["tracks"]
+    events = state["events"]
+
+    result: dict[str, Any] = {
+        "selection": {"type": object_type, "id": object_id},
+        "asset": None,
+        "zone": None,
+        "connection": None,
+        "track": None,
+        "event": None,
+        "relatedAssets": [],
+        "relatedZones": [],
+        "relatedConnections": [],
+        "relatedTracks": [],
+        "relatedEvents": [],
+    }
+
+    if object_type == "asset":
+        asset = next((a for a in assets if a["id"] == object_id), None)
+        if not asset:
+            return None
+        result["asset"] = asset
+        result["relatedZones"] = [z for z in zones if z["id"] == asset.get("zoneId")]
+        result["relatedTracks"] = [t for t in tracks if t["assetId"] == object_id]
+        result["relatedEvents"] = [e for e in events if e.get("assetId") == object_id]
+        
+        # Connections where this asset is source or target
+        asset_conns = [c for c in connections if c["sourceId"] == object_id or c["targetId"] == object_id]
+        result["relatedConnections"] = asset_conns
+        
+        # Related assets via connections
+        related_asset_ids = {c["sourceId"] for c in asset_conns} | {c["targetId"] for c in asset_conns}
+        related_asset_ids.discard(object_id)
+        result["relatedAssets"] = [a for a in assets if a["id"] in related_asset_ids]
+
+    elif object_type == "zone":
+        zone = next((z for z in zones if z["id"] == object_id), None)
+        if not zone:
+            return None
+        result["zone"] = zone
+        zone_ring = close_polygon(zone["coordinates"])
+        
+        # Assets in zone
+        result["relatedAssets"] = [a for a in assets if point_in_polygon(a["location"], zone_ring) or a.get("zoneId") == object_id]
+        # Events in zone
+        result["relatedEvents"] = [e for e in events if point_in_polygon(e["location"], zone_ring) or e.get("zoneId") == object_id]
+        # Tracks passing through zone
+        result["relatedTracks"] = [t for t in tracks if any(point_in_polygon(p["location"], zone_ring) for p in t["points"])]
+
+    elif object_type == "connection":
+        conn = next((c for c in connections if c["id"] == object_id), None)
+        if not conn:
+            return None
+        result["connection"] = conn
+        result["relatedAssets"] = [a for a in assets if a["id"] in {conn["sourceId"], conn["targetId"]}]
+
+    elif object_type == "event":
+        event = next((e for e in events if e["id"] == object_id), None)
+        if not event:
+            return None
+        result["event"] = event
+        if event.get("assetId"):
+            result["relatedAssets"] = [a for a in assets if a["id"] == event["assetId"]]
+        if event.get("zoneId"):
+            result["relatedZones"] = [z for z in zones if z["id"] == event["zoneId"]]
+
+    elif object_type == "track":
+        track = next((t for t in tracks if t["id"] == object_id), None)
+        if not track:
+            return None
+        result["track"] = track
+        if track.get("assetId"):
+            result["relatedAssets"] = [a for a in assets if a["id"] == track["assetId"]]
+            # Related events for this track's asset
+            result["relatedEvents"] = [e for e in events if e.get("assetId") == track["assetId"]]
+
+    else:
+        return None
+
+    return result

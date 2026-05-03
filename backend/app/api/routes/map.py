@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from app.core.config import settings
 from app.db.cosmos import CosmosDB, get_db
-from app.services.map_service import BBox, close_polygon, filter_map_features
+from app.services.map_service import BBox, close_polygon, filter_map_features, get_object_detail
 
 router = APIRouter()
 
@@ -75,3 +75,15 @@ async def search_places(query: str = Query(..., min_length=2), limit: int = Quer
             if feature.get("lon") is not None and feature.get("lat") is not None
         ]
     }
+
+
+@router.get("/objects/{object_type}/{object_id}")
+async def get_map_object_detail(
+    object_type: str,
+    object_id: str,
+    db: CosmosDB = Depends(get_db),
+):
+    detail = await get_object_detail(db, object_type, object_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail="Object not found")
+    return detail

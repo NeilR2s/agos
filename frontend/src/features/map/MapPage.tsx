@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { mapApi } from "@/api/backend/client";
-import { Badge } from "@/components/ui/badge";
 import { MapCanvas } from "./components/MapCanvas";
 import { MapControlRail } from "./components/MapControlRail";
 import { MapDetailRail } from "./components/MapDetailRail";
@@ -334,45 +333,46 @@ export function MapPage() {
   };
 
   return (
-    <div className="min-h-dvh bg-background px-2 py-2 text-foreground lg:h-dvh lg:overflow-hidden lg:px-3 lg:py-3">
-      <div className="mx-auto flex h-full max-w-[1920px] flex-col gap-2">
-        <section className="rounded-2xl border border-border bg-card/55 px-3 py-2.5 lg:px-4">
-          <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
-            <div className="min-w-0 flex flex-wrap items-center gap-x-3 gap-y-2">
-              <Badge variant="outline" className="border-border text-muted-foreground">
-                [ Geospatial Lab ]
-              </Badge>
-              <h1 className="font-sans text-[30px] leading-[1.2]">Infrastructure / Vector / Event</h1>
-              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
-                <span>{queryMode === "bbox" ? "Viewport Mode" : "Polygon Mode"}</span>
-                <span>/</span>
-                <span>{playing ? "Temporal Playback" : "Static View"}</span>
-                <span>/</span>
-                <span className="max-w-[220px] truncate text-foreground/80">{selectionSummaryLabel}</span>
-                <span>/</span>
-                <span className="max-w-[220px] truncate">{summary.activeTimestamp.replace("T", " ").replace("Z", " UTC")}</span>
-                {focusedPlaceLabel ? <span className="max-w-[180px] truncate">/ {focusedPlaceLabel}</span> : null}
-                {isBackgroundMapRefresh ? <span className="text-chart-3">/ syncing</span> : null}
-              </div>
+    <div className="min-h-dvh bg-[#030303] px-4 py-3 text-foreground lg:h-dvh lg:overflow-hidden lg:px-6">
+      <div className="mx-auto flex h-full max-w-[2000px] flex-col gap-6">
+        <header className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[11px] uppercase tracking-[2px] text-muted-foreground/60">
+                Geospatial Lab
+              </span>
+              <span className="h-3 w-px bg-border/40" />
+              <h1 className="font-sans text-[26px] font-medium leading-none tracking-tight">
+                Infrastructure / Vector / Event
+              </h1>
             </div>
-
-            <div className="grid grid-cols-4 gap-1.5 xl:min-w-[300px]">
-              {[
-                ["Assets", featureData.assets.length],
-                ["Zones", featureData.zones.length],
-                ["Events", activeEvents.length],
-                ["Tracks", tracks.filter((track) => track.visibleCoordinates.length >= 2).length],
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-xl border border-border bg-secondary/30 px-2.5 py-2">
-                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{label}</p>
-                  <p className="mt-0.5 font-sans text-[18px] text-foreground">{value}</p>
-                </div>
-              ))}
+            
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/50">
+              <span className="text-foreground/40">{queryMode === "bbox" ? "Viewport Mode" : "Polygon Mode"}</span>
+              <span className="text-foreground/40">{playing ? "Temporal Playback" : "Static View"}</span>
+              <span className="text-foreground/70">{selectionSummaryLabel}</span>
+              <span>{summary.activeTimestamp.replace("T", " ").replace("Z", " UTC")}</span>
+              {focusedPlaceLabel ? <span className="text-primary/70">/ {focusedPlaceLabel}</span> : null}
+              {isBackgroundMapRefresh ? <span className="animate-pulse text-chart-3">syncing</span> : null}
             </div>
           </div>
-        </section>
 
-        <section className="grid min-h-0 flex-1 gap-2 xl:grid-cols-[220px_minmax(0,1fr)] xl:items-stretch">
+          <div className="flex items-center gap-8 xl:mb-1">
+            {[
+              ["Assets", featureData.assets.length],
+              ["Zones", featureData.zones.length],
+              ["Events", activeEvents.length],
+              ["Tracks", tracks.filter((track) => track.visibleCoordinates.length >= 2).length],
+            ].map(([label, value]) => (
+              <div key={label} className="flex items-baseline gap-2">
+                <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground/40">{label}</span>
+                <span className="font-mono text-[16px] text-foreground/90">{value}</span>
+              </div>
+            ))}
+          </div>
+        </header>
+
+        <section className="grid min-h-0 flex-1 gap-6 xl:grid-cols-[200px_minmax(0,1fr)] xl:items-stretch">
           <div className="order-2 min-h-0 xl:order-1 xl:overflow-hidden">
             <MapControlRail
               layerState={layerState}
@@ -383,10 +383,8 @@ export function MapPage() {
               isPolygonDirty={isPolygonDirty}
               objectSearchQuery={objectSearchQuery}
               placeSearchQuery={placeSearchQueryValue}
-              focusedPlaceLabel={focusedPlaceLabel}
               searchResults={placeSearchQuery.data ?? []}
               searchResultsLoading={placeSearchQuery.isFetching}
-              searchResultsError={placeSearchQuery.isError ? (placeSearchQuery.error instanceof Error ? placeSearchQuery.error.message : "Place search failed") : null}
               onLayerToggle={handleLayerToggle}
               onQueryModeChange={handleQueryModeChange}
               onObjectSearchQueryChange={setObjectSearchQuery}
@@ -399,22 +397,14 @@ export function MapPage() {
             />
           </div>
 
-          <div className="relative order-1 flex min-w-0 flex-col gap-2 xl:order-2 xl:min-h-0">
+          <div className="relative order-1 flex min-w-0 flex-1 flex-col gap-4 xl:order-2 xl:min-h-0">
             {featureQuery.isError ? (
-              <section className="rounded-2xl border border-border bg-card px-4 py-3">
-                <p className="font-sans text-[14px] leading-[1.6] text-muted-foreground">
-                  {featureQuery.error instanceof Error ? featureQuery.error.message : "Map data request failed."}
-                </p>
-              </section>
+              <div className="border border-destructive/30 bg-destructive/5 px-4 py-2 text-[12px] text-destructive/80">
+                {featureQuery.error instanceof Error ? featureQuery.error.message : "Map data request failed."}
+              </div>
             ) : null}
 
-            {isInitialMapLoad ? (
-              <section className="rounded-2xl border border-border bg-card px-4 py-3">
-                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Resolving map state...</p>
-              </section>
-            ) : null}
-
-            <div className="relative flex min-w-0 flex-1 flex-col gap-0 overflow-hidden rounded-3xl border border-border bg-card/40 xl:min-h-0">
+            <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden border border-border/40 bg-card/10 xl:min-h-0">
               <MapCanvas
                 assets={featureData.assets}
                 zones={featureData.zones}
@@ -438,19 +428,21 @@ export function MapPage() {
                 onUpdatePolygonVertex={handleUpdatePolygonVertex}
               />
 
-              <MapTimeline
-                timestamps={timeline}
-                activeIndex={activeTimelineIndex}
-                playing={playing}
-                windowSize={activeTimeWindow}
-                onIndexChange={setTimelineIndex}
-                onTogglePlayback={() => setPlaying((current) => !current)}
-                onWindowSizeChange={setTimeWindow}
-              />
+              <div className="absolute inset-x-0 bottom-0 z-30">
+                <MapTimeline
+                  timestamps={timeline}
+                  activeIndex={activeTimelineIndex}
+                  playing={playing}
+                  windowSize={activeTimeWindow}
+                  onIndexChange={setTimelineIndex}
+                  onTogglePlayback={() => setPlaying((current) => !current)}
+                  onWindowSizeChange={setTimeWindow}
+                />
+              </div>
 
               <MapDetailRail
                 key={selection ? `${selection.type}:${selection.id}` : "none"}
-                className="xl:absolute xl:inset-y-0 xl:right-0 xl:w-[320px] xl:border-l"
+                className="xl:absolute xl:inset-y-0 xl:right-0 xl:z-40 xl:w-[340px] xl:border-l"
                 open={inspectorOpen}
                 selection={selection}
                 detail={detailQuery.data ?? null}
