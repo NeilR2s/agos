@@ -91,64 +91,15 @@ export function AgentWorkingTrace({ events, isStreaming, selectedAgentId, onSele
 
             {expanded ? (
                 <div className="divide-y divide-border/45 border-t border-border/70 bg-background/5">
-                    {buckets.map((bucket, index) => {
-                        const latest = bucket.events[bucket.events.length - 1];
-                        const isSelected = bucket.agentId === selectedAgentId;
-                        const highlights = bucket.events
-                            .filter((event) => event.type !== "message.delta")
-                            .slice(-2)
-                            .map((event) => stripMarkdownArtifacts(describeEvent(event)));
-                        const bucketProgress = getBucketProgress(bucket);
-                        const isRunning = bucket.status === "running";
-
-                        return (
-                            <button
-                                key={bucket.agentId}
-                                type="button"
-                                onClick={() => onSelectAgent(bucket.agentId)}
-                                className={cn(
-                                    "grid w-full gap-3 py-3 pl-4 pr-3 text-left transition-colors md:grid-cols-[140px_minmax(0,1fr)_auto] md:items-start md:pl-5 md:pr-4",
-                                    getBucketRowTone(bucket.status, isSelected)
-                                )}
-                            >
-                                <div className="min-w-0">
-                                    <p className="truncate font-sans text-[13px] leading-[1.35] text-foreground/86">{bucket.role.replace(/-/g, " ")}</p>
-                                    <p className="mt-1 truncate font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/65">Agent {String(index + 1).padStart(2, "0")}</p>
-                                </div>
-                                <div className="min-w-0 space-y-2">
-                                    <div className="flex items-center gap-3">
-                                        {isRunning ? (
-                                            <DotMatrixProgress progress={bucketProgress.value} compact tone="active" />
-                                        ) : (
-                                            <span className="font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/60">{bucket.status}</span>
-                                        )}
-                                        <span className="shrink-0 font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/60">{bucketProgress.stage}</span>
-                                    </div>
-                                    <p className="line-clamp-2 break-words font-sans text-[13px] leading-[1.55] text-foreground/80">
-                                        {stripMarkdownArtifacts(bucket.summary) ?? (latest ? stripMarkdownArtifacts(describeEvent(latest)) : "Awaiting trace output.")}
-                                    </p>
-                                    {highlights.length ? (
-                                        <div className="space-y-1">
-                                            {highlights.map((highlight, index) => (
-                                                <div key={`${bucket.agentId}-${index}`} className="flex items-start gap-2">
-                                                    <span className="mt-[5px] size-1 shrink-0 rounded-full bg-border/80" />
-                                                    <p className="line-clamp-1 break-words font-sans text-[12px] leading-[1.5] text-muted-foreground">
-                                                        {highlight}
-                                                    </p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : null}
-                                </div>
-                                <div className="flex flex-wrap items-center gap-2 font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/65 md:justify-end">
-                                    <span className={cn(getStatusBadgeTone(bucket.status))}>{bucket.status}</span>
-                                    <span>{Math.round(bucketProgress.value)}%</span>
-                                    <span>{bucket.toolCount} tools</span>
-                                    <span>{bucket.citationCount} sources</span>
-                                </div>
-                            </button>
-                        );
-                    })}
+                    {buckets.map((bucket, index) => (
+                        <AgentBucketRow
+                            key={bucket.agentId}
+                            bucket={bucket}
+                            index={index}
+                            onSelectAgent={onSelectAgent}
+                            selectedAgentId={selectedAgentId}
+                        />
+                    ))}
                 </div>
             ) : null}
         </div>
@@ -158,23 +109,15 @@ export function AgentWorkingTrace({ events, isStreaming, selectedAgentId, onSele
 function getBucketRowTone(status: "idle" | "running" | "completed" | "error", isSelected: boolean) {
     if (status === "error") {
         return isSelected
-            ? "bg-destructive/[0.04] border-l-2 border-l-destructive/50 pl-[14px] md:pl-[18px]"
-            : "hover:bg-destructive/[0.025]";
+            ? "bg-destructive/[0.03] border-l-2 border-l-destructive/60 pl-[14px] md:pl-[18px]"
+            : "hover:bg-destructive/[0.02]";
     }
 
-    if (status === "running") {
-        return isSelected
-            ? "bg-chart-1/[0.03] border-l-2 border-l-chart-1 pl-[14px] md:pl-[18px]"
-            : "hover:bg-accent/15";
+    if (isSelected) {
+        return "bg-white/[0.015] border-l-2 border-l-[#ff5f1f] pl-[14px] md:pl-[18px]";
     }
 
-    if (status === "completed") {
-        return isSelected
-            ? "bg-chart-2/[0.02] border-l-2 border-l-chart-2/50 pl-[14px] md:pl-[18px]"
-            : "hover:bg-accent/15";
-    }
-
-    return isSelected ? "bg-accent/20 border-l-2 border-l-border/50 pl-[14px] md:pl-[18px]" : "hover:bg-accent/15";
+    return "hover:bg-white/[0.015]";
 }
 
 function getStatusBadgeTone(status: "idle" | "running" | "completed" | "error") {
@@ -188,6 +131,92 @@ function getStatusBadgeTone(status: "idle" | "running" | "completed" | "error") 
         default:
             return "text-muted-foreground";
     }
+}
+
+function AgentBucketRow({ bucket, index, onSelectAgent, selectedAgentId }: { bucket: ReturnType<typeof buildAgentTraceBuckets>[number], index: number, onSelectAgent: (id: string) => void, selectedAgentId: string | null }) {
+    const latest = bucket.events[bucket.events.length - 1];
+    const isSelected = bucket.agentId === selectedAgentId;
+    const highlights = bucket.events
+        .filter((event) => event.type !== "message.delta")
+        .slice(-2)
+        .map((event) => stripMarkdownArtifacts(describeEvent(event)));
+    const bucketProgress = getBucketProgress(bucket);
+    
+    const [showFinishedBar, setShowFinishedBar] = useState(false);
+    const prevStatusRef = useRef(bucket.status);
+
+    useEffect(() => {
+        const wasRunning = prevStatusRef.current === "running";
+        const isNowFinished = bucket.status === "completed" || bucket.status === "error";
+        
+        if (wasRunning && isNowFinished) {
+            const showTimer = setTimeout(() => setShowFinishedBar(true), 0);
+            const hideTimer = setTimeout(() => {
+                setShowFinishedBar(false);
+            }, 800);
+            return () => {
+                clearTimeout(showTimer);
+                clearTimeout(hideTimer);
+            };
+        }
+        
+        prevStatusRef.current = bucket.status;
+    }, [bucket.status]);
+
+    const showBar = bucket.status === "running" || showFinishedBar;
+    const tone = bucket.status === "error" ? "error" : bucket.status === "completed" ? "complete" : "active";
+
+    return (
+        <button
+            type="button"
+            onClick={() => onSelectAgent(bucket.agentId)}
+            className={cn(
+                "grid w-full gap-3 py-3 pl-4 pr-3 text-left transition-colors md:grid-cols-[140px_minmax(0,1fr)_auto] md:items-start md:pl-5 md:pr-4",
+                getBucketRowTone(bucket.status, isSelected)
+            )}
+        >
+            <div className="min-w-0">
+                <p className="truncate font-sans text-[13px] leading-[1.35] text-foreground/86">{bucket.role.replace(/-/g, " ")}</p>
+                <p className="mt-1 truncate font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/65">Agent {String(index + 1).padStart(2, "0")}</p>
+            </div>
+            <div className="min-w-0 space-y-2">
+                <div className="flex items-center gap-3">
+                    {showBar ? (
+                        <DotMatrixProgress progress={bucketProgress.value} compact tone={tone} />
+                    ) : (
+                        <span className="font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/60">{bucket.status === "completed" ? "complete" : bucket.status}</span>
+                    )}
+                    <span className={cn(
+                        "shrink-0 font-mono text-[9px] uppercase tracking-[1.2px]",
+                        bucket.status === "completed" ? "text-chart-2/80" : "text-muted-foreground/60"
+                    )}>
+                        {bucket.status === "completed" || bucket.status === "error" ? "100%" : bucketProgress.stage}
+                    </span>
+                </div>
+                <p className="line-clamp-2 break-words font-sans text-[13px] leading-[1.55] text-foreground/80">
+                    {stripMarkdownArtifacts(bucket.summary) ?? (latest ? stripMarkdownArtifacts(describeEvent(latest)) : "Awaiting trace output.")}
+                </p>
+                {highlights.length ? (
+                    <div className="space-y-1">
+                        {highlights.map((highlight, index) => (
+                            <div key={`${bucket.agentId}-${index}`} className="flex items-start gap-2">
+                                <span className="mt-[5px] size-1 shrink-0 rounded-full bg-border/80" />
+                                <p className="line-clamp-1 break-words font-sans text-[12px] leading-[1.5] text-muted-foreground">
+                                    {highlight}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                ) : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/65 md:justify-end">
+                <span className={cn(getStatusBadgeTone(bucket.status))}>{bucket.status}</span>
+                <span>{bucket.status === "completed" || bucket.status === "error" ? "100%" : `${Math.round(bucketProgress.value)}%`}</span>
+                <span>{bucket.toolCount} tools</span>
+                <span>{bucket.citationCount} sources</span>
+            </div>
+        </button>
+    );
 }
 
 function useSmoothedProgress(targetProgress: number) {
@@ -266,8 +295,30 @@ type BucketProgress = {
 
 function AgentProgressRow({ item }: { item: BucketProgress; index: number }) {
     const tone = item.bucket.status === "error" ? "error" : item.bucket.status === "completed" ? "complete" : "active";
-    const isRunning = tone === "active";
-    const isError = tone === "error";
+    const isError = item.bucket.status === "error";
+    
+    const [showFinishedBar, setShowFinishedBar] = useState(false);
+    const prevStatusRef = useRef(item.bucket.status);
+
+    useEffect(() => {
+        const wasRunning = prevStatusRef.current === "running";
+        const isNowFinished = item.bucket.status === "completed" || item.bucket.status === "error";
+        
+        if (wasRunning && isNowFinished) {
+            const showTimer = setTimeout(() => setShowFinishedBar(true), 0);
+            const hideTimer = setTimeout(() => {
+                setShowFinishedBar(false);
+            }, 800);
+            return () => {
+                clearTimeout(showTimer);
+                clearTimeout(hideTimer);
+            };
+        }
+        
+        prevStatusRef.current = item.bucket.status;
+    }, [item.bucket.status]);
+
+    const showBar = item.bucket.status === "running" || showFinishedBar;
 
     return (
         <div className="grid min-h-6 items-center gap-3 md:grid-cols-[140px_minmax(0,1fr)_100px]">
@@ -276,23 +327,22 @@ function AgentProgressRow({ item }: { item: BucketProgress; index: number }) {
             </div>
             
             <div className="flex min-w-0 items-center gap-3">
-                {isRunning ? (
+                {showBar ? (
                     <DotMatrixProgress progress={item.value} compact tone={tone} />
                 ) : (
                     <p className="truncate font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/60">
-                        {isError ? "execution failed" : item.bucket.status}
+                        {isError ? "execution failed" : item.bucket.status === "completed" ? "complete" : item.bucket.status}
                     </p>
                 )}
             </div>
 
             <div className="flex items-center justify-between gap-2 font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/60 md:justify-end">
-                {isError ? (
+                {isError && !showFinishedBar ? (
                     <span className="text-destructive">failed</span>
                 ) : (
                     <>
-                        <span>{Math.round(item.value)}%</span>
-                        {isRunning ? <span>{item.stage}</span> : null}
-                        {!isRunning && !isError ? <span className="size-1.5 rounded-full bg-chart-2" /> : null}
+                        <span>{item.bucket.status === "completed" || item.bucket.status === "error" ? "100%" : `${Math.round(item.value)}%`}</span>
+                        {item.bucket.status === "running" ? <span>{item.stage}</span> : null}
                     </>
                 )}
             </div>
@@ -318,10 +368,13 @@ function getBucketProgress(bucket: ReturnType<typeof buildAgentTraceBuckets>[num
     const started = bucket.events.some((event) => event.type === "agent.started");
     const toolStartedCount = bucket.events.filter((event) => event.type === "tool.started").length;
     const pendingToolCount = Math.max(0, toolStartedCount - bucket.toolCount);
-    const base = pass ? 14 + (Math.min(pass, 6) / 6) * 66 : started ? 14 : 6;
-    const toolLift = Math.min(10, bucket.toolCount * 4 + pendingToolCount * 2);
-    const sourceLift = Math.min(6, bucket.citationCount * 2);
-    const value = Math.min(92, Math.max(started ? 14 : 6, base + toolLift + sourceLift));
+    
+    // More aggressive base and lift
+    const base = pass ? 35 + (Math.min(pass, 6) / 6) * 55 : started ? 35 : 12;
+    const toolLift = Math.min(20, bucket.toolCount * 6 + pendingToolCount * 3);
+    const sourceLift = Math.min(10, bucket.citationCount * 3);
+    
+    const value = Math.min(96, Math.max(started ? 35 : 12, base + toolLift + sourceLift));
     const latest = [...bucket.events].reverse().find((event) => event.type !== "message.delta");
 
     if (latest?.type === "tool.started") {

@@ -539,28 +539,41 @@ export function AgentPage() {
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
-            <span className="hidden rounded-full border border-border/70 bg-secondary/35 px-2.5 py-1 sm:inline-flex">{mode}</span>
-            <span className="hidden rounded-full border border-border/70 bg-secondary/35 px-2.5 py-1 md:inline-flex">{selectedTicker ?? "no ticker"}</span>
-            <span className="hidden rounded-full border border-border/70 bg-secondary/35 px-2.5 py-1 lg:inline-flex">{runConfig.maxAgents} workers</span>
-            {runsQuery.isFetching ? <span className="hidden rounded-full border border-border/70 bg-secondary/35 px-2.5 py-1 lg:inline-flex">refreshing</span> : null}
+          <div className="flex shrink-0 items-center gap-2 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/70">
+            <span className="hidden sm:inline-flex">{mode}</span>
+            <span className="hidden sm:inline">·</span>
+            <span className="hidden md:inline-flex">{selectedTicker ?? "no ticket"}</span>
+            <span className="hidden md:inline">·</span>
+            <span className="hidden lg:inline-flex">{runConfig.maxAgents} workers</span>
+            <span className="hidden lg:inline">·</span>
             {activeRun ? (
-              <button
-                type="button"
-                onClick={() => setActivePanel("run")}
-                className="rounded-full border border-border bg-secondary/45 px-2.5 py-1 text-muted-foreground transition-colors hover:border-ring/60 hover:bg-accent hover:text-foreground"
-              >
-                {activeRunLabel ?? "Run"} / {activeRun.status}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActivePanel("run")}
+                  className="transition-colors hover:text-foreground"
+                >
+                  {activeRunLabel ?? "Run"}
+                </button>
+                <span>·</span>
+                <span className={cn(getRunStatusTone(activeRun.status))}>{activeRun.status}</span>
+              </div>
             ) : threadId && runsQuery.isLoading ? (
-              <span className="rounded-full border border-border/70 bg-secondary/35 px-2.5 py-1 text-muted-foreground/70">loading runs</span>
-            ) : null}
+              <span className="text-muted-foreground/50">loading runs</span>
+            ) : (
+              <span className="text-muted-foreground/50">idle</span>
+            )}
             {stream.status === "cancelled" && stream.run?.id === activeRunId ? (
-              <span className="rounded-full border border-border/70 bg-secondary/35 px-2.5 py-1 text-muted-foreground">cancelled</span>
+              <>
+                <span>·</span>
+                <span className="text-destructive">cancelled</span>
+              </>
             ) : null}
-            <Button type="button" variant="outline" size="sm" onClick={handleStartFreshThread} disabled={stream.isStreaming || isSubmitting} className="h-8 rounded-full border-border bg-secondary/35 px-3 text-[10px] text-muted-foreground hover:bg-accent hover:text-foreground">
-              New Chat
-            </Button>
+            <div className="ml-2 flex items-center gap-1.5">
+              <Button type="button" variant="outline" size="sm" onClick={handleStartFreshThread} disabled={stream.isStreaming || isSubmitting} className="h-8 rounded-full border-border/60 bg-secondary/35 px-3 text-[10px] text-muted-foreground hover:bg-accent hover:text-foreground">
+                New Chat
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -700,21 +713,27 @@ export function AgentPage() {
                             type="button"
                             onClick={() => handleSelectRun(run.id)}
                             className={cn(
-                              "grid w-full grid-cols-[26px_minmax(0,1fr)] gap-3 border-b border-border/45 py-3 pr-2 text-left transition-colors last:border-b-0 hover:bg-accent/20",
-                              isActive && "bg-accent/30"
+                              "relative w-full py-3.5 pr-2 text-left transition-colors",
+                              isActive
+                                ? "bg-white/[0.035] border-l-2 border-[#ff5f1f]"
+                                : "border-l-2 border-transparent hover:bg-white/[0.015]"
                             )}
                           >
-                            <span className={cn("h-full min-h-11 border-l", isActive ? "border-chart-1" : "border-border/70")}>
-                              <span className="sr-only">{isActive ? "Selected" : "Run"}</span>
-                            </span>
-                            <span className="min-w-0">
-                              <span className="flex items-center justify-between gap-3">
-                                <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">{String(index + 1).padStart(2, "0")}</span>
+                            <div className="pl-4">
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/60">{String(index + 1).padStart(2, "0")}</span>
                                 <span className={cn("font-mono text-[9px] uppercase tracking-[1.2px]", getRunStatusTone(run.status))}>{run.status}</span>
-                              </span>
-                              <span className="mt-2 block line-clamp-2 break-words font-sans text-[13px] leading-[1.45] text-foreground/82">{stripMarkdownArtifacts(run.summary) || "AGOS Synthesis"}</span>
-                              <span className="mt-1 block font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/65">{run.mode} · {formatDurationMs(run.latencyMs)}</span>
-                            </span>
+                              </div>
+                              <span className={cn(
+                                "mt-2 block line-clamp-2 break-words font-sans text-[13px] leading-[1.45]",
+                                isActive ? "text-foreground" : "text-muted-foreground/80"
+                              )}>{stripMarkdownArtifacts(run.summary) || "AGOS Synthesis"}</span>
+                              <div className="mt-2 flex items-center gap-2 font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/50">
+                                <span>{run.mode}</span>
+                                <span>·</span>
+                                <span>{formatDurationMs(run.latencyMs)}</span>
+                              </div>
+                            </div>
                           </button>
                         );
                       })
@@ -799,17 +818,19 @@ function RunTelemetryStrip({
   const started = formatShortDate(run?.startedAt);
 
   return (
-    <section className="space-y-3 border-b border-border/60 pb-5">
+    <section className="space-y-2 border-b border-border/60 pb-5">
       <div className="min-w-0">
-        <h2 className="line-clamp-2 break-words font-sans text-[22px] font-medium leading-[1.15] tracking-[-0.03em] text-foreground">
+        <h2 className="font-sans text-[22px] font-medium leading-none tracking-[-0.03em] text-foreground">
           {stripMarkdownArtifacts(run?.summary) || "AGOS Synthesis"}
         </h2>
-        <p className="mt-2 font-mono text-[10px] uppercase tracking-[1.25px] text-muted-foreground/75">
-          AGOS Synthesis · {run?.mode ?? "---"} · <span className={getRunStatusTone(statusLabel)}>{statusLabel}</span> · {formatDurationMs(run?.latencyMs)} · {agentCount} agents · {toolCount} tools · {citationCount} sources
-        </p>
-        <p className="mt-1 font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/55">
-          {selectedTicker ?? run?.selectedTicker ?? "No ticker"} · {modelLabel} · {thinkingLevel} thinking · Started {started}
-        </p>
+        <div className="mt-3 flex flex-col gap-1.5 font-mono text-[10px] uppercase tracking-[1.25px]">
+          <p className="text-muted-foreground/75">
+            {run?.status === "completed" ? "Completed" : statusLabel} · {formatDurationMs(run?.latencyMs)} · {agentCount} agents · {toolCount} tools · {citationCount} sources
+          </p>
+          <p className="text-muted-foreground/55">
+            {selectedTicker ?? run?.selectedTicker ?? "No ticker"} · {run?.mode ?? "---"} · {modelLabel} · {thinkingLevel} thinking · Started {started}
+          </p>
+        </div>
       </div>
       {error ? <p className="border-l border-destructive/50 px-3 py-1.5 font-sans text-[13px] leading-[1.6] text-destructive">{error}</p> : null}
     </section>

@@ -64,52 +64,64 @@ export function AgentComposer({
         isLanding ? "p-4" : "p-3",
         isStreaming && "py-2"
       )}>
-        <textarea
-          ref={textareaRef}
-          id="agent-composer"
-          name="agent-composer"
-          aria-label="Message AGOS"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              onSubmit();
-            }
-          }}
-          placeholder={isStreaming ? "Agents are working..." : "Ask AGOS anything"}
-          readOnly={isStreaming}
-          className={cn(
-            "max-h-[170px] w-full resize-none border-0 bg-transparent font-sans text-[15px] leading-[1.55] text-foreground outline-none placeholder:text-muted-foreground/60 md:text-[16px]",
-            isLanding ? "min-h-[76px] px-1 pb-4 pt-1" : isStreaming ? "min-h-8 px-1 pb-1 pt-1 placeholder:text-muted-foreground/40" : "min-h-[64px] px-1 pb-3 pt-1"
-          )}
-        />
+        {!isStreaming && (
+          <textarea
+            ref={textareaRef}
+            id="agent-composer"
+            name="agent-composer"
+            aria-label="Message AGOS"
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                onSubmit();
+              }
+            }}
+            placeholder="Ask AGOS anything"
+            className={cn(
+              "max-h-[170px] w-full resize-none border-0 bg-transparent font-sans text-[15px] leading-[1.55] text-foreground outline-none placeholder:text-muted-foreground/60 md:text-[16px]",
+              isLanding ? "min-h-[76px] px-1 pb-4 pt-1" : "min-h-[64px] px-1 pb-3 pt-1"
+            )}
+          />
+        )}
 
-        <div className={cn("flex flex-col border-t border-border/55 md:flex-row md:items-center md:justify-between", isStreaming ? "gap-2 pt-2" : "gap-3 pt-3")}>
+        <div className={cn(
+          "flex flex-col md:flex-row md:items-center md:justify-between",
+          isStreaming ? "gap-2" : "border-t border-border/55 gap-3 pt-3"
+        )}>
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              onClick={onToggleControlsPanel}
-              aria-label="Open tools and parameters"
-              aria-expanded={activePanel === "controls"}
-              className={cn(
-                "size-8 rounded-full border border-transparent bg-transparent text-muted-foreground/70 hover:bg-secondary/40 hover:text-foreground",
-                activePanel === "controls" && "border-ring/60 bg-accent text-foreground"
-              )}
-            >
-              {isLanding ? <PlusIcon className="size-4" /> : <AdjustmentsHorizontalIcon className="size-4" />}
-            </Button>
-            <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/65">{isLanding ? "Tools" : selectedModel?.label ?? "AGOS"}</span>
-            {!isLanding ? <span className="hidden font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/50 sm:inline">· {config.maxAgents} workers</span> : null}
-            {!isLanding ? <span className="hidden font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/50 md:inline">· {config.thinkingLevel} thinking</span> : null}
+            {isStreaming ? (
+              <span className="font-sans text-[14px] text-muted-foreground/80">Agents are working…</span>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={onToggleControlsPanel}
+                  aria-label="Open tools and parameters"
+                  aria-expanded={activePanel === "controls"}
+                  className={cn(
+                    "size-8 rounded-full border border-transparent bg-transparent text-muted-foreground/70 hover:bg-secondary/40 hover:text-foreground",
+                    activePanel === "controls" && "border-ring/60 bg-accent text-foreground"
+                  )}
+                >
+                  {isLanding ? <PlusIcon className="size-4" /> : <AdjustmentsHorizontalIcon className="size-4" />}
+                </Button>
+                <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/65">{isLanding ? "Tools" : selectedModel?.label ?? "AGOS"}</span>
+              </>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2 md:justify-end">
             <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground">
-              <span className="px-1.5 text-muted-foreground/50">{mode}</span>
-              <span className="hidden px-1.5 text-muted-foreground/50 sm:inline-flex">{selectedTicker ?? "no ticker"}</span>
+              {!isStreaming && (
+                <>
+                  <span className="px-1.5 text-muted-foreground/50">{mode}</span>
+                  <span className="hidden px-1.5 text-muted-foreground/50 sm:inline-flex">{selectedTicker ?? "no ticker"}</span>
+                </>
+              )}
               <Button
                 type="button"
                 variant="outline"
@@ -123,7 +135,7 @@ export function AgentComposer({
               >
                 <Bars3BottomLeftIcon className="size-4" /> Trace
               </Button>
-              {!isLanding ? (
+              {!isLanding && !isStreaming ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -147,12 +159,17 @@ export function AgentComposer({
               aria-label={actionLabel}
               title={actionLabel}
               className={cn(
-                "size-10 shrink-0 rounded-full p-0 shadow-none",
-                isStreaming && "border-destructive/60 bg-destructive/15 text-destructive hover:border-destructive hover:bg-destructive/25 hover:text-destructive"
+                "h-10 shrink-0 rounded-full shadow-none",
+                isStreaming ? "border-destructive/60 bg-destructive/15 text-destructive hover:border-destructive hover:bg-destructive/25 hover:text-destructive px-4" : "size-10 p-0"
               )}
               variant={isStreaming ? "outline" : "default"}
             >
-              {isStreaming ? <StopCircleIcon className="size-5" /> : <PaperAirplaneIcon className="size-4" />}
+              {isStreaming ? (
+                <div className="flex items-center gap-2">
+                  <StopCircleIcon className="size-5" />
+                  <span className="font-mono text-[10px] uppercase tracking-[1.2px]">Stop</span>
+                </div>
+              ) : <PaperAirplaneIcon className="size-4" />}
             </Button>
           </div>
         </div>

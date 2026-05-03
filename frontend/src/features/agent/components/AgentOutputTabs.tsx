@@ -128,9 +128,9 @@ export function AgentOutputTabs({ output, markdown, traceNode }: AgentOutputTabs
                 className={cn(
                   "inline-flex shrink-0 items-center gap-2 border-b px-3 py-2 font-mono text-[10px] uppercase tracking-[1.2px] transition-colors",
                   resolvedActiveTab === tab.id
-                    ? "border-chart-1 text-foreground"
-                    : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
-                  tab.disabled && "cursor-not-allowed opacity-40 hover:border-transparent hover:text-muted-foreground"
+                    ? "border-chart-1 text-foreground/90"
+                    : "border-transparent text-muted-foreground/50 hover:text-foreground/80",
+                  tab.disabled && "cursor-not-allowed opacity-40"
                 )}
               >
                 <span>{tab.label}</span>
@@ -157,22 +157,21 @@ function SummaryTab({ output, onSourceClick }: { output: AgentStructuredOutput; 
   const firstSources = output.sources.slice(0, 4);
   const reliabilityWarnings = output.reliabilityWarnings ?? [];
   return (
-    <div className="space-y-6">
-      <section className="border-b border-border/60 pb-5">
+    <div className="space-y-8">
+      <section className="border-b border-border/60 pb-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Overview</p>
           <span
             className={cn(
-              "font-mono text-[10px] uppercase tracking-[1.2px]",
-              output.executionReady ? "text-chart-2" : "text-muted-foreground"
+              "font-mono text-[9px] uppercase tracking-[1.4px]",
+              output.executionReady ? "text-chart-2/80" : "text-muted-foreground/50"
             )}
           >
             {output.executionReady ? "execution-ready" : "advisory only"}
           </span>
         </div>
-        <p className="mt-3 max-w-[960px] font-sans text-[18px] leading-[1.5] tracking-[-0.01em] text-foreground/95 md:text-[20px]">{plainText(output.summary)}</p>
+        <p className="mt-4 max-w-[780px] font-sans text-[18px] leading-[1.6] tracking-[-0.01em] text-foreground/90 md:text-[20px]">{plainText(output.summary)}</p>
         {firstSources.length ? (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-5 flex flex-wrap gap-2">
             {firstSources.map((source) => (
               <SourceChip key={source.id} source={source} onClick={onSourceClick} />
             ))}
@@ -182,7 +181,7 @@ function SummaryTab({ output, onSourceClick }: { output: AgentStructuredOutput; 
 
       {reliabilityWarnings.length ? <ReliabilityWarnings warnings={reliabilityWarnings} /> : null}
 
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="grid gap-8 lg:grid-cols-3">
         <ListBlock title="Assumptions" items={output.assumptions} />
         <ListBlock title="Risks" items={output.risks} tone="risk" />
         <ListBlock title="Next Steps" items={output.nextSteps} />
@@ -216,21 +215,21 @@ function EvidenceTab({
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-3 border-b border-border/60 pb-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Audit Logs</p>
-          <p className="mt-1 font-sans text-[12px] leading-[1.5] text-muted-foreground">Filter claims, inspect support, and resolve citations.</p>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 border-b border-border/60 pb-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Audit Trace</p>
+          <p className="mt-1 font-sans text-[13px] leading-none text-muted-foreground/70">Support verification for synthesized claims.</p>
         </div>
-        <div className="inline-flex w-fit overflow-hidden rounded-full border border-border/70 bg-secondary/20 p-0.5">
+        <div className="flex flex-wrap items-center gap-4">
           {evidenceFilters.map((item) => (
             <button
               key={item.value}
               type="button"
               onClick={() => setFilter(item.value)}
               className={cn(
-                "rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-[1.2px] transition-colors",
-                filter === item.value ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"
+                "font-mono text-[10px] uppercase tracking-[1.4px] transition-colors",
+                filter === item.value ? "text-[#ff5f1f]" : "text-muted-foreground hover:text-foreground"
               )}
             >
               {item.label}
@@ -240,8 +239,8 @@ function EvidenceTab({
       </div>
 
       {visibleEvidence.length ? (
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-          <div className="divide-y divide-border/55 border-y border-border/60">
+        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+          <div className="divide-y divide-white/[0.06] border-y border-white/[0.08]">
             {visibleEvidence.map((item) => {
               const hasSources = item.sourceIds.length > 0;
               const isActive = item.id === activeEvidence?.id;
@@ -252,69 +251,73 @@ function EvidenceTab({
                   aria-expanded={isActive}
                   onClick={() => setActiveEvidenceId(item.id)}
                   className={cn(
-                    "grid w-full grid-cols-[4px_minmax(0,1fr)] gap-3 py-3 pr-3 text-left transition-colors",
-                    !hasSources
-                      ? isActive
-                        ? "bg-destructive/5"
-                        : "hover:bg-destructive/5"
-                      : isActive
-                        ? "bg-accent/35"
-                        : "hover:bg-accent/20"
+                    "group relative grid w-full grid-cols-[minmax(0,1fr)_auto] gap-4 py-4 pr-3 text-left transition-colors",
+                    isActive ? "bg-white/[0.02]" : "hover:bg-white/[0.01]"
                   )}
                 >
-                  <span className={cn("h-full min-h-16 border-l", isActive ? "border-chart-1" : hasSources ? "border-border/70" : "border-destructive/60")} />
-                  <span className="min-w-0">
-                    <span className="flex flex-wrap items-center justify-between gap-3">
-                      <span className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
-                        <span>{item.id}</span>
-                        <span>{hasSources ? `${item.sourceIds.length} sources` : "no source link"}</span>
-                      </span>
-                      <ConfidenceBadge value={item.confidence} />
+                  <span className={cn(
+                    "absolute inset-y-0 left-0 w-0.5 transition-colors",
+                    isActive ? "bg-[#ff5f1f]" : "bg-transparent"
+                  )} />
+                  <span className="min-w-0 pl-4">
+                    <span className="flex flex-wrap items-center gap-3">
+                      <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/60">{item.id}</span>
+                      <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/40">{hasSources ? `${item.sourceIds.length} sources` : "no citation"}</span>
                     </span>
-                    <span className="mt-2 block line-clamp-2 font-sans text-[15px] leading-[1.35] text-foreground">{plainText(item.claim)}</span>
-                    <span className="mt-2 block line-clamp-2 font-sans text-[12px] leading-[1.55] text-foreground/55">{plainText(item.detail)}</span>
+                    <span className={cn(
+                      "mt-2 block line-clamp-2 font-sans text-[15px] leading-[1.45]",
+                      isActive ? "text-foreground" : "text-foreground/80 group-hover:text-foreground"
+                    )}>{plainText(item.claim)}</span>
                   </span>
+                  <ConfidenceBadge value={item.confidence} />
                 </button>
               );
             })}
           </div>
 
-          <section className="min-h-[320px] border-y border-border/60 py-4">
+          <section className="min-h-[400px] border-l border-white/[0.08] pl-8">
             {activeEvidence ? (
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Selected Evidence / {activeEvidence.id}</p>
-                    <h3 className="mt-3 font-sans text-[21px] font-medium leading-[1.25] tracking-[-0.02em] text-foreground">{plainText(activeEvidence.claim)}</h3>
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/60">Evidence ID / {activeEvidence.id}</p>
+                      <h3 className="mt-3 font-sans text-[22px] font-medium leading-[1.25] tracking-[-0.02em] text-foreground">{plainText(activeEvidence.claim)}</h3>
+                    </div>
+                    <ConfidenceBadge value={activeEvidence.confidence} />
                   </div>
-                  <ConfidenceBadge value={activeEvidence.confidence} />
+                  <p className="max-w-[720px] font-sans text-[15px] leading-[1.7] text-foreground/75">{plainText(activeEvidence.detail)}</p>
                 </div>
 
-                <p className="font-sans text-[14px] leading-[1.7] text-foreground/75">{plainText(activeEvidence.detail)}</p>
+                <div className="h-px bg-white/[0.06]" />
 
-                {activeEvidence.calculation ? (
-                  <Callout label="Calculation" value={activeEvidence.calculation} />
-                ) : null}
+                <div className="grid gap-6 sm:grid-cols-2">
+                  {activeEvidence.calculation ? (
+                    <Callout label="Calculation" value={activeEvidence.calculation} />
+                  ) : null}
 
-                {!activeEvidence.sourceIds.length ? (
-                  <Callout label="Source Link" value="No source citation is attached to this evidence item." tone="risk" />
-                ) : (
-                  <div>
-                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Linked Sources</p>
-                    <SourceChipList sourceIds={activeEvidence.sourceIds} sourceById={sourceById} onSourceClick={onSourceClick} />
-                  </div>
-                )}
-
-                {(activeEvidence.agentIds ?? []).length ? (
-                  <div>
-                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Contributing Agents</p>
-                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1.5 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/75">
-                      {(activeEvidence.agentIds ?? []).map((agentId) => (
-                        <span key={agentId}>{agentId.replace(/-/g, " ")}</span>
-                      ))}
+                  {(activeEvidence.agentIds ?? []).length ? (
+                    <div>
+                      <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/60">Contributing Agents</p>
+                      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/50">
+                        {(activeEvidence.agentIds ?? []).map((agentId) => (
+                          <span key={agentId}>{agentId.replace(/-/g, " ")}</span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ) : null}
+                  ) : null}
+                </div>
+
+                <div className="h-px bg-white/[0.06]" />
+
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/60">Linked Sources</p>
+                  {!activeEvidence.sourceIds.length ? (
+                    <p className="mt-3 font-sans text-[13px] text-destructive/70">No source citation is attached to this evidence item.</p>
+                  ) : (
+                    <SourceChipList sourceIds={activeEvidence.sourceIds} sourceById={sourceById} onSourceClick={onSourceClick} />
+                  )}
+                </div>
               </div>
             ) : (
               <EmptyPanel label="No evidence matches the current filter." />
@@ -338,30 +341,33 @@ function RecommendationsTab({
   onSourceClick: (sourceId: string) => void;
 }) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {output.recommendations.length ? (
-        <div className="divide-y divide-border/55 border-y border-border/60">
+        <div className="divide-y divide-white/[0.06] border-y border-white/[0.08]">
           {output.recommendations.map((item) => {
             const supportStatus = item.supportStatus ?? (item.sourceIds.length ? "supported" : "unsupported");
             return (
               <article
                 key={item.id}
-                className={cn("grid gap-4 px-3 py-4 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]", supportStatus === "unsupported" && "border-l border-l-destructive/50")}
+                className="grid gap-8 px-4 py-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]"
               >
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-3">
-                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{item.id}</p>
+                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/60">{item.id}</p>
                     <SupportBadge value={supportStatus} />
                     <ConfidenceBadge value={item.confidence} />
                   </div>
-                  <h3 className="mt-3 font-sans text-[18px] font-medium leading-[1.35] tracking-[-0.015em] text-foreground">{plainText(item.title)}</h3>
-                  <p className="mt-2 font-sans text-[13px] leading-[1.65] text-foreground/70">{plainText(item.rationale)}</p>
+                  <h3 className="mt-4 font-sans text-[20px] font-medium leading-[1.3] tracking-[-0.015em] text-foreground">{plainText(item.title)}</h3>
+                  <p className="mt-3 font-sans text-[14px] leading-[1.7] text-foreground/75">{plainText(item.rationale)}</p>
                 </div>
-                <div className="grid content-start gap-2">
+                <div className="grid content-start gap-4 border-l border-white/[0.08] pl-8">
                   {item.supportReason ? <Callout label="Evidence Status" value={item.supportReason} tone={supportStatus === "supported" ? undefined : "risk"} /> : null}
-                  <Callout label="Risk" value={item.risk} tone="risk" />
+                  <Callout label="Risk Assessment" value={item.risk} tone="risk" />
                   <Callout label="Next Action" value={item.nextAction} />
-                  <SourceChipList sourceIds={item.sourceIds} sourceById={sourceById} onSourceClick={onSourceClick} />
+                  <div className="pt-2">
+                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground/60">Linked Sources</p>
+                    <SourceChipList sourceIds={item.sourceIds} sourceById={sourceById} onSourceClick={onSourceClick} />
+                  </div>
                 </div>
               </article>
             );
@@ -386,30 +392,30 @@ function DecisionTable({
   onSourceClick: (sourceId: string) => void;
 }) {
   return (
-    <section>
+    <section className="space-y-4">
       <div className="border-b border-border/60 pb-3">
         <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Decision Table</p>
       </div>
-      <div className="border-y border-border/60">
+      <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-transparent">
         <table className="w-full table-fixed border-collapse text-left">
           <thead>
-            <tr>
+            <tr className="bg-white/[0.02]">
               {["Holding", "Status", "Finding", "Suggested Action", "Confidence", "Sources"].map((header) => (
-                <th key={header} className="break-words border-b border-border/60 px-3 py-3 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/75">
+                <th key={header} className="border-b border-white/[0.06] px-4 py-3 font-mono text-[10px] uppercase tracking-[1.2px] text-muted-foreground/60">
                   {header}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-white/[0.06]">
             {rows.map((row, index) => (
-              <tr key={`${row.holding}-${index}`} className="hover:bg-accent/20">
-                <td className="break-words border-b border-border/45 px-3 py-3 font-sans text-[13px] text-foreground">{plainText(row.holding)}</td>
-                <td className="break-words border-b border-border/45 px-3 py-3 font-sans text-[13px] text-foreground/70">{plainText(row.status)}</td>
-                <td className="break-words border-b border-border/45 px-3 py-3 font-sans text-[13px] text-foreground/70">{plainText(row.finding)}</td>
-                <td className="break-words border-b border-border/45 px-3 py-3 font-sans text-[13px] text-foreground/70">{plainText(row.suggestedAction)}</td>
-                <td className="border-b border-border/45 px-3 py-3"><ConfidenceBadge value={row.confidence} /></td>
-                <td className="border-b border-border/45 px-3 py-3">
+              <tr key={`${row.holding}-${index}`} className="transition-colors hover:bg-white/[0.02]">
+                <td className="px-4 py-3.5 font-sans text-[13px] text-foreground/90">{plainText(row.holding)}</td>
+                <td className="px-4 py-3.5 font-sans text-[13px] text-foreground/70">{plainText(row.status)}</td>
+                <td className="px-4 py-3.5 font-sans text-[13px] text-foreground/70">{plainText(row.finding)}</td>
+                <td className="px-4 py-3.5 font-sans text-[13px] text-foreground/70">{plainText(row.suggestedAction)}</td>
+                <td className="px-4 py-3.5"><ConfidenceBadge value={row.confidence} /></td>
+                <td className="px-4 py-3.5">
                   <SourceChipList sourceIds={row.sourceIds} sourceById={sourceById} onSourceClick={onSourceClick} compact />
                 </td>
               </tr>
@@ -479,30 +485,31 @@ function MemoTab({ markdown }: { markdown: string }) {
 
 function ReliabilityWarnings({ warnings }: { warnings: string[] }) {
   return (
-    <section className="border-l border-destructive/50 px-4 py-1">
-      <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-destructive">Evidence Audit</p>
-      <ul className="mt-3 space-y-2">
+    <section className="space-y-4">
+      <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Evidence Audit</p>
+      <div className="space-y-2 border-l border-destructive/40 pl-4">
         {warnings.map((warning, index) => (
-          <li key={`${warning}-${index}`} className="font-sans text-[13px] leading-[1.6] text-foreground/75">
+          <p key={`${warning}-${index}`} className="font-sans text-[13px] leading-[1.6] text-foreground/75">
             {warning}
-          </li>
+          </p>
         ))}
-      </ul>
+      </div>
+      <div className="h-px bg-border/60" />
     </section>
   );
 }
 
 function ListBlock({ title, items, tone }: { title: string; items: string[]; tone?: "risk" }) {
   return (
-    <section className={cn("border-t border-border/60 pt-4", tone === "risk" && "border-l border-l-destructive/50 pl-4")}>
+    <section className={cn("space-y-4", tone === "risk" && "border-l border-destructive/40 pl-6")}>
       <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">{title}</p>
-      <ul className="mt-3 space-y-2">
+      <div className="space-y-2">
         {items.map((item, index) => (
-          <li key={`${title}-${index}`} className="font-sans text-[13px] leading-[1.6] text-foreground/70">
+          <p key={`${title}-${index}`} className="font-sans text-[13px] leading-[1.6] text-foreground/70">
             {plainText(item)}
-          </li>
+          </p>
         ))}
-      </ul>
+      </div>
     </section>
   );
 }
@@ -567,7 +574,7 @@ function matchesEvidenceFilter(item: AgentStructuredOutput["evidence"][number], 
 
 function ConfidenceBadge({ value }: { value: "low" | "medium" | "high" }) {
   return (
-    <span className={cn("rounded-full border px-2 py-1 font-mono text-[10px] uppercase tracking-[1.2px]", getConfidenceTone(value))}>
+    <span className={cn("font-mono text-[10px] uppercase tracking-[1.2px]", getConfidenceTone(value))}>
       {value} confidence
     </span>
   );
@@ -575,7 +582,7 @@ function ConfidenceBadge({ value }: { value: "low" | "medium" | "high" }) {
 
 function SupportBadge({ value }: { value: "supported" | "partial" | "unsupported" }) {
   return (
-    <span className={cn("rounded-full border px-2 py-1 font-mono text-[10px] uppercase tracking-[1.2px]", getSupportTone(value))}>
+    <span className={cn("font-mono text-[10px] uppercase tracking-[1.2px]", getSupportTone(value))}>
       {value}
     </span>
   );
@@ -583,7 +590,7 @@ function SupportBadge({ value }: { value: "supported" | "partial" | "unsupported
 
 function FreshnessBadge({ value }: { value: AgentSourceReference["freshness"] }) {
   return (
-    <span className={cn("rounded-full border px-2 py-1 font-mono text-[10px] uppercase tracking-[1.2px]", getFreshnessTone(value))}>
+    <span className={cn("font-mono text-[10px] uppercase tracking-[1.2px]", getFreshnessTone(value))}>
       {value}
     </span>
   );
@@ -594,21 +601,21 @@ function EmptyPanel({ label }: { label: string }) {
 }
 
 function getConfidenceTone(value: "low" | "medium" | "high") {
-  if (value === "high") return "border-chart-2/50 text-chart-2";
-  if (value === "low") return "border-destructive/50 text-destructive";
-  return "border-border text-foreground/55";
+  if (value === "high") return "text-chart-2/80";
+  if (value === "low") return "text-destructive/80";
+  return "text-muted-foreground/60";
 }
 
 function getSupportTone(value: "supported" | "partial" | "unsupported") {
-  if (value === "supported") return "border-chart-2/50 text-chart-2";
-  if (value === "unsupported") return "border-destructive/50 text-destructive";
-  return "border-chart-1/50 text-chart-1";
+  if (value === "supported") return "text-chart-2/80";
+  if (value === "unsupported") return "text-destructive/80";
+  return "text-chart-1/80";
 }
 
 function getFreshnessTone(value: AgentSourceReference["freshness"]) {
-  if (value === "current" || value === "recent") return "border-chart-2/50 text-chart-2";
-  if (value === "stale") return "border-destructive/50 text-destructive";
-  return "border-border text-muted-foreground";
+  if (value === "current" || value === "recent") return "text-chart-2/80";
+  if (value === "stale") return "text-destructive/80";
+  return "text-muted-foreground/60";
 }
 
 function sourceFreshnessNeedsReview(source: AgentSourceReference) {
