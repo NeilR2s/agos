@@ -22,7 +22,6 @@ import { TerminalSkeleton } from "@/components/ui/terminal-skeleton";
 import { cn } from "@/lib/utils";
 import { normalizeEngineHealth } from "@/data/normalizeEngine";
 import { normalizePortfolio } from "@/data/normalizePortfolio";
-import { formatCurrency } from "@/lib/format";
 import { getSignedInUserIdentity } from "@/lib/authIdentity";
 import { useAuthStore } from "@/store/authStore";
 
@@ -244,10 +243,10 @@ export function Sidebar({
                                 className={cn(
                                     "flex w-full items-center rounded-xl py-2.5 font-mono text-[12px] uppercase tracking-[1.4px] transition-colors",
                                     showLabels ? "justify-start gap-3 px-3" : "justify-center gap-0 px-0",
-                                    isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground hover:bg-sidebar-accent/70 hover:text-foreground"
+                                    isActive ? "text-foreground" : "text-muted-foreground hover:bg-sidebar-accent/30 hover:text-foreground"
                                 )}
                             >
-                                <Icon className="size-4 shrink-0" />
+                                <Icon className={cn("size-4 shrink-0", isActive ? "text-foreground" : "")} />
                                 <span
                                     className={cn(
                                         "min-w-0 whitespace-nowrap transition-[max-width,opacity] duration-200",
@@ -320,18 +319,10 @@ export function Sidebar({
                                         key={holding.id}
                                         to={`/research?ticker=${holding.ticker}`}
                                         onClick={() => onNavigate?.()}
-                                            className="group flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-muted-foreground transition-colors hover:bg-sidebar-accent/70 hover:text-foreground"
+                                            className="group flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-muted-foreground transition-colors hover:bg-sidebar-accent/30 hover:text-foreground"
                                         title={holding.ticker}
                                     >
                                             <span className="font-mono text-[12px] uppercase tracking-[1.4px] text-foreground">{holding.ticker}</span>
-                                        <span
-                                            className={cn(
-                                                "min-w-0 truncate font-sans text-[12px] text-white/[0.42] transition-[max-width,opacity] duration-200",
-                                                showLabels ? "max-w-full opacity-100" : hiddenRevealClass
-                                            )}
-                                        >
-                                            {formatCurrency(holding.marketValue)}
-                                        </span>
                                     </Link>
                                 ))
                             ) : (

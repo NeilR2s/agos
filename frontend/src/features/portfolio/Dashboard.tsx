@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { backendClient, getUserId } from "@/api/backend/client";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
     AlertDialog,
@@ -23,14 +22,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import {
-    Card,
-    CardAction,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
 import {
     Table,
     TableBody,
@@ -75,17 +66,6 @@ type HoldingDialogState = {
 } | null;
 
 // Portfolio normalization moved to src/data/normalizePortfolio
-
-const allocationPalette = [
-    "var(--foreground)",
-    "color-mix(in oklch, var(--foreground) 78%, transparent)",
-    "color-mix(in oklch, var(--foreground) 62%, transparent)",
-    "color-mix(in oklch, var(--foreground) 46%, transparent)",
-    "color-mix(in oklch, var(--foreground) 30%, transparent)",
-    "var(--chart-2)",
-    "var(--chart-1)",
-    "var(--destructive)",
-];
 
 export const Dashboard = () => {
     const userId = getUserId();
@@ -217,6 +197,50 @@ export const Dashboard = () => {
 
     const portfolio = portfolioQuery.data;
     const cashAmount = cashQuery.data?.amount ?? portfolio?.liquidCash ?? 0;
+    const [showAllocation, setShowAllocation] = useState(false);
+
+    const handleExportCsv = () => {
+        if (!portfolio) return;
+
+        const headers = ["Ticker", "Shares", "Average Price", "Last Price", "Market Value", "Gain/Loss", "Return (%)"];
+        const rows = portfolio.holdings.map((h) => [
+            h.ticker,
+            h.shares,
+            h.avgPrice,
+            h.currentPrice ?? 0,
+            h.marketValue ?? 0,
+            h.gainLoss ?? 0,
+            h.gainLossPercent !== null ? h.gainLossPercent.toFixed(2) : "0.00"
+        ]);
+
+        rows.push(["CASH", "", "", "", cashAmount, "", ""]);
+        rows.push([
+            "TOTAL PORTFOLIO",
+            "",
+            "",
+            "",
+            portfolio.totalPortfolioValue,
+            portfolio.totalGainLoss ?? 0,
+            portfolio.totalGainLossPercent !== null ? portfolio.totalGainLossPercent.toFixed(2) : "0.00"
+        ]);
+
+        const csvContent = [
+            headers.join(","),
+            ...rows.map((r) => r.map(String).join(","))
+        ].join("\n");
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `AGOS_Portfolio_${new Date().toISOString().split("T")[0]}.csv`);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success("Portfolio exported to CSV");
+    };
+
     const allocationSegments = [
         ...(portfolio?.holdings ?? [])
             .map((holding) => ({
@@ -232,35 +256,49 @@ export const Dashboard = () => {
     ];
     const allocationTotal = allocationSegments.reduce((sum, segment) => sum + segment.value, 0);
 
+    const allocationPalette = [
+        "var(--foreground)",
+        "color-mix(in oklch, var(--foreground) 78%, transparent)",
+        "color-mix(in oklch, var(--foreground) 62%, transparent)",
+        "color-mix(in oklch, var(--foreground) 46%, transparent)",
+        "color-mix(in oklch, var(--foreground) 30%, transparent)",
+        "var(--chart-2)",
+        "var(--chart-1)",
+        "var(--destructive)",
+    ];
+
     const gainClass = (value: number) =>
         value > 0 ? "text-chart-2" : value < 0 ? "text-destructive" : "text-muted-foreground";
 
     const portfolioError = portfolioQuery.error ? extractErrorMessage(portfolioQuery.error) : null;
 
-    // Pass 3: Portfolio Risk Exposure Metrics
-    const sortedHoldings = [...(portfolio?.holdings ?? [])].sort((a, b) => (b.marketValue ?? 0) - (a.marketValue ?? 0));
-    const totalVal = portfolio?.totalPortfolioValue ?? 0;
-    const largestPos = sortedHoldings[0]?.ticker ?? "None";
-    const top3Val = sortedHoldings.slice(0, 3).reduce((sum, h) => sum + (h.marketValue ?? 0), 0);
-    const top3Pct = totalVal > 0 ? (top3Val / totalVal) * 100 : 0;
-    const cashPct = totalVal > 0 ? (cashAmount / totalVal) * 100 : 0;
-
     return (
-        <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-8 px-6 py-8 md:px-8 md:py-12">
-            <header className="flex flex-col gap-4 border-b border-border pb-6 md:flex-row md:items-end md:justify-between">
+        <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-[32px] px-6 py-8 md:px-8 md:py-12">
+            <header className="flex flex-col gap-4 border-b border-border/50 pb-6 md:flex-row md:items-end md:justify-between">
                 <div className="space-y-3">
-                    <Badge variant="outline" className="border-border text-muted-foreground">
-                        [ Portfolio ]
-                    </Badge>
-                    <h1 className="font-sans text-[30px] leading-[1.2]">Portfolio Control Surface</h1>
-                    <p className="max-w-[700px] font-sans text-[16px] leading-[1.5] text-muted-foreground">
-                        Direct management of holdings and capital. Live telemetry and position metrics synchronized with backend services.
+                    <h1 className="font-sans text-[28px] font-medium leading-[1.2]">Portfolio</h1>
+                    <p className="max-w-[700px] font-sans text-[15px] leading-[1.5] text-muted-foreground">
+                        Track holdings, exposure, and performance.
                     </p>
                 </div>
                 <div className="flex flex-col items-start gap-3 md:items-end">
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-wrap gap-2">
+                        <Button variant="ghost" className="text-muted-foreground" onClick={() => setShowAllocation(!showAllocation)}>
+                            {showAllocation ? "Hide Allocation" : "Allocation"}
+                        </Button>
                         <Button variant="outline" onClick={() => setHoldingDialog({ mode: "add" })}>
                             Add Holding
+                        </Button>
+                        <Button variant="ghost" className="text-muted-foreground" onClick={() => setCashOpen(true)}>
+                            Sync Cash
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            className="text-muted-foreground"
+                            onClick={handleExportCsv}
+                            disabled={portfolioQuery.isLoading}
+                        >
+                            Export
                         </Button>
                     </div>
                 </div>
@@ -272,245 +310,134 @@ export const Dashboard = () => {
                 </div>
             ) : null}
 
-            <section className="grid gap-4 md:grid-cols-2">
-                <SummaryCard
-                    title="Portfolio Summary"
-                    actionLabel="Update Cash"
-                    onAction={() => setCashOpen(true)}
-                    rows={[
-                        { label: "Total Portfolio Value", value: formatCurrency(portfolio?.totalPortfolioValue) },
-                        {
-                            label: "Liquid Cash",
-                            value: formatCurrency(cashAmount),
-                            subvalue: "Available capital",
-                        },
-                        { label: "Market Value", value: formatCurrency(portfolio?.totalMarketValue) },
-                        {
-                            label: "Total Gain / Loss",
-                            value: formatSignedNumber(portfolio?.totalGainLoss),
-                            valueClassName: gainClass(portfolio?.totalGainLoss ?? 0),
-                            subvalue: formatPercent(portfolio?.totalGainLossPercent),
-                            subvalueClassName: gainClass(portfolio?.totalGainLossPercent ?? 0),
-                        },
-                    ]}
-                />
-
-                <Card size="sm">
-                    <CardHeader>
-                        <CardTitle className="text-[18px] leading-[1.2]">Portfolio Snapshot</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                        <StatRow label="Holdings" value={String(portfolio?.holdings.length ?? 0)} />
-                        <StatRow label="Portfolio Value" value={formatCurrency(portfolio?.totalPortfolioValue)} />
-                        <StatRow
-                            label="Gain / Loss"
-                            value={formatSignedNumber(portfolio?.totalGainLoss)}
-                            valueClassName={gainClass(portfolio?.totalGainLoss ?? 0)}
-                        />
-                        <StatRow
-                            label="Gain / Loss %"
-                            value={formatPercent(portfolio?.totalGainLossPercent)}
-                            valueClassName={gainClass(portfolio?.totalGainLossPercent ?? 0)}
-                        />
-                    </CardContent>
-                </Card>
+            <section className="flex flex-wrap items-center gap-x-12 gap-y-6">
+                <div className="space-y-1">
+                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Net Value</p>
+                    <p className="font-mono text-xl tabular-nums text-foreground">{formatCurrency(portfolio?.totalPortfolioValue)}</p>
+                </div>
+                <div className="space-y-1">
+                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Cash</p>
+                    <p className="font-mono text-xl tabular-nums text-foreground">{formatCurrency(cashAmount)}</p>
+                </div>
+                <div className="space-y-1">
+                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">P/L</p>
+                    <p className={cn("font-mono text-xl tabular-nums", gainClass(portfolio?.totalGainLoss ?? 0))}>{formatSignedNumber(portfolio?.totalGainLoss)}</p>
+                </div>
+                <div className="space-y-1">
+                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Return</p>
+                    <p className={cn("font-mono text-xl tabular-nums", gainClass(portfolio?.totalGainLossPercent ?? 0))}>{formatPercent(portfolio?.totalGainLossPercent)}</p>
+                </div>
+                <div className="space-y-1">
+                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Holdings</p>
+                    <p className="font-mono text-xl tabular-nums text-foreground">{portfolio?.holdings.length ?? 0}</p>
+                </div>
             </section>
 
-            <section className="grid gap-4 md:grid-cols-3">
-                <Card size="sm">
-                    <CardHeader>
-                        <CardTitle className="text-[14px] uppercase tracking-[1.4px] text-white/50">Largest Position</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="font-mono text-2xl font-semibold text-foreground">{largestPos}</p>
-                        <p className="mt-1 font-mono text-[10px] uppercase tracking-[1px] text-muted-foreground">
-                            {sortedHoldings[0] ? `${((sortedHoldings[0].marketValue ?? 0) / totalVal * 100).toFixed(1)}% of portfolio` : "No positions"}
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card size="sm">
-                    <CardHeader>
-                        <CardTitle className="text-[14px] uppercase tracking-[1.4px] text-white/50">Top 3 Concentration</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="font-mono text-2xl font-semibold text-foreground">{top3Pct.toFixed(1)}%</p>
-                        <p className="mt-1 font-mono text-[10px] uppercase tracking-[1px] text-muted-foreground">
-                            Combined weight of top holdings
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card size="sm">
-                    <CardHeader>
-                        <CardTitle className="text-[14px] uppercase tracking-[1.4px] text-white/50">Cash Ratio</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="font-mono text-2xl font-semibold text-foreground">{cashPct.toFixed(1)}%</p>
-                        <p className="mt-1 font-mono text-[10px] uppercase tracking-[1px] text-muted-foreground">
-                            Liquid capital availability
-                        </p>
-                    </CardContent>
-                </Card>
-            </section>
+            {showAllocation && allocationTotal > 0 && (
+                <section className="space-y-3 animate-in fade-in duration-500">
+                    <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+                        {allocationSegments.map((segment, index) => (
+                            <div
+                                key={segment.label}
+                                className="h-full transition-all"
+                                style={{
+                                    width: `${(segment.value / allocationTotal) * 100}%`,
+                                    backgroundColor: allocationPalette[index % allocationPalette.length],
+                                }}
+                                title={`${segment.label} ${((segment.value / allocationTotal) * 100).toFixed(1)}%`}
+                            />
+                        ))}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                        {allocationSegments.map((segment, index) => (
+                            <div key={segment.label} className="flex items-center gap-2">
+                                <span
+                                    className="h-1.5 w-1.5 rounded-full shrink-0"
+                                    style={{ backgroundColor: allocationPalette[index % allocationPalette.length] }}
+                                />
+                                <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
+                                    {segment.label} <span className="text-foreground ml-1">{((segment.value / allocationTotal) * 100).toFixed(1)}%</span>
+                                    <span className="ml-1 opacity-50">({formatCurrency(segment.value)})</span>
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
 
             {portfolio?.totalGainLoss === null ? (
-                <div className="rounded-2xl border border-dashed border-border px-4 py-3 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
+                <div className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">
                     Gain and loss are unavailable for one or more holdings until a valid average price is saved.
                 </div>
             ) : null}
 
-            <section>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Capital Allocation</CardTitle>
-                        <CardDescription>
-                            Capital distribution across positions and liquidity.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {allocationTotal > 0 ? (
-                            <>
-                                <div className="flex h-6 overflow-hidden border border-border">
-                                    {allocationSegments.map((segment, index) => (
-                                        <div
-                                            key={segment.label}
-                                            className="h-full min-w-[2px]"
-                                            style={{
-                                                width: `${(segment.value / allocationTotal) * 100}%`,
-                                                backgroundColor: allocationPalette[index % allocationPalette.length],
-                                            }}
-                                            title={`${segment.label} ${((segment.value / allocationTotal) * 100).toFixed(1)}%`}
-                                            aria-label={`${segment.label} allocation ${((segment.value / allocationTotal) * 100).toFixed(1)} percent`}
-                                        />
-                                    ))}
-                                </div>
-
-                                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                                    {allocationSegments.map((segment, index) => {
-                                        const allocationPct = allocationTotal > 0 ? (segment.value / allocationTotal) * 100 : 0;
-
-                                        return (
-                                            <div key={segment.label} className="space-y-2 border border-border px-4 py-3">
-                                                <div className="flex items-center justify-between gap-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <span
-                                                            className="block h-2.5 w-2.5 border border-white/20"
-                                                            style={{ backgroundColor: allocationPalette[index % allocationPalette.length] }}
-                                                            aria-hidden="true"
-                                                        />
-                                                        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white">
-                                                            {segment.label}
-                                                        </p>
-                                                    </div>
-                                                    <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">
-                                                        {allocationPct.toFixed(1)}%
-                                                    </p>
-                                                </div>
-                                                <p className="text-right font-mono text-sm tabular-nums text-white">
-                                                    {formatCurrency(segment.value)}
-                                                </p>
-                                                <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
-                                                    {segment.sublabel}
-                                                </p>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </>
-                        ) : (
-                            <div className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
-                                Add holdings or cash to render allocation visuals.
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-            </section>
-
-            <section className="grid gap-4">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Holdings</CardTitle>
-                        <CardDescription>
-                            Position telemetry and API-bound operations.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="min-h-[320px]">
+            <section className="mt-[24px]">
+                <h2 className="mb-4 font-sans text-[16px] font-medium">Portfolio Holdings</h2>
+                <div className="min-h-[320px]">
                             {portfolioQuery.isLoading ? (
                                 <TerminalSkeleton lines={5} label="SYNCING HOLDINGS" />
                             ) : (
-                                <div className="overflow-hidden border border-border">
-                                    <Table className="table-fixed">
-                                        <TableHeader>
-                                            <TableRow className="border-border hover:bg-transparent">
-                                                <TableHead className="w-[88px] px-3 font-mono text-[10px] uppercase tracking-[1.4px]">Ticker</TableHead>
-                                                <TableHead className="w-[76px] px-3 text-right font-mono text-[10px] uppercase tracking-[1.4px]">Shares</TableHead>
-                                                <TableHead className="px-3 text-right font-mono text-[10px] uppercase tracking-[1.4px]">Avg Price</TableHead>
-                                                <TableHead className="px-3 text-right font-mono text-[10px] uppercase tracking-[1.4px]">Last Price</TableHead>
-                                                <TableHead className="px-3 text-right font-mono text-[10px] uppercase tracking-[1.4px]">Market Value</TableHead>
-                                                <TableHead className="px-3 text-right font-mono text-[10px] uppercase tracking-[1.4px]">Gain / Loss</TableHead>
-                                                <TableHead className="w-[72px] px-3 text-right font-mono text-[10px] uppercase tracking-[1.4px]">Actions</TableHead>
+                                <Table className="w-full">
+                                    <TableHeader>
+                                        <TableRow className="border-b border-border/50 hover:bg-transparent">
+                                            <TableHead className="w-[88px] h-10 px-0 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Ticker</TableHead>
+                                            <TableHead className="w-[76px] h-10 px-0 text-right font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Shares</TableHead>
+                                            <TableHead className="h-10 px-0 text-right font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Avg Price</TableHead>
+                                            <TableHead className="h-10 px-0 text-right font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Last Price</TableHead>
+                                            <TableHead className="h-10 px-0 text-right font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Market Value</TableHead>
+                                            <TableHead className="h-10 px-0 text-right font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">P/L</TableHead>
+                                            <TableHead className="h-10 px-0 text-right font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Return</TableHead>
+                                            <TableHead className="w-[72px] h-10 px-0 text-right font-mono text-[10px] uppercase tracking-[1.4px] text-transparent">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {portfolio?.holdings.map((holding) => (
+                                            <TableRow key={holding.id} className="group border-b border-border/50 hover:bg-white/[0.02]">
+                                                <TableCell className="px-0 font-mono text-sm uppercase tracking-[1.4px] text-foreground">{holding.ticker}</TableCell>
+                                                <TableCell className="px-0 text-right font-mono text-sm tabular-nums text-foreground">{formatNumber(holding.shares, "en-PH", 0)}</TableCell>
+                                                <TableCell className="px-0 text-right font-mono text-sm tabular-nums text-foreground">{formatCurrency(holding.avgPrice)}</TableCell>
+                                                <TableCell className="px-0 text-right font-mono text-sm tabular-nums text-foreground">{formatCurrency(holding.currentPrice)}</TableCell>
+                                                <TableCell className="px-0 text-right font-mono text-sm tabular-nums text-foreground">{formatCurrency(holding.marketValue)}</TableCell>
+                                                <TableCell className={cn("px-0 text-right font-mono text-sm tabular-nums", gainClass(holding.gainLoss ?? 0))}>{formatSignedNumber(holding.gainLoss)}</TableCell>
+                                                <TableCell className={cn("px-0 text-right font-mono text-sm tabular-nums", gainClass(holding.gainLossPercent ?? 0))}>{holding.gainLossPercent === null ? "---" : formatPercent(holding.gainLossPercent)}</TableCell>
+                                                <TableCell className="px-0">
+                                                    <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon-sm"
+                                                            className="text-white/30 hover:bg-white/5 hover:text-white"
+                                                            onClick={() => setHoldingDialog({ mode: "edit", holding })}
+                                                        >
+                                                            <PencilLine className="size-4" />
+                                                            <span className="sr-only">Edit {holding.ticker}</span>
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon-sm"
+                                                            className="text-white/30 hover:bg-white/5 hover:text-white"
+                                                            onClick={() => {
+                                                                setTickerToDelete(holding.ticker);
+                                                            }}
+                                                            disabled={deleteHoldingMutation.isPending}
+                                                        >
+                                                            <Trash2 className="size-4" />
+                                                            <span className="sr-only">Delete {holding.ticker}</span>
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
                                             </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {portfolio?.holdings.map((holding) => (
-                                                <TableRow key={holding.id} className="border-border/70 hover:bg-white/[0.03]">
-                                                    <TableCell className="truncate px-3 font-mono text-sm uppercase tracking-[1.4px]">{holding.ticker}</TableCell>
-                                                    <TableCell className="px-3 text-right font-mono text-sm tabular-nums">{formatNumber(holding.shares, "en-PH", 0)}</TableCell>
-                                                    <TableCell className="px-3 text-right font-mono text-sm tabular-nums">{formatCurrency(holding.avgPrice)}</TableCell>
-                                                    <TableCell className="px-3 text-right font-mono text-sm tabular-nums">{formatCurrency(holding.currentPrice)}</TableCell>
-                                                    <TableCell className="px-3 text-right font-mono text-sm tabular-nums">{formatCurrency(holding.marketValue)}</TableCell>
-                                                    <TableCell className={cn("px-3 text-right font-mono text-sm", gainClass(holding.gainLoss ?? 0))}>
-                                                        <div className="flex flex-col items-end leading-tight">
-                                                            <span className="tabular-nums">{formatSignedNumber(holding.gainLoss)}</span>
-                                                            <span className="font-mono text-[10px] uppercase tracking-[1.4px] text-inherit/70 tabular-nums">
-                                                                {holding.gainLossPercent === null ? "Cost basis needed" : formatPercent(holding.gainLossPercent)}
-                                                            </span>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="px-3">
-                                                        <div className="flex items-center justify-end gap-1 whitespace-nowrap">
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon-sm"
-                                                                className="text-white/30 hover:bg-white/5 hover:text-white"
-                                                                onClick={() => setHoldingDialog({ mode: "edit", holding })}
-                                                            >
-                                                                <PencilLine />
-                                                                <span className="sr-only">Edit {holding.ticker}</span>
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon-sm"
-                                                                className="text-white/30 hover:bg-white/5 hover:text-white"
-                                                                onClick={() => {
-                                                                    setTickerToDelete(holding.ticker);
-                                                                }}
-                                                                disabled={deleteHoldingMutation.isPending}
-                                                            >
-                                                                <Trash2 />
-                                                                <span className="sr-only">Delete {holding.ticker}</span>
-                                                            </Button>
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                            {portfolio?.holdings.length === 0 && (
-                                                <TableRow>
-                                                    <TableCell colSpan={7} className="py-10 text-center font-mono text-xs uppercase tracking-[1.4px] text-white/30">
-                                                        No active positions found.
-                                                    </TableCell>
-                                                </TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </div>
+                                        ))}
+                                        {portfolio?.holdings.length === 0 && (
+                                            <TableRow className="border-b-0 hover:bg-transparent">
+                                                <TableCell colSpan={8} className="py-10 text-center font-mono text-[10px] uppercase tracking-[1.4px] text-white/30">
+                                                    No active positions found.
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
                             )}
                         </div>
-                    </CardContent>
-                </Card>
-
             </section>
 
             <HoldingDialog
@@ -551,15 +478,15 @@ export const Dashboard = () => {
             />
 
             <AlertDialog open={Boolean(tickerToDelete)} onOpenChange={(open) => !open && setTickerToDelete(null)}>
-                <AlertDialogContent className="border-border bg-background text-foreground shadow-none sm:max-w-[420px]">
+                <AlertDialogContent className="border-border/50 bg-background text-foreground shadow-none sm:max-w-[420px]">
                     <AlertDialogHeader>
                         <AlertDialogTitle>Delete Holding</AlertDialogTitle>
-                        <AlertDialogDescription>
+                        <AlertDialogDescription className="font-sans text-[14px]">
                             Confirm deletion of <span className="font-mono text-white">{tickerToDelete}</span> from the active portfolio. This operation is API-bound and cannot be reversed.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter className="gap-3">
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogFooter className="gap-3 pt-2">
+                        <AlertDialogCancel className="border-transparent hover:bg-white/5">Cancel</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={() => {
                                 if (tickerToDelete) {
@@ -577,79 +504,6 @@ export const Dashboard = () => {
         </div>
     );
 };
-
-function SummaryCard({
-    title,
-    rows,
-    actionLabel,
-    onAction,
-}: {
-    title: string;
-    rows: Array<{
-        label: string;
-        value: string;
-        subvalue?: string;
-        valueClassName?: string;
-        subvalueClassName?: string;
-    }>;
-    actionLabel?: string;
-    onAction?: () => void;
-}) {
-    return (
-        <Card size="sm">
-            <CardHeader>
-                <CardTitle className="text-[18px] leading-[1.2]">{title}</CardTitle>
-                {actionLabel && onAction ? (
-                    <CardAction>
-                        <Button variant="outline" size="xs" onClick={onAction}>
-                            {actionLabel}
-                        </Button>
-                    </CardAction>
-                ) : null}
-            </CardHeader>
-            <CardContent className="space-y-2">
-                {rows.map((row) => (
-                    <StatRow
-                        key={row.label}
-                        label={row.label}
-                        value={row.value}
-                        subvalue={row.subvalue}
-                        valueClassName={row.valueClassName}
-                        subvalueClassName={row.subvalueClassName}
-                    />
-                ))}
-            </CardContent>
-        </Card>
-    );
-}
-
-function StatRow({
-    label,
-    value,
-    subvalue,
-    valueClassName,
-    subvalueClassName,
-}: {
-    label: string;
-    value: string;
-    subvalue?: string;
-    valueClassName?: string;
-    subvalueClassName?: string;
-}) {
-    return (
-        <div className="flex items-center justify-between gap-4 border-b border-border pb-2 last:border-b-0 last:pb-0">
-            <div className="min-w-0 space-y-0.5">
-                <div className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/50">{label}</div>
-                {subvalue ? (
-                    <div className={cn("font-mono text-[10px] uppercase tracking-[1.4px] tabular-nums", subvalueClassName ?? "text-white/30")}>
-                        {subvalue}
-                    </div>
-                ) : null}
-            </div>
-            <div className={cn("shrink-0 text-right font-mono text-sm tabular-nums", valueClassName)}>{value}</div>
-        </div>
-    );
-}
 
 function HoldingDialog({
     open,
@@ -695,18 +549,18 @@ function HoldingDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="border-border bg-background text-foreground shadow-none sm:max-w-[480px]">
+            <DialogContent className="border-border/50 bg-background text-foreground shadow-none sm:max-w-[480px]">
                 <DialogHeader>
-                    <DialogTitle>{mode === "add" ? "Add Holding" : `Edit ${holding?.ticker ?? "Holding"}`}</DialogTitle>
-                    <DialogDescription>
+                    <DialogTitle>{mode === "add" ? "Add Holding" : "Edit Holding"}</DialogTitle>
+                    <DialogDescription className="font-sans text-[14px]">
                         {mode === "add"
-                            ? "Register new holding via portfolio API."
-                            : "Update position parameters and refresh telemetry."}
+                            ? "Create a new portfolio position."
+                            : "Edit position details and refresh market data."}
                     </DialogDescription>
                 </DialogHeader>
 
                 <form
-                    className="space-y-4"
+                    className="space-y-5 mt-4"
                     onSubmit={(event) => {
                         event.preventDefault();
                         const nextShares = Number(shares);
@@ -734,8 +588,8 @@ function HoldingDialog({
                         });
                     }}
                 >
-                    <div className="space-y-2">
-                        <label htmlFor="holding-ticker" className="font-sans text-[14px] text-white/70">Ticker</label>
+                    <div className="space-y-1">
+                        <label htmlFor="holding-ticker" className="font-sans text-[13px] font-medium text-white/70">Ticker</label>
                         <TickerAutocompleteInput
                             id="holding-ticker"
                             name="ticker"
@@ -745,11 +599,13 @@ function HoldingDialog({
                             readOnly={mode === "edit"}
                             inputClassName={cn(mode === "edit" ? "text-white/70" : "text-white")}
                             placeholder="TEL"
+                            showHint={false}
                         />
+                        {mode === "add" && <p className="font-sans text-[11px] text-white/40">Press Enter to select a ticker.</p>}
                     </div>
 
-                    <div className="space-y-2">
-                        <label htmlFor="holding-shares" className="font-sans text-[14px] text-white/70">Shares</label>
+                    <div className="space-y-1">
+                        <label htmlFor="holding-shares" className="font-sans text-[13px] font-medium text-white/70">Shares</label>
                         <input
                             id="holding-shares"
                             name="shares"
@@ -759,12 +615,12 @@ function HoldingDialog({
                             value={shares}
                             onChange={(event) => setShares(event.target.value)}
                             required
-                            className="flex h-10 w-full border border-border bg-transparent px-3 py-2 font-sans text-sm text-white outline-none placeholder:text-white/30 focus:ring-2 focus:ring-ring"
+                            className="flex h-11 w-full rounded-none border border-border/50 bg-transparent px-3 py-2 font-mono text-sm text-white outline-none placeholder:text-white/30 focus:border-ring focus:ring-1 focus:ring-ring"
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <label htmlFor="holding-average-price" className="font-sans text-[14px] text-white/70">Average Price</label>
+                    <div className="space-y-1">
+                        <label htmlFor="holding-average-price" className="font-sans text-[13px] font-medium text-white/70">Average Price</label>
                         <input
                             id="holding-average-price"
                             name="avgPrice"
@@ -778,9 +634,9 @@ function HoldingDialog({
                             }}
                             required
                             placeholder={latestKnownPrice !== null && latestKnownPrice !== undefined && latestKnownPrice > 0 ? latestKnownPrice.toFixed(2) : "0.00"}
-                            className="flex h-10 w-full border border-border bg-transparent px-3 py-2 font-sans text-sm text-white outline-none placeholder:text-white/30 focus:ring-2 focus:ring-ring"
+                            className="flex h-11 w-full rounded-none border border-border/50 bg-transparent px-3 py-2 font-mono text-sm text-white outline-none placeholder:text-white/30 focus:border-ring focus:ring-1 focus:ring-ring"
                         />
-                        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40">
+                        <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-white/40 pt-1">
                             {latestPriceQuery.isFetching && !latestKnownPrice
                                 ? "Fetching latest market price..."
                                 : latestKnownPrice !== null && latestKnownPrice !== undefined && latestKnownPrice > 0
@@ -789,12 +645,12 @@ function HoldingDialog({
                         </p>
                     </div>
 
-                    <DialogFooter className="gap-3">
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                    <DialogFooter className="gap-3 pt-2">
+                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={pending}>
-                            {pending ? "Saving..." : mode === "add" ? "Create Holding" : "Update Holding"}
+                        <Button type="submit" variant="default" disabled={pending}>
+                            {pending ? "Saving..." : mode === "add" ? "Add Holding" : "Save Changes"}
                         </Button>
                     </DialogFooter>
                 </form>
@@ -820,14 +676,14 @@ function CashDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="border-border bg-background text-foreground shadow-none sm:max-w-[420px]">
+            <DialogContent className="border-border/50 bg-background text-foreground shadow-none sm:max-w-[420px]">
                 <DialogHeader>
                     <DialogTitle>Update Cash</DialogTitle>
-                    <DialogDescription>Synchronize cash balance via portfolio endpoint.</DialogDescription>
+                    <DialogDescription className="font-sans text-[14px]">Synchronize cash balance via portfolio endpoint.</DialogDescription>
                 </DialogHeader>
 
                 <form
-                    className="space-y-4"
+                    className="space-y-5 mt-4"
                     onSubmit={(event) => {
                         event.preventDefault();
                         const nextAmount = Number(amount);
@@ -839,8 +695,8 @@ function CashDialog({
                         onSubmit(nextAmount);
                     }}
                 >
-                    <div className="space-y-2">
-                        <label htmlFor="cash-amount" className="font-sans text-[14px] text-white/70">Amount</label>
+                    <div className="space-y-1">
+                        <label htmlFor="cash-amount" className="font-sans text-[13px] font-medium text-white/70">Amount</label>
                         <input
                             id="cash-amount"
                             name="amount"
@@ -850,15 +706,15 @@ function CashDialog({
                             value={amount}
                             onChange={(event) => setAmount(event.target.value)}
                             required
-                            className="flex h-10 w-full border border-border bg-transparent px-3 py-2 font-sans text-sm text-white outline-none placeholder:text-white/30 focus:ring-2 focus:ring-ring"
+                            className="flex h-11 w-full rounded-none border border-border/50 bg-transparent px-3 py-2 font-mono text-sm text-white outline-none placeholder:text-white/30 focus:border-ring focus:ring-1 focus:ring-ring"
                         />
                     </div>
 
-                    <DialogFooter className="gap-3">
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                    <DialogFooter className="gap-3 pt-2">
+                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={pending}>
+                        <Button type="submit" variant="default" disabled={pending}>
                             {pending ? "Saving..." : "Update Cash"}
                         </Button>
                     </DialogFooter>
