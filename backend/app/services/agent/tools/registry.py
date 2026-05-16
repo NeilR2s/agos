@@ -166,7 +166,6 @@ ROLE_TOOL_GROUPS: dict[str, list[str]] = {
 SERVER_TOOL_LABELS = {
     "google_search": "Web search",
     "code_execution": "Code interpreter",
-    "url_context": "URL context",
 }
 
 
@@ -227,8 +226,6 @@ def get_server_tools(tool_settings: AgentToolSettings | None = None) -> list[dic
         server_tools.append({"google_search": {}})
     if selected.codeExecution:
         server_tools.append({"code_execution": {}})
-    if selected.urlContext:
-        server_tools.append({"url_context": {}})
     return server_tools
 
 

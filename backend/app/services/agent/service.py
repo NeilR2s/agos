@@ -77,7 +77,7 @@ class AgentService:
         else:
             try:
                 llm = ChatGoogleGenerativeAI(
-                    model="gemini-3.1-flash-lite",
+                    model=settings.AGENT_MODEL,
                     google_api_key=settings.GEMINI_API_KEY,
                     temperature=1,
                     thinking_level = "high"

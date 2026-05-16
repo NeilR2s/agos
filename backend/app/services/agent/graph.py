@@ -178,7 +178,7 @@ def _role_instructions(mode: str, selected_ticker: str | None) -> list[WorkerSpe
             label="Research Lead",
             role="research-lead",
             tool_role="research-lead",
-            built_in_tools=("google_search", "url_context"),
+            built_in_tools=("google_search", "code_execution"),
             instruction=(
                 f"Own the primary evidence sweep for {ticker_line}. Resolve what matters, what changed, and what still needs verification. "
                 "Use first-party tools first, then fall back to grounded web retrieval only when necessary."
@@ -200,7 +200,7 @@ def _role_instructions(mode: str, selected_ticker: str | None) -> list[WorkerSpe
             label="Web Investigator",
             role="web-investigator",
             tool_role="web-investigator",
-            built_in_tools=("google_search", "url_context"),
+            built_in_tools=("google_search", "code_execution"),
             instruction=(
                 "Use grounded web retrieval to validate freshness, external references, and URL-specific claims. "
                 "Report only observable facts and source-backed findings."
