@@ -100,7 +100,7 @@ class GeminiResponder(BaseAgentResponder):
             model=settings.AGENT_MODEL,
             google_api_key=settings.GEMINI_API_KEY,
             temperature=1,
-            thinking_level="high"
+            # thinking_level="high"
         )
 
     async def stream_response(

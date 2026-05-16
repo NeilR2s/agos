@@ -271,7 +271,7 @@ class ConcurrentAgentGraph:
             top_p=self.run_config.topP,
             max_output_tokens=self.run_config.maxOutputTokens,
             max_retries=2,
-            thinking_level=self.run_config.thinkingLevel,
+            # thinking_level=self.run_config.thinkingLevel,
         )
 
     async def astream_events(self, graph_state: dict[str, Any], config: dict[str, Any], version: str = "v2") -> AsyncIterator[RuntimeEvent]:
