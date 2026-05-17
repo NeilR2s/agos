@@ -28,7 +28,8 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     AGENT_MODEL: str = ""
     LANGSMITH_API_KEY: str = ""
-    LANGSMITH_TRACING: bool = False
+    LANGSMITH_TRACING: bool = True
+    LANGSMITH_PROJECT: str = ""
     LANGGRAPH_AES_KEY: str = ""
     AGENT_ENABLE_ACTION_TOOLS: bool = False
     AGENT_HISTORY_WINDOW: int = 12
