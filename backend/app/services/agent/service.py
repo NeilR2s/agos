@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-import logging
 import asyncio
+import logging
 import time
 from typing import AsyncIterator, Optional
 from uuid import uuid4
+
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from app.core.config import settings
 from app.db.agent_cosmos import get_agent_repository, utc_now_iso
@@ -12,6 +14,7 @@ from app.models.agent import (
     AgentEvent,
     AgentMessage,
     AgentRun,
+    AgentRunConfig,
     AgentRunRequest,
     AgentRunResult,
     AgentSSEEvent,
@@ -20,12 +23,15 @@ from app.models.agent import (
     AgentThreadCreate,
     Citation,
 )
+from app.services.agent import graph as agent_graph
 from app.services.agent.configuration import config_to_public_dict, resolve_model_profile
+from app.services.agent.llm import build_chat_model, is_model_configured
 from app.services.agent.middleware import (
     build_system_prompt,
     derive_thread_title,
     sanitize_preview,
 )
+from app.services.agent.prompts import NO_MODEL_OUTPUT, build_title_prompt
 from app.services.agent.state import AgentRuntimeContext
 from app.services.agent.streaming import build_sse_event, persistable_event, should_persist_event
 
@@ -69,28 +75,19 @@ class AgentService:
             
         first_msg = user_messages[0].content
         
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        from app.core.config import settings
-        
-        if not settings.GEMINI_API_KEY:
+        if not is_model_configured():
             new_title = derive_thread_title(first_msg, thread.selectedTicker)
         else:
             try:
-                llm = ChatGoogleGenerativeAI(
-                    model=settings.AGENT_MODEL,
-                    google_api_key=settings.GEMINI_API_KEY,
-                    temperature=1,
-                    thinking_level = "high"
-
-                )
-                prompt = f"Generate a very short 3-5 word title for a chat thread that starts with this user message: {first_msg}\nReturn ONLY the title, no quotes or prefix."
+                title_config = AgentRunConfig()
+                llm = build_chat_model(resolve_model_profile(title_config), title_config)
+                prompt = build_title_prompt(first_msg)
                 resp = await llm.ainvoke(prompt)
                 new_title = resp.content.strip().strip('"').strip("'")
                 if thread.selectedTicker:
                     new_title = f"{thread.selectedTicker.upper()} / {new_title}"
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).warning(f"Title generation failed: {e}")
+            except Exception as exc:
+                logger.warning("Title generation failed: %s", exc)
                 new_title = derive_thread_title(first_msg, thread.selectedTicker)
                 
         return await self.repository.update_thread(
@@ -323,11 +320,7 @@ class AgentService:
                 },
             )
 
-            from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-
-            from app.services.agent.graph import build_agent_graph
-
-            graph = build_agent_graph(resolved_mode, payload.config)
+            graph = agent_graph.build_agent_graph(resolved_mode, payload.config)
             
             messages = [SystemMessage(content=system_prompt)]
             for msg in history:
@@ -414,9 +407,7 @@ class AgentService:
             if not assistant_content and final_content_from_graph:
                 assistant_content = final_content_from_graph.strip()
             if not assistant_content:
-                assistant_content = (
-                    "No model output was returned for this run. Review the trace and retry once the model connection is stable."
-                )
+                assistant_content = NO_MODEL_OUTPUT
                 
             persisted_run = await self.repository.get_run(thread_id=thread_id, run_id=run_id)
             if persisted_run and persisted_run.status == "cancelled":

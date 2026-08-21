@@ -35,7 +35,7 @@ def _run(run_id: str = "run-1", status: str = "running") -> AgentRun:
         id=run_id,
         threadId="thread-1",
         userId="user-1",
-        model="gemini-test",
+        model="DeepSeek-V4-Flash-0731",
         mode="research",
         status=status,
         startedAt="2024-01-01T00:00:00Z",

@@ -5,6 +5,7 @@ import re
 from typing import Iterable
 
 from app.models.agent import AgentMessage
+from app.services.agent.prompts import build_system_prompt as build_agent_system_prompt
 from app.services.agent.state import AgentRuntimeContext, ToolOutcome
 
 
@@ -44,17 +45,7 @@ def should_call_financials(message: str) -> bool:
 
 
 def build_system_prompt(context: AgentRuntimeContext) -> str:
-    ticker_line = context.selected_ticker or "none"
-    return (
-        "You are AGOS, an institutional research and trading copilot. "
-        "Do not fabricate tools, citations, prices, or holdings. "
-        "Never claim to have hidden reasoning. Report only observable reasoning summaries. "
-        "Separate facts, evidence, and inference clearly. "
-        "If engine output is present, treat the engine as the trade-evaluation authority. "
-        "Keep the answer concise, operator-facing, and actionable. "
-        "Always state suitability assumptions (e.g. risk tolerance, horizon) when providing capital allocation advice. "
-        f"Current mode: {context.mode}. Selected ticker: {ticker_line}."
-    )
+    return build_agent_system_prompt(context)
 
 
 def render_tool_context(outcomes: list[ToolOutcome]) -> str:

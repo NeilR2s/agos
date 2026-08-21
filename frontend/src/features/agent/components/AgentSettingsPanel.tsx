@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { AGOS_MODEL_PRESETS, AGOS_SKILL_OPTIONS } from "@/features/agent/config";
-import type { AgentMode, AgentRunConfig } from "@/features/agent/types";
+import type { AgentMode, AgentModelProfileManifest, AgentRunConfig, AgentSkillManifest } from "@/features/agent/types";
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
 type AgentSettingsPanelProps = {
   config: AgentRunConfig;
   mode: AgentMode;
+  modelProfiles?: AgentModelProfileManifest[];
+  skillOptions?: AgentSkillManifest[];
   onChange: (next: AgentRunConfig) => void;
 };
 
-export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPanelProps) {
+export function AgentSettingsPanel({ config, mode, modelProfiles = AGOS_MODEL_PRESETS, skillOptions = AGOS_SKILL_OPTIONS, onChange }: AgentSettingsPanelProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const update = <K extends keyof AgentRunConfig>(key: K, value: AgentRunConfig[K]) => {
@@ -19,6 +21,10 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
 
   const updateTool = (tool: keyof AgentRunConfig["tools"], value: boolean) => {
     onChange({ ...config, tools: { ...config.tools, [tool]: value } });
+  };
+
+  const updateModelPreset = (preset: AgentModelProfileManifest) => {
+    onChange({ ...config, modelPreset: preset.id, thinkingLevel: preset.reasoningEffort });
   };
 
   const toggleSkill = (skillId: string) => {
@@ -47,13 +53,13 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
           <p className="mt-1 font-sans text-[13px] leading-[1.6] text-muted-foreground">Operational profile preset.</p>
         </div>
         <div className="grid gap-3 lg:grid-cols-3">
-          {AGOS_MODEL_PRESETS.map((preset) => {
+          {modelProfiles.map((preset) => {
             const isSelected = config.modelPreset === preset.id;
             return (
               <button
                 key={preset.id}
                 type="button"
-                onClick={() => update("modelPreset", preset.id)}
+                onClick={() => updateModelPreset(preset)}
                 className={cn(
                   "rounded-[20px] border border-border px-4 py-4 text-left transition-colors hover:border-ring/60 hover:bg-accent/70",
                   isSelected && "border-ring/60 bg-accent"
@@ -61,6 +67,9 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
               >
                 <p className="font-mono text-[11px] uppercase tracking-[1.4px] text-foreground">{preset.label}</p>
                 <p className="mt-2 font-sans text-[13px] leading-[1.6] text-muted-foreground">{preset.subtitle}</p>
+                <p className="mt-2 font-mono text-[9px] uppercase tracking-[1.2px] text-muted-foreground/55">
+                  {preset.model} · {preset.reasoningEffort} effort
+                </p>
               </button>
             );
           })}
@@ -194,22 +203,10 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
             </label>
 
             <div className="space-y-2">
-              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Thinking Level</p>
-              <div className="grid grid-cols-2 gap-2">
-                {(["minimal", "low", "medium", "high"] as const).map((level) => (
-                  <button
-                    key={level}
-                    type="button"
-                    onClick={() => update("thinkingLevel", level)}
-                    className={cn(
-                      "rounded-full border border-border px-3 py-2 font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground transition-colors hover:border-ring/60 hover:text-foreground",
-                      config.thinkingLevel === level && "border-ring/60 bg-accent text-foreground"
-                    )}
-                  >
-                    {level}
-                  </button>
-                ))}
-              </div>
+              <p className="font-mono text-[10px] uppercase tracking-[1.4px] text-muted-foreground">Reasoning Effort</p>
+              <p className="rounded-[18px] border border-border bg-secondary/20 px-4 py-3 font-sans text-[13px] leading-[1.6] text-muted-foreground">
+                Reasoning effort is tied to the selected behavior tier: Swift is low, Core is high, and Deep is max.
+              </p>
             </div>
           </section>
 
@@ -219,7 +216,7 @@ export function AgentSettingsPanel({ config, mode, onChange }: AgentSettingsPane
               <p className="mt-1 font-sans text-[13px] leading-[1.6] text-muted-foreground">Prompt-level specializations.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {AGOS_SKILL_OPTIONS.map((skill) => {
+              {skillOptions.map((skill) => {
                 const active = config.skills.includes(skill.id);
                 return (
                   <button

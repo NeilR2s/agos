@@ -163,12 +163,6 @@ ROLE_TOOL_GROUPS: dict[str, list[str]] = {
     "execution-guard": ["portfolio", "market", "engine"],
 }
 
-SERVER_TOOL_LABELS = {
-    "google_search": "Web search",
-    "code_execution": "Code interpreter",
-}
-
-
 def _dedupe_tools(tools: Iterable[BaseTool]) -> list[BaseTool]:
     ordered: list[BaseTool] = []
     seen: set[str] = set()
@@ -217,16 +211,6 @@ def get_tool_index(
     role: str | None = None,
 ) -> dict[str, BaseTool]:
     return {tool_item.name: tool_item for tool_item in get_available_tools(mode, tool_settings=tool_settings, role=role)}
-
-
-def get_server_tools(tool_settings: AgentToolSettings | None = None) -> list[dict]:
-    selected = tool_settings or AgentToolSettings()
-    server_tools: list[dict] = []
-    if selected.webSearch:
-        server_tools.append({"google_search": {}})
-    if selected.codeExecution:
-        server_tools.append({"code_execution": {}})
-    return server_tools
 
 
 def describe_external_capabilities(capabilities: list[AgentExternalCapability]) -> list[str]:

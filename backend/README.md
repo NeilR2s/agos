@@ -73,7 +73,7 @@
 
 ## Local run
 
-- Populate `.env` from `.env.example` and set Cosmos, Firebase, and Gemini values.
+- Populate `.env` from `.env.example` and set Cosmos, Firebase, and DeepSeek values.
 - Run the service from inside `backend/`.
 
 ```bash

@@ -26,20 +26,20 @@ async def _noop_emit(event):
     return None
 
 
-def test_worker_enables_server_tool_invocation_echo(monkeypatch):
-    monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
+def test_worker_binds_available_tools(monkeypatch):
+    monkeypatch.setattr(settings, "DEEPSEEK_API_KEY", "test-key")
     monkeypatch.setattr("app.services.agent.graph.resolve_skill_prompts", lambda skills: [])
     monkeypatch.setattr("app.services.agent.graph.describe_external_capabilities", lambda capabilities: [])
-    monkeypatch.setattr("app.services.agent.graph.get_available_tools", lambda *args, **kwargs: [])
+    fake_tool = object()
+    monkeypatch.setattr("app.services.agent.graph.get_available_tools", lambda *args, **kwargs: [fake_tool])
     monkeypatch.setattr("app.services.agent.graph.get_tool_index", lambda *args, **kwargs: {})
 
     graph = ConcurrentAgentGraph("research", AgentRunConfig())
     capture = {}
 
     class FakeModel:
-        def bind_tools(self, tools, tool_config=None):
+        def bind_tools(self, tools):
             capture["tools"] = tools
-            capture["tool_config"] = tool_config
             return self
 
         async def ainvoke(self, messages, config=None):
@@ -61,12 +61,11 @@ def test_worker_enables_server_tool_invocation_echo(monkeypatch):
     )
 
     assert result.summary == "Worker response"
-    assert capture["tool_config"] == {"include_server_side_tool_invocations": True}
-    assert any(isinstance(tool, dict) and "google_search" in tool for tool in capture["tools"])
+    assert capture["tools"] == [fake_tool]
 
 
 def test_synthesis_completed_includes_structured_output_payload(monkeypatch):
-    monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(settings, "DEEPSEEK_API_KEY", "test-key")
     graph = ConcurrentAgentGraph("research", AgentRunConfig())
 
     class FakeModel:

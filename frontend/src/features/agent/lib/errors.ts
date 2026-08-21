@@ -23,8 +23,8 @@ export function humanizeAgentError(error: unknown) {
 
   const lower = normalized.toLowerCase();
 
-  if (lower.includes("gemini_api_key")) {
-    return "Configuration error: Gemini API access is not configured on the backend.";
+  if (lower.includes("deepseek_api_key")) {
+    return "Configuration error: DeepSeek API access is not configured on the backend.";
   }
 
   if (
@@ -32,7 +32,7 @@ export function humanizeAgentError(error: unknown) {
     lower.includes("please enable tool_config") ||
     lower.includes("server-side tool")
   ) {
-    return "Configuration error: server-side Gemini tools must be enabled for web search, code interpreter, or URL context.";
+    return "Configuration error: server-side model tools are unavailable for web search, code interpreter, or URL context.";
   }
 
   if (lower.includes("stream ended before agos emitted a terminal event")) {

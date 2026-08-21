@@ -3,6 +3,7 @@ import type { paths } from "./types";
 import { useAuthStore } from "../../store/authStore";
 import type {
   AgentEvent,
+  AgentConfigManifest,
   AgentMessage,
   AgentRun,
   AgentRunRequest,
@@ -78,6 +79,10 @@ async function backendJson<T>(path: string, init: RequestInit = {}): Promise<T> 
 }
 
 export const agentApi = {
+  getConfig() {
+    return backendJson<AgentConfigManifest>("/api/v1/agent/config");
+  },
+
   createThread(body: AgentThreadCreateRequest) {
     return backendJson<AgentThread>("/api/v1/agent/threads", {
       method: "POST",

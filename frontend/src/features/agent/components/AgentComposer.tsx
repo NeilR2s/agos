@@ -3,7 +3,7 @@ import { AdjustmentsHorizontalIcon, Bars3BottomLeftIcon, PaperAirplaneIcon, Plus
 
 import { Button } from "@/components/ui/button";
 import { AGOS_MODEL_PRESETS } from "@/features/agent/config";
-import type { AgentMode, AgentRunConfig } from "@/features/agent/types";
+import type { AgentMode, AgentModelProfileManifest, AgentRunConfig } from "@/features/agent/types";
 import { cn } from "@/lib/utils";
 
 type AgentComposerProps = {
@@ -20,6 +20,7 @@ type AgentComposerProps = {
   selectedTicker?: string | null;
   mode: AgentMode;
   config: AgentRunConfig;
+  modelProfiles?: AgentModelProfileManifest[];
   isLanding?: boolean;
 };
 
@@ -44,10 +45,11 @@ export function AgentComposer({
   selectedTicker,
   mode,
   config,
+  modelProfiles = AGOS_MODEL_PRESETS,
   isLanding = false,
 }: AgentComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const selectedModel = AGOS_MODEL_PRESETS.find((preset) => preset.id === config.modelPreset);
+  const selectedModel = modelProfiles.find((preset) => preset.id === config.modelPreset);
   const actionLabel = isStreaming ? "Stop run" : isBusy && streamStatus === "cancelled" ? "Terminating" : isBusy ? "Initializing" : "Send message";
 
   useEffect(() => {
