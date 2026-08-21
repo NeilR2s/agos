@@ -197,7 +197,7 @@ export const Dashboard = () => {
 
     const portfolio = portfolioQuery.data;
     const cashAmount = cashQuery.data?.amount ?? portfolio?.liquidCash ?? 0;
-    const [showAllocation, setShowAllocation] = useState(false);
+    const [showAllocation, setShowAllocation] = useState(true);
 
     const handleExportCsv = () => {
         if (!portfolio) return;
