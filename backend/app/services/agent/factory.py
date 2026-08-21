@@ -3,9 +3,13 @@ from __future__ import annotations
 import re
 from typing import AsyncIterator
 
-from app.core.config import settings
-from app.models.agent import AgentMessage
+from langchain_core.messages import HumanMessage
+
+from app.models.agent import AgentMessage, AgentRunConfig
 from app.services.agent.middleware import render_tool_context
+from app.services.agent.configuration import resolve_model_profile
+from app.services.agent.llm import build_chat_model, is_model_configured
+from app.services.agent.prompts import DETERMINISTIC_FALLBACK_ASSESSMENT, build_responder_prompt
 from app.services.agent.state import AgentRuntimeContext, ToolOutcome
 
 
@@ -49,7 +53,7 @@ class BaseAgentResponder:
 
 
 class FallbackAgentResponder(BaseAgentResponder):
-    reason = "Gemini is not configured. Using deterministic response synthesis."
+    reason = "DeepSeek is not configured. Using deterministic response synthesis."
 
     async def stream_response(
         self,
@@ -81,9 +85,7 @@ class FallbackAgentResponder(BaseAgentResponder):
 
         lines.append("")
         lines.append("Assessment:")
-        lines.append(
-            "Use the evidence summary as the current operating picture. If you need a deeper answer, configure Gemini so AGOS can synthesize these tool results into a richer narrative."
-        )
+        lines.append(DETERMINISTIC_FALLBACK_ASSESSMENT)
 
         response = "\n".join(lines)
         chunks = [chunk for chunk in re.split(r"(\s+)", response) if chunk]
@@ -91,17 +93,12 @@ class FallbackAgentResponder(BaseAgentResponder):
             yield chunk
 
 
-class GeminiResponder(BaseAgentResponder):
+class DeepSeekResponder(BaseAgentResponder):
     def __init__(self):
-        from langchain_google_genai import ChatGoogleGenerativeAI
-
-        self.model_name = settings.AGENT_MODEL
-        self.model = ChatGoogleGenerativeAI(
-            model=settings.AGENT_MODEL,
-            google_api_key=settings.GEMINI_API_KEY,
-            temperature=1,
-            # thinking_level="high"
-        )
+        context_config = AgentRunConfig()
+        self.model_profile = resolve_model_profile(context_config)
+        self.model_name = self.model_profile.model
+        self.model = build_chat_model(self.model_profile, context_config)
 
     async def stream_response(
         self,
@@ -112,16 +109,14 @@ class GeminiResponder(BaseAgentResponder):
         tool_outcomes: list[ToolOutcome],
         context: AgentRuntimeContext,
     ) -> AsyncIterator[str]:
-        from langchain_core.messages import HumanMessage
-
-        prompt = (
-            f"System instructions:\n{system_prompt}\n\n"
-            f"Conversation history:\n{_history_block(history)}\n\n"
-            f"Latest operator request:\n{latest_user_message.strip()}\n\n"
-            f"Selected ticker: {context.selected_ticker or 'none'}\n"
-            f"Mode: {context.mode}\n\n"
-            f"Structured tool context:\n{render_tool_context(tool_outcomes)}\n\n"
-            "Respond with short sections for Overview, Evidence, Inference, and Next Step."
+        prompt = build_responder_prompt(
+            system_prompt=system_prompt,
+            latest_user_message=latest_user_message,
+            history=history,
+            tool_outcomes=tool_outcomes,
+            context=context,
+            history_block=_history_block(history),
+            tool_context=render_tool_context(tool_outcomes),
         )
         messages = [HumanMessage(content=prompt)]
 
@@ -132,10 +127,10 @@ class GeminiResponder(BaseAgentResponder):
 
 
 def build_agent_responder() -> BaseAgentResponder:
-    if not settings.GEMINI_API_KEY:
+    if not is_model_configured():
         return FallbackAgentResponder()
 
     try:
-        return GeminiResponder()
+        return DeepSeekResponder()
     except Exception:
         return FallbackAgentResponder()

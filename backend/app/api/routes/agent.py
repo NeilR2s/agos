@@ -3,8 +3,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
 
+from app.core.limiter import limiter
 from app.core.security import get_current_user, oauth2_scheme
 from app.models.agent import (
+    AgentConfigManifest,
     AgentInterruptDecisionRequest,
     AgentRun,
     AgentRunRequest,
@@ -12,11 +14,16 @@ from app.models.agent import (
     AgentThread,
     AgentThreadCreate,
 )
+from app.services.agent.configuration import build_agent_config_manifest
 from app.services.agent.service import AgentService, get_agent_service
 from app.services.agent.streaming import encode_sse
-from app.core.limiter import limiter
 
 router = APIRouter()
+
+
+@router.get("/config", response_model=AgentConfigManifest)
+async def get_agent_config():
+    return build_agent_config_manifest()
 
 
 def _user_id(current_user: dict) -> str:

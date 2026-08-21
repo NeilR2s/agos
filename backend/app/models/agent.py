@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 AgentMode = Literal["general", "research", "trading"]
 AgentRole = Literal["user", "assistant", "system"]
 AgentRunStatus = Literal["queued", "running", "completed", "error", "cancelled"]
 AgentModelPreset = Literal["agos-swift", "agos-core", "agos-deep"]
-AgentThinkingLevel = Literal["minimal", "low", "medium", "high"]
+AgentThinkingLevel = Literal["low", "high", "max"]
 
 
 class AgentExternalCapability(BaseModel):
@@ -37,11 +37,42 @@ class AgentRunConfig(BaseModel):
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     topP: float = Field(default=0.95, ge=0.0, le=1.0)
     maxOutputTokens: int = Field(default=2048, ge=256, le=8192)
-    thinkingLevel: AgentThinkingLevel = "medium"
+    thinkingLevel: AgentThinkingLevel = "high"
     maxAgents: int = Field(default=3, ge=1, le=4)
     tools: AgentToolSettings = Field(default_factory=AgentToolSettings)
     skills: list[str] = Field(default_factory=list)
     externalCapabilities: list[AgentExternalCapability] = Field(default_factory=list)
+
+    @field_validator("thinkingLevel", mode="before")
+    @classmethod
+    def normalize_legacy_thinking_level(cls, value: object) -> object:
+        if value == "minimal":
+            return "low"
+        if value == "medium":
+            return "high"
+        return value
+
+
+class AgentModelProfileManifest(BaseModel):
+    id: AgentModelPreset
+    label: str
+    subtitle: str
+    provider: str
+    model: str
+    reasoningEffort: AgentThinkingLevel
+    description: str
+
+
+class AgentSkillManifest(BaseModel):
+    id: str
+    label: str
+    prompt: str
+
+
+class AgentConfigManifest(BaseModel):
+    modelProfiles: list[AgentModelProfileManifest]
+    skillOptions: list[AgentSkillManifest]
+    defaultConfig: AgentRunConfig
 
 
 class Citation(BaseModel):

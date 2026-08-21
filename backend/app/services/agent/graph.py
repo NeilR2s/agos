@@ -2,67 +2,33 @@ from __future__ import annotations
 
 import asyncio
 import json
-from dataclasses import dataclass
-from typing import Any, AsyncIterator, Awaitable, Callable
+from typing import Any, AsyncIterator
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 
-from app.core.config import settings
 from app.models.agent import AgentRunConfig, Citation
 from app.services.agent.configuration import resolve_model_profile
+from app.services.agent.llm import build_chat_model, is_model_configured
+from app.services.agent.prompts import (
+    MODEL_NOT_CONFIGURED_FINAL,
+    MODEL_NOT_CONFIGURED_WORKER_CONTENT,
+    MODEL_NOT_CONFIGURED_WORKER_SUMMARY,
+    build_fallback_synthesis,
+    build_synthesis_prompt,
+    build_synthesis_system_prompt,
+    build_worker_prompt,
+    stringify_message_content,
+)
 from app.services.agent.skills import resolve_skill_prompts
 from app.services.agent.state import AgentRuntimeContext
 from app.services.agent.structured_output import annotate_citation, build_structured_output
 from app.services.agent.tools.registry import (
-    SERVER_TOOL_LABELS,
     describe_external_capabilities,
     get_available_tools,
-    get_server_tools,
     get_tool_index,
 )
-
-
-RuntimeEvent = dict[str, Any]
-EmitFn = Callable[[RuntimeEvent], Awaitable[None]]
-
-
-@dataclass(frozen=True, slots=True)
-class WorkerSpec:
-    agent_id: str
-    label: str
-    role: str
-    instruction: str
-    tool_role: str
-    built_in_tools: tuple[str, ...] = ()
-
-
-@dataclass(slots=True)
-class WorkerResult:
-    agent_id: str
-    label: str
-    role: str
-    summary: str
-    content: str
-    citations: list[Citation]
-    tool_count: int
-    status: str = "completed"
-
-
-def _stringify_message_content(content: object) -> str:
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts: list[str] = []
-        for item in content:
-            if isinstance(item, str):
-                parts.append(item)
-                continue
-            if isinstance(item, dict):
-                text = item.get("text")
-                if isinstance(text, str):
-                    parts.append(text)
-        return "".join(parts)
-    return ""
+from app.services.agent.types import EmitFn, RuntimeEvent, WorkerResult, WorkerSpec
+from app.services.agent.workers import build_worker_specs as build_configured_worker_specs
 
 
 def _content_blocks(message: BaseMessage) -> list[dict[str, Any]]:
@@ -81,7 +47,7 @@ def _assistant_text(message: BaseMessage, *, trim: bool = True) -> str:
     if text_parts:
         text = "".join(text_parts)
         return text.strip() if trim else text
-    text = _stringify_message_content(getattr(message, "content", ""))
+    text = stringify_message_content(getattr(message, "content", ""))
     return text.strip() if trim else text
 
 
@@ -102,36 +68,6 @@ def _dedupe_citations(citations: list[Citation]) -> list[Citation]:
         seen.add(key)
         unique.append(citation)
     return unique
-
-
-def _grounding_citations(message: BaseMessage) -> list[Citation]:
-    response_metadata = getattr(message, "response_metadata", {}) or {}
-    grounding = response_metadata.get("grounding_metadata")
-    if not isinstance(grounding, dict):
-        return []
-
-    queries = grounding.get("web_search_queries")
-    grounding_chunks = grounding.get("grounding_chunks")
-    citations: list[Citation] = []
-    if isinstance(grounding_chunks, list):
-        for index, chunk in enumerate(grounding_chunks[:6]):
-            if not isinstance(chunk, dict):
-                continue
-            web = chunk.get("web")
-            if not isinstance(web, dict):
-                continue
-            href = web.get("uri") if isinstance(web.get("uri"), str) else None
-            title = web.get("title") if isinstance(web.get("title"), str) and web.get("title") else f"Grounding source {index + 1}"
-            citations.append(
-                Citation(
-                    label=title,
-                    source="google_grounding",
-                    kind="reference",
-                    href=href,
-                    meta={"queries": queries if isinstance(queries, list) else []},
-                )
-            )
-    return citations
 
 
 def _tool_citations(output: object) -> list[Citation]:
@@ -170,89 +106,8 @@ def _format_tool_args(args: object) -> str:
     return _shorten(str(args), limit=120)
 
 
-def _role_instructions(mode: str, selected_ticker: str | None) -> list[WorkerSpec]:
-    ticker_line = selected_ticker or "the active operating context"
-    shared = [
-        WorkerSpec(
-            agent_id="research-lead",
-            label="Research Lead",
-            role="research-lead",
-            tool_role="research-lead",
-            built_in_tools=("google_search", "code_execution"),
-            instruction=(
-                f"Own the primary evidence sweep for {ticker_line}. Resolve what matters, what changed, and what still needs verification. "
-                "Use first-party tools first, then fall back to grounded web retrieval only when necessary."
-            ),
-        ),
-        WorkerSpec(
-            agent_id="portfolio-analyst",
-            label="Portfolio Analyst",
-            role="portfolio-analyst",
-            tool_role="portfolio-analyst",
-            built_in_tools=(),
-            instruction=(
-                "Anchor the answer to the operator's current exposure, overlap, concentration, and position context. "
-                "Call out what the portfolio already owns or lacks."
-            ),
-        ),
-        WorkerSpec(
-            agent_id="web-investigator",
-            label="Web Investigator",
-            role="web-investigator",
-            tool_role="web-investigator",
-            built_in_tools=("google_search", "code_execution"),
-            instruction=(
-                "Use grounded web retrieval to validate freshness, external references, and URL-specific claims. "
-                "Report only observable facts and source-backed findings."
-            ),
-        ),
-        WorkerSpec(
-            agent_id="risk-sentinel",
-            label="Risk Sentinel",
-            role="risk-sentinel",
-            tool_role="risk-sentinel",
-            built_in_tools=("google_search", "code_execution"),
-            instruction=(
-                "Stress-test the thesis, surface hidden risk, and quantify edge cases when code execution would materially improve the answer. "
-                "Do not produce a trade directive without explicit evidence."
-            ),
-        ),
-    ]
-
-    if mode == "trading":
-        shared.append(
-            WorkerSpec(
-                agent_id="execution-guard",
-                label="Execution Guard",
-                role="execution-guard",
-                tool_role="execution-guard",
-                built_in_tools=("code_execution",),
-                instruction=(
-                    "Translate validated evidence into an execution-minded read. Use the engine when available, quantify risk, and keep the output decision-aware."
-                ),
-            )
-        )
-    return shared
-
-
 def build_worker_specs(mode: str, context: AgentRuntimeContext, run_config: AgentRunConfig) -> list[WorkerSpec]:
-    ordered = _role_instructions(mode, context.selected_ticker)
-    specs: list[WorkerSpec] = []
-    for candidate in ordered:
-        if len(specs) >= run_config.maxAgents:
-            break
-        if candidate.role == "portfolio-analyst" and not run_config.tools.portfolio:
-            continue
-        if candidate.role == "web-investigator" and not (run_config.tools.research or run_config.tools.webSearch or run_config.tools.urlContext):
-            continue
-        if candidate.role == "risk-sentinel" and not (run_config.tools.market or run_config.tools.engine or run_config.tools.codeExecution):
-            continue
-        if candidate.role == "execution-guard" and not (mode == "trading" and run_config.tools.engine):
-            continue
-        specs.append(candidate)
-    if not specs:
-        specs.append(ordered[0])
-    return specs
+    return build_configured_worker_specs(mode, context, run_config)
 
 
 class ConcurrentAgentGraph:
@@ -262,17 +117,7 @@ class ConcurrentAgentGraph:
         self.model_profile = resolve_model_profile(run_config)
 
     def _build_model(self):
-        from langchain_google_genai import ChatGoogleGenerativeAI
-
-        return ChatGoogleGenerativeAI(
-            model=self.model_profile.model,
-            google_api_key=settings.GEMINI_API_KEY,
-            temperature=self.run_config.temperature,
-            top_p=self.run_config.topP,
-            max_output_tokens=self.run_config.maxOutputTokens,
-            max_retries=2,
-            # thinking_level=self.run_config.thinkingLevel,
-        )
+        return build_chat_model(self.model_profile, self.run_config)
 
     async def astream_events(self, graph_state: dict[str, Any], config: dict[str, Any], version: str = "v2") -> AsyncIterator[RuntimeEvent]:
         del version
@@ -280,13 +125,13 @@ class ConcurrentAgentGraph:
         base_messages: list[BaseMessage] = list(graph_state["messages"])
         worker_specs = build_worker_specs(self.mode, context, self.run_config)
 
-        if not settings.GEMINI_API_KEY:
+        if not is_model_configured():
             worker_summaries = [
                 {
                     "agentId": spec.agent_id,
                     "label": spec.label,
                     "role": spec.role,
-                    "summary": "Gemini is not configured, so AGOS could not run this worker.",
+                    "summary": MODEL_NOT_CONFIGURED_WORKER_SUMMARY,
                     "toolCount": 0,
                 }
                 for spec in worker_specs
@@ -295,19 +140,19 @@ class ConcurrentAgentGraph:
                 yield {
                     "event": "agent.started",
                     "agent": {"id": spec.agent_id, "label": spec.label, "role": spec.role},
-                    "data": {"detail": f"{spec.label} is offline because Gemini is not configured."},
+                    "data": {"detail": f"{spec.label} is offline because DeepSeek is not configured."},
                 }
                 yield {
                     "event": "agent.completed",
                     "agent": {"id": spec.agent_id, "label": spec.label, "role": spec.role},
                     "data": {
                         "status": "completed",
-                        "summary": "Gemini is not configured, so AGOS could not run this worker.",
-                        "content": "Configure GEMINI_API_KEY to enable multi-agent execution.",
+                        "summary": MODEL_NOT_CONFIGURED_WORKER_SUMMARY,
+                        "content": MODEL_NOT_CONFIGURED_WORKER_CONTENT,
                         "toolCount": 0,
                     },
                 }
-            fallback = "Gemini is not configured. Configure GEMINI_API_KEY to enable AGOS multi-agent reasoning, traces, and synthesis."
+            fallback = MODEL_NOT_CONFIGURED_FINAL
             yield {
                 "event": "agent.started",
                 "agent": {"id": "synthesizer", "label": "Synthesis", "role": "synthesizer"},
@@ -386,14 +231,11 @@ class ConcurrentAgentGraph:
             capability_notes = describe_external_capabilities(self.run_config.externalCapabilities)
             tools = get_available_tools(self.mode, tool_settings=self.run_config.tools, role=spec.tool_role)
             tool_index = get_tool_index(self.mode, tool_settings=self.run_config.tools, role=spec.tool_role)
-            server_tools = [tool_def for tool_def in get_server_tools(self.run_config.tools) if next(iter(tool_def)) in spec.built_in_tools]
-            tool_config = {"include_server_side_tool_invocations": True} if server_tools else None
-
             system_prompt = self._worker_prompt(base_messages, context, spec, skill_prompts, capability_notes)
             messages: list[BaseMessage] = [SystemMessage(content=system_prompt), *self._conversation_messages(base_messages)]
             model = self._build_model()
-            if tools or server_tools:
-                model = model.bind_tools([*tools, *server_tools], tool_config=tool_config)
+            if tools:
+                model = model.bind_tools(tools)
 
             all_citations: list[Citation] = []
             tool_count = 0
@@ -427,50 +269,8 @@ class ConcurrentAgentGraph:
                                 },
                             }
                         )
-                    elif block_type == "server_tool_call":
-                        name = str(block.get("name") or "server_tool")
-                        await emit(
-                            {
-                                "event": "tool.started",
-                                "agent": {"id": spec.agent_id, "label": spec.label, "role": spec.role},
-                                "data": {
-                                    "name": name,
-                                    "detail": f"{spec.label} invoked {SERVER_TOOL_LABELS.get(name, name.replace('_', ' '))}.",
-                                    "args": block.get("args") if isinstance(block.get("args"), dict) else {},
-                                    "serverTool": True,
-                                },
-                            }
-                        )
-                    elif block_type == "server_tool_result":
-                        name = str(block.get("name") or "server_tool")
-                        output = block.get("output") if isinstance(block.get("output"), str) else "Server tool completed."
-                        await emit(
-                            {
-                                "event": "tool.completed",
-                                "agent": {"id": spec.agent_id, "label": spec.label, "role": spec.role},
-                                "data": {
-                                    "name": name,
-                                    "summary": _shorten(output or "Server tool completed.", limit=180),
-                                    "serverTool": True,
-                                },
-                            }
-                        )
-
-                for citation in _grounding_citations(response):
-                    enriched_citation = annotate_citation(
-                        citation,
-                        agent_id=spec.agent_id,
-                        agent_label=spec.label,
-                        tool_name="google_grounding",
-                    )
-                    all_citations.append(enriched_citation)
-                    await emit(
-                        {
-                            "event": "citation.added",
-                            "agent": {"id": spec.agent_id, "label": spec.label, "role": spec.role},
-                            "data": {"citation": enriched_citation.model_dump(mode="json")},
-                        }
-                    )
+                    elif block_type in {"server_tool_call", "server_tool_result"}:
+                        continue
 
                 tool_calls = getattr(response, "tool_calls", None) or []
                 if tool_calls:
@@ -707,63 +507,27 @@ class ConcurrentAgentGraph:
         skill_prompts: list[str],
         capability_notes: list[str],
     ) -> str:
-        global_prompt = ""
-        if base_messages and isinstance(base_messages[0], SystemMessage):
-            global_prompt = _stringify_message_content(base_messages[0].content)
-        sections = [global_prompt, f"You are {spec.label} inside AGOS.", spec.instruction]
-        sections.append(f"Selected ticker: {context.selected_ticker or 'none'}. Mode: {context.mode}.")
-        if skill_prompts:
-            sections.append("Active AGOS skills:\n- " + "\n- ".join(skill_prompts))
-        if capability_notes:
-            sections.append("External capability status:\n- " + "\n- ".join(capability_notes))
-        sections.append(
-            "Return a concise operator memo. Separate evidence from inference. Use tools when they improve confidence, not by default."
+        return build_worker_prompt(
+            base_messages=base_messages,
+            selected_ticker=context.selected_ticker,
+            mode=context.mode,
+            worker_label=spec.label,
+            worker_instruction=spec.instruction,
+            skill_prompts=skill_prompts,
+            capability_notes=capability_notes,
         )
-        return "\n\n".join(section for section in sections if section)
 
     def _synthesis_system_prompt(self, base_messages: list[BaseMessage], context: AgentRuntimeContext) -> str:
-        global_prompt = ""
-        if base_messages and isinstance(base_messages[0], SystemMessage):
-            global_prompt = _stringify_message_content(base_messages[0].content)
-        return (
-            f"{global_prompt}\n\n"
-            "You are the AGOS synthesis agent. Combine worker outputs into one answer. "
-            "Keep the result crisp, operator-facing, and faithful to evidence. "
-            "Present sections for Overview, Evidence, Recommendations, Assumptions, Risks, and Next Steps. "
-            "Always include an 'Assumptions' block detailing presumed risk tolerance, horizon, and liquidity needs. "
-            "Frame recommendations as advisory and not execution-ready unless an execution guard explicitly approved it. "
-            f"Current mode: {context.mode}. Selected ticker: {context.selected_ticker or 'none'}."
-        )
+        return build_synthesis_system_prompt(base_messages, context)
 
     def _synthesis_prompt(self, results: list[WorkerResult], context: AgentRuntimeContext) -> str:
-        sections = [
-            f"Selected ticker: {context.selected_ticker or 'none'}",
-            f"Mode: {context.mode}",
-            "Worker outputs:",
-        ]
+        worker_sections = []
         for result in results:
-            sections.append(f"[{result.label}] Summary: {result.summary}")
-            sections.append(result.content)
-        sections.append(
-            "Write a single final answer for the operator. Make tool/model activity invisible unless it directly matters."
-        )
-        return "\n\n".join(sections)
+            worker_sections.append(f"[{result.label}] Summary: {result.summary}\n\n{result.content}")
+        return build_synthesis_prompt(worker_sections, context)
 
     def _fallback_synthesis(self, results: list[WorkerResult], context: AgentRuntimeContext) -> str:
-        lines = [
-            f"Overview: AGOS completed a {context.mode} pass for {context.selected_ticker or 'the current context'}.",
-            "Evidence:",
-        ]
-        for result in results:
-            lines.append(f"- {result.label}: {result.summary}")
-        lines.append("Next Step:")
-        lines.append("- Review the consolidated evidence and decide whether a deeper rerun or narrower follow-up is needed.")
-        lines.append("Assumptions:")
-        lines.append("- Risk tolerance, liquidity needs, and tax constraints were not explicitly provided.")
-        lines.append("- Recommendations are advisory and not execution-ready.")
-        lines.append("Risks:")
-        lines.append("- Source freshness and execution constraints must be verified before action.")
-        return "\n".join(lines)
+        return build_fallback_synthesis([f"- {result.label}: {result.summary}" for result in results], context)
 
 
 def build_agent_graph(mode: str, run_config: AgentRunConfig | None = None):

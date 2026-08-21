@@ -25,8 +25,8 @@ class Settings(BaseSettings):
     FIREBASE_PROJECT_ID: str = "agos-auth"
 
     # Agent / LLM
-    GEMINI_API_KEY: str = ""
-    AGENT_MODEL: str = ""
+    DEEPSEEK_API_KEY: str = ""
+    DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
     LANGSMITH_API_KEY: str = ""
     LANGSMITH_TRACING: bool = True
     LANGSMITH_PROJECT: str = ""

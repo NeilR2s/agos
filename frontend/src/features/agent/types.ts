@@ -1,7 +1,23 @@
 export type AgentMode = "general" | "research" | "trading";
 export type AgentRole = "user" | "assistant" | "system";
 export type AgentModelPreset = "agos-swift" | "agos-core" | "agos-deep";
-export type AgentThinkingLevel = "minimal" | "low" | "medium" | "high";
+export type AgentThinkingLevel = "low" | "high" | "max";
+
+export interface AgentModelProfileManifest {
+  id: AgentModelPreset;
+  label: string;
+  subtitle: string;
+  provider: string;
+  model: string;
+  reasoningEffort: AgentThinkingLevel;
+  description: string;
+}
+
+export interface AgentSkillManifest {
+  id: string;
+  label: string;
+  prompt: string;
+}
 
 export interface AgentExternalCapability {
   id: string;
@@ -33,6 +49,12 @@ export interface AgentRunConfig {
   tools: AgentToolSettings;
   skills: string[];
   externalCapabilities: AgentExternalCapability[];
+}
+
+export interface AgentConfigManifest {
+  modelProfiles: AgentModelProfileManifest[];
+  skillOptions: AgentSkillManifest[];
+  defaultConfig: AgentRunConfig;
 }
 
 export interface Citation {

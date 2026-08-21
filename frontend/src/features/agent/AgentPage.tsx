@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { agentApi } from "@/api/backend/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DEFAULT_AGENT_RUN_CONFIG, AGENT_CONFIG_STORAGE_KEY } from "@/features/agent/config";
+import { AGOS_MODEL_PRESETS, AGOS_SKILL_OPTIONS, DEFAULT_AGENT_RUN_CONFIG, AGENT_CONFIG_STORAGE_KEY } from "@/features/agent/config";
 import { AgentComposer } from "@/features/agent/components/AgentComposer";
 import { AgentOutputTabs } from "@/features/agent/components/AgentOutputTabs";
 import { AgentSettingsPanel } from "@/features/agent/components/AgentSettingsPanel";
@@ -15,17 +15,27 @@ import { AgentTranscript } from "@/features/agent/components/AgentTranscript";
 import { useAgentStream } from "@/features/agent/hooks/useAgentStream";
 import { humanizeAgentError } from "@/features/agent/lib/errors";
 import { pickDefaultAgentId, stripMarkdownArtifacts } from "@/features/agent/lib/traces";
-import type { AgentMessage, AgentMode, AgentRun, AgentRunConfig, AgentRunRequest, AgentSSEEvent, AgentThread, Citation } from "@/features/agent/types";
+import type { AgentMessage, AgentMode, AgentRun, AgentRunConfig, AgentRunRequest, AgentSSEEvent, AgentThinkingLevel, AgentThread, Citation } from "@/features/agent/types";
 import { formatDurationMs, formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const allowedModes: AgentMode[] = ["general", "research", "trading"];
+const allowedThinkingLevels: AgentThinkingLevel[] = ["low", "high", "max"];
 
 const normalizeMode = (value: string | null): AgentMode => {
   if (value && allowedModes.includes(value as AgentMode)) {
     return value as AgentMode;
   }
   return "general";
+};
+
+const normalizeThinkingLevel = (value: unknown): AgentThinkingLevel => {
+  if (value === "minimal") return "low";
+  if (value === "medium") return "high";
+  if (typeof value === "string" && allowedThinkingLevels.includes(value as AgentThinkingLevel)) {
+    return value as AgentThinkingLevel;
+  }
+  return DEFAULT_AGENT_RUN_CONFIG.thinkingLevel;
 };
 
 const dedupeEvents = (events: AgentSSEEvent[]) => {
@@ -60,6 +70,7 @@ const loadStoredConfig = (): AgentRunConfig => {
     return {
       ...DEFAULT_AGENT_RUN_CONFIG,
       ...parsed,
+      thinkingLevel: normalizeThinkingLevel(parsed.thinkingLevel),
       tools: {
         ...DEFAULT_AGENT_RUN_CONFIG.tools,
         ...parsed.tools,
@@ -143,6 +154,16 @@ export function AgentPage() {
       setSearchParamsTransition(next);
     }
   }, [searchParams, setSearchParamsTransition]);
+
+  const agentConfigQuery = useQuery({
+    queryKey: ["agent-config"],
+    queryFn: () => agentApi.getConfig(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const modelProfiles = agentConfigQuery.data?.modelProfiles ?? AGOS_MODEL_PRESETS;
+  const skillOptions = agentConfigQuery.data?.skillOptions ?? AGOS_SKILL_OPTIONS;
+  const selectedModelProfile = modelProfiles.find((profile) => profile.id === runConfig.modelPreset);
 
   const activeThreadQuery = useQuery({
     queryKey: ["agent-thread", threadId],
@@ -455,7 +476,10 @@ export function AgentPage() {
         message,
         mode,
         selectedTicker: nextSelectedTicker,
-        config: runConfig,
+        config: {
+          ...runConfig,
+          thinkingLevel: selectedModelProfile?.reasoningEffort ?? runConfig.thinkingLevel,
+        },
         uiContext: {
           pathname: window.location.pathname,
           search: window.location.search,
@@ -639,6 +663,7 @@ export function AgentPage() {
             selectedTicker={selectedTicker}
             mode={mode}
             config={runConfig}
+            modelProfiles={modelProfiles}
             isLanding={isLanding}
           />
         </div>
@@ -785,7 +810,7 @@ export function AgentPage() {
                 </div>
               </div>
             ) : (
-              <AgentSettingsPanel config={runConfig} mode={mode} onChange={setRunConfig} />
+              <AgentSettingsPanel config={runConfig} mode={mode} modelProfiles={modelProfiles} skillOptions={skillOptions} onChange={setRunConfig} />
             )}
           </div>
         </DialogContent>

@@ -65,7 +65,7 @@ Use this only for dataset preparation, training, and evaluation. The runtime mod
 
 - Cosmos DB is the shared storage layer.
 - Firebase ID tokens are used by `frontend`, `backend`, and `engine`.
-- Gemini is required for backend agent runs and cron news structuring.
+- DeepSeek is required for backend agent runs; Gemini is still used by cron news structuring.
 - Tavily is required for cron news search.
 
 ## Dev bypass
